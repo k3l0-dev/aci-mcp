@@ -81,14 +81,19 @@ docker run --env-file mcp/.env -p 8000:8000 aci-mcp
 Standalone tooling to pull the full jsonmeta schema collection from a live APIC and generate the data files consumed by the MCP server.
 
 ```bash
-cd schema-collector
-cp .env.example .env        # fill in APIC credentials
-uv sync
+cd schema-collector && uv sync
 
-python fetch_schemas.py     # download jsonmeta files → mo-schemas/
-python gen_descriptions.py  # generate class-descriptions.json
-# copy outputs to mcp/data/
+# Full pipeline in one command
+uv run python collect.py
+
+# Or step by step
+uv run python fetch_cobra.py       # download acimodel wheel from the APIC
+uv run python gen_classes.py       # extract class list → classes.yaml
+uv run python fetch_schemas.py     # fetch jsonmeta files → mo-schemas/
+uv run python gen_descriptions.py  # build index → ../data/class-descriptions.json
 ```
+
+The `.env` at the repo root is shared with `mcp/` — no separate credentials file needed.
 
 ---
 

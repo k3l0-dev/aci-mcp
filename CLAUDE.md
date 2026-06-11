@@ -85,13 +85,19 @@ Skipping steps 1 or 2 silently returns empty results because APIC does not error
 
 ## schema-collector/
 
-Standalone scripts to pull schemas from a live APIC and generate the data files consumed by `mcp/`.
+Standalone tooling to collect schemas from a live APIC. Run with:
 
-```text
-fetch_schemas.py    Download jsonmeta files from /doc/jsonmeta/ endpoint
-gen_descriptions.py Generate mcp/data/class-descriptions.json from the schemas
-gen_classes.py      Generate classes.yaml
-classes.yaml        Curated class list
+```bash
+uv run python collect.py   # full pipeline in one command
 ```
 
-Outputs written directly to `../data/` (repo root). Heavy artifacts (`mo-schemas/`, `cobra-sdk/`) are gitignored.
+Pipeline steps (in order):
+
+```text
+fetch_cobra.py      Download acimodel wheel from /cobra/sdk/python/ on the APIC
+gen_classes.py      Extract class list from wheel → classes.yaml
+fetch_schemas.py    Fetch jsonmeta files from /doc/jsonmeta/ → mo-schemas/
+gen_descriptions.py Build class index → ../data/class-descriptions.json
+```
+
+Output lands in `data/` at the repo root. Heavy artifacts (`mo-schemas/`, `cobra-sdk/`) are gitignored.
