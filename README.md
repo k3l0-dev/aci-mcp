@@ -81,7 +81,15 @@ docker run --env-file mcp/.env -p 8000:8000 aci-mcp
 Standalone tooling to pull the full jsonmeta schema collection from a live APIC and build the data files consumed by the MCP server. The four pipeline steps (cobra download, class extraction, schema fetch, description index) are unified in a single CLI entry point.
 
 ```bash
-cd schema-collector && uv sync
+cd schema-collector
+rm -rf .venv && uv sync      # first time — or if the venv is broken
+
+# aci-collect is available three ways:
+uv run aci-collect run       # no activation needed
+# — or —
+source .venv/bin/activate && aci-collect run
+# — or install globally —
+uv tool install . && aci-collect run
 
 # Run the full pipeline
 aci-collect run
