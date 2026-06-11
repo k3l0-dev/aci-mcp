@@ -1,5 +1,5 @@
-# Build from the repo root:
-#   docker build -f mcp/deploy/Dockerfile mcp/
+# Build context must be the repo root:
+#   docker build -f mcp/deploy/Dockerfile .
 FROM python:3.12-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -13,13 +13,13 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Install dependencies before copying source to leverage Docker layer cache
-COPY pyproject.toml uv.lock ./
+COPY mcp/pyproject.toml mcp/uv.lock ./
 RUN uv sync --frozen --no-dev
 
-# Copy application source and registry data
-COPY main.py ./
-COPY registry/ ./registry/
-COPY apic/ ./apic/
+# Copy application source and shared data
+COPY mcp/main.py ./
+COPY mcp/registry/ ./registry/
+COPY mcp/apic/ ./apic/
 COPY data/ ./data/
 
 # Run as non-root

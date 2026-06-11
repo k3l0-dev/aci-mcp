@@ -9,7 +9,7 @@ def test_unknown_class_returns_empty_dict(schemas_dir):
 
 
 @pytest.mark.skipif(
-    not __import__("pathlib").Path(__file__).parent.parent.parent.joinpath("data", "schemas").exists(),
+    not __import__("pathlib").Path(__file__).parent.parent.parent.parent.joinpath("data", "schemas").exists(),
     reason="schemas/ collection not available",
 )
 class TestWithSchemas:

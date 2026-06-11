@@ -10,13 +10,12 @@ __pycache__/
 # Environment files
 .env
 
-# MCP — generated / heavy schema data (regenerate with schema-collector)
-mcp/data/schemas/
+# Shared data — heavy schema collection (regenerate with schema-collector)
+data/schemas/
 
-# Schema collector — downloaded artifacts
+# Schema collector — downloaded artifacts and generated outputs
 schema-collector/mo-schemas/
 schema-collector/cobra-sdk/
-schema-collector/class-descriptions.json
 schema-collector/.venv/
 
 # IDE

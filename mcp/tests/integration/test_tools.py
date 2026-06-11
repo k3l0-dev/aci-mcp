@@ -83,12 +83,12 @@ def _make_ctx(lifespan_ctx: dict):
 
 @pytest.fixture
 def schemas_dir():
-    return Path(__file__).parent.parent.parent / "data" / "schemas"
+    return Path(__file__).parent.parent.parent.parent / "data" / "schemas"
 
 
 @pytest.fixture
 def descriptions_file():
-    return Path(__file__).parent.parent.parent / "data" / "class-descriptions.json"
+    return Path(__file__).parent.parent.parent.parent / "data" / "class-descriptions.json"
 
 
 @pytest.fixture
@@ -154,7 +154,7 @@ async def test_search_classes_no_match_returns_empty(tool_ctx):
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(
-    not Path(__file__).parent.parent.parent.joinpath("data", "schemas").exists(),
+    not Path(__file__).parent.parent.parent.parent.joinpath("data", "schemas").exists(),
     reason="schemas/ collection not available",
 )
 async def test_get_schema_known_class(tool_ctx):

@@ -13,8 +13,8 @@ ACI object model without any hardcoded class knowledge:
   query           — execute a filtered class query against the APIC
 
 All ACI domain knowledge lives in:
-  data/schemas/                 15 k+ jsonmeta files from the APIC /doc/jsonmeta/ endpoint
-  data/class-descriptions.json  label + comment index built by gen_descriptions.py
+  ../data/schemas/                 15 k+ jsonmeta files from the APIC /doc/jsonmeta/ endpoint
+  ../data/class-descriptions.json  label + comment index built by schema-collector/gen_descriptions.py
 
 Typical LLM workflow
 --------------------
@@ -67,9 +67,10 @@ from registry.schema import load_schema
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 BASE_DIR = Path(__file__).parent
-SCHEMAS_DIR = BASE_DIR / "data" / "schemas"
-DESCRIPTIONS_FILE = BASE_DIR / "data" / "class-descriptions.json"
-ENV_FILE = BASE_DIR / ".env"
+REPO_ROOT = BASE_DIR.parent
+SCHEMAS_DIR = REPO_ROOT / "data" / "schemas"
+DESCRIPTIONS_FILE = REPO_ROOT / "data" / "class-descriptions.json"
+ENV_FILE = REPO_ROOT / ".env"
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 

@@ -25,7 +25,7 @@ cd mcp/
 # Install dependencies
 uv sync
 
-# Run the server (reads .env)
+# Run the server (reads ../.env)
 python main.py
 
 # Run all tests
@@ -34,37 +34,37 @@ pytest
 # Run a single test file
 pytest tests/unit/test_filter.py
 
-# Docker (build context is mcp/)
-docker build -f deploy/Dockerfile .
+# Docker (build context must be repo root)
+docker build -f mcp/deploy/Dockerfile .
 docker run --env-file .env -p 8000:8000 aci-mcp
 ```
 
 ### Environment
 
-Copy `mcp/.env.example` to `mcp/.env`. Set `APIC_HOST`, `APIC_USER`, `APIC_PASSWORD`. The server authenticates via cookie token on startup and auto-reauthenticates on 401/403.
+Copy `.env.example` to `.env` at the **repo root**. Set `APIC_HOST`, `APIC_USER`, `APIC_PASSWORD`. The server authenticates via cookie token on startup and auto-reauthenticates on 401/403.
 
 ### Architecture
 
 ```text
-main.py                     FastMCP server, lifespan, three tool definitions
-apic/
-  client.py                 ApicClient — live APIC, cookie auth, httpx
-registry/
-  descriptions.py           Load + keyword-search class-descriptions.json
-  schema.py                 Lazy jsonmeta loader — extracts query-planning fields only
-  filter.py                 Build APIC query-target-filter strings from dicts
-data/
+mcp/
+  main.py                   FastMCP server, lifespan, three tool definitions
+  apic/client.py            ApicClient — live APIC, cookie auth, httpx
+  registry/
+    descriptions.py         Load + keyword-search class-descriptions.json
+    schema.py               Lazy jsonmeta loader — extracts query-planning fields only
+    filter.py               Build APIC query-target-filter strings from dicts
+  client/
+    aci-mcp.json            MCP client config pointing to http://localhost:8002/mcp
+    SKILL.md                Full ACI object model + tool usage guide for LLM skill files
+  deploy/Dockerfile         Container image (build context: repo root)
+  tests/
+    conftest.py             Shared fixtures (sample_imdata, schemas_dir)
+    unit/                   Pure-logic tests for filter, schema, search
+    integration/            Tool tests using an in-memory StubBackend
+
+data/                       Shared — written by schema-collector, read by mcp
   class-descriptions.json   label+comment index for all known ACI classes
   schemas/                  15 k+ jsonmeta files from /doc/jsonmeta/ (gitignored)
-client/
-  aci-mcp.json              MCP client config pointing to http://localhost:8002/mcp
-  SKILL.md                  Full ACI object model + tool usage guide for LLM skill files
-deploy/
-  Dockerfile                Container image
-tests/
-  conftest.py               Shared fixtures (sample_imdata, schemas_dir)
-  unit/                     Pure-logic tests for filter, schema, search
-  integration/              Tool tests using an in-memory StubBackend
 ```
 
 ### Key design decisions
@@ -94,4 +94,4 @@ gen_classes.py      Generate classes.yaml
 classes.yaml        Curated class list
 ```
 
-Outputs copied to `mcp/data/` after a collection run. Heavy artifacts (`mo-schemas/`, `cobra-sdk/`) are gitignored.
+Outputs written directly to `../data/` (repo root). Heavy artifacts (`mo-schemas/`, `cobra-sdk/`) are gitignored.

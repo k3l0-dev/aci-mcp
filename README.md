@@ -26,7 +26,7 @@
 
 The server exposes three tools that an LLM must call in order:
 
-```
+```text
 1. search_classes("bridge domain")   →  fvBD
 2. get_schema("fvBD")                →  identifiedBy, containedBy, properties, relations
 3. query("fvBD", scope_dn="uni/tn-OT", filters={"name": "servers"})  →  objects
@@ -37,9 +37,8 @@ All ACI domain knowledge (15 k+ jsonmeta class schemas, label + description inde
 ### Quick start
 
 ```bash
-cd mcp
 cp .env.example .env        # fill in APIC_HOST, APIC_USER, APIC_PASSWORD
-uv sync
+cd mcp && uv sync
 python main.py              # starts on port 8000
 ```
 
@@ -95,7 +94,7 @@ python gen_descriptions.py  # generate class-descriptions.json
 
 ## Repository layout
 
-```
+```text
 aci-mcp/
 ├── mcp/                        MCP server
 │   ├── main.py

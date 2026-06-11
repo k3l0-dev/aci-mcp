@@ -12,7 +12,7 @@ from pathlib import Path
 
 import pytest
 
-SCHEMAS_DIR = Path(__file__).parent.parent / "data" / "schemas"
+SCHEMAS_DIR = Path(__file__).parent.parent.parent / "data" / "schemas"
 
 # ── In-memory fixture data (flat imdata format) ───────────────────────────────
 
