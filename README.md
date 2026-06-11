@@ -6,6 +6,7 @@
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](mcp/deploy/Dockerfile)
 [![MCP](https://img.shields.io/badge/protocol-MCP-orange)](https://modelcontextprotocol.io)
 [![Cisco ACI](https://img.shields.io/badge/Cisco-ACI%20APIC-1BA0D7?logo=cisco&logoColor=white)](https://developer.cisco.com/docs/aci/)
+[![License](https://img.shields.io/badge/license-Proprietary-red)](LICENSE)
 
 > Schema-driven MCP server for Cisco ACI — lets any LLM navigate the full ACI object model through three generic tools, with no hardcoded class knowledge.
 

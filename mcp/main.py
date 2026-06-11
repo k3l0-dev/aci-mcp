@@ -1,3 +1,4 @@
+# Copyright (c) 2026 Khalid El-Ouiali — Monark AIOPS SRL. All rights reserved.
 """
 main.py
 
