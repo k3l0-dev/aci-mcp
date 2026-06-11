@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environments
+.venv/
+
+# Environment files
+.env
+
+# MCP — generated / heavy schema data (regenerate with schema-collector)
+mcp/data/schemas/
+
+# Schema collector — downloaded artifacts
+schema-collector/mo-schemas/
+schema-collector/cobra-sdk/
+schema-collector/class-descriptions.json
+schema-collector/.venv/
+
+# IDE
+.vscode/
