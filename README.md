@@ -78,22 +78,40 @@ docker run --env-file mcp/.env -p 8000:8000 aci-mcp
 
 ## schema-collector — APIC Schema Fetcher
 
-Standalone tooling to pull the full jsonmeta schema collection from a live APIC and generate the data files consumed by the MCP server.
+Standalone tooling to pull the full jsonmeta schema collection from a live APIC and build the data files consumed by the MCP server. The four pipeline steps (cobra download, class extraction, schema fetch, description index) are unified in a single CLI entry point.
 
 ```bash
 cd schema-collector && uv sync
 
-# Full pipeline in one command
-uv run python collect.py
+# Run the full pipeline
+aci-collect run
 
-# Or step by step
-uv run python fetch_cobra.py       # download acimodel wheel from the APIC
-uv run python gen_classes.py       # extract class list → classes.yaml
-uv run python fetch_schemas.py     # fetch jsonmeta files → mo-schemas/
-uv run python gen_descriptions.py  # build index → ../data/class-descriptions.json
+# Resume from a specific step (skip earlier ones)
+aci-collect run --from schemas
+
+# Re-run everything even if artifacts already exist
+aci-collect run --force
+
+# Tune parallel requests (default: 20)
+aci-collect run --concurrency 40
+
+# Check artifact state
+aci-collect status
+
+# Remove generated artifacts (add --all to also remove the cobra wheel)
+aci-collect clean
 ```
 
 The `.env` at the repo root is shared with `mcp/` — no separate credentials file needed.
+
+### Pipeline steps
+
+| Step | What it does | Output |
+| --- | --- | --- |
+| `cobra` | Downloads the `acimodel` wheel from `/cobra/_downloads` on the APIC | `cobra-sdk/*.whl` |
+| `classes` | Extracts all `Mo` subclasses from the wheel | `classes.yaml` |
+| `schemas` | Fetches jsonmeta JSON for every class | `mo-schemas/*.json` |
+| `descriptions` | Builds label + description index | `../data/class-descriptions.json` |
 
 ---
 
@@ -111,7 +129,14 @@ aci-mcp/
 │   ├── client/                 MCP client config + LLM skill doc
 │   ├── deploy/Dockerfile
 │   └── tests/
-├── schema-collector/           APIC schema collection scripts
+├── schema-collector/
+│   ├── collect.py              single CLI entry point (aci-collect)
+│   ├── pyproject.toml
+│   ├── classes.yaml            (generated — class list from wheel)
+│   ├── cobra-sdk/              (gitignored — downloaded wheel)
+│   └── mo-schemas/             (gitignored — 15 k+ jsonmeta files)
+├── data/
+│   └── class-descriptions.json (committed — built by aci-collect)
 ├── CLAUDE.md
 └── .gitignore
 ```
