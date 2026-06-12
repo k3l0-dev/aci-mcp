@@ -122,6 +122,32 @@ The `.env` at the repo root is shared with `mcp/` — no separate credentials fi
 | `schemas` | Fetches jsonmeta JSON for every class | `mo-schemas/*.json` |
 | `descriptions` | Builds label + description index | `../data/class-descriptions.json` |
 
+### Building a standalone binary
+
+The collector can be compiled into a self-contained Linux x86_64 binary (no Python required on the target server).
+
+#### macOS prerequisites — OrbStack + Rosetta 2
+
+Docker Desktop uses QEMU to emulate x86_64, which is 5–10× slower than native for CPU-intensive tasks like Nuitka compilation. OrbStack uses Apple's Rosetta 2 instead — the overhead drops to ~1.5× and filesystem I/O is significantly faster.
+
+1. Install [OrbStack](https://orbstack.dev) — it replaces Docker Desktop as a drop-in
+2. Rosetta 2 is enabled by default for `linux/amd64` containers — no extra configuration needed
+3. Confirm: `docker context show` should return `orbstack`
+
+#### Build
+
+```bash
+cd schema-collector
+
+# macOS (requires OrbStack — builds inside a Docker linux/amd64 container via Rosetta 2)
+# Linux  (builds natively — requires root for apt deps)
+make build
+```
+
+Output: `schema-collector/dist/<git-tag>/aci-collect`
+
+The version string is resolved from the current git tag. Run `make help` for all available targets.
+
 ---
 
 ## Contributing
