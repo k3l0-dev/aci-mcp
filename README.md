@@ -124,6 +124,28 @@ The `.env` at the repo root is shared with `mcp/` — no separate credentials fi
 
 ---
 
+## Contributing
+
+### Branch strategy
+
+This project follows a **trunk-based** workflow:
+
+| Branch | Role |
+| --- | --- |
+| `main` | Always deployable — releases are tags on this branch |
+| `feature/*` | Short-lived feature branches (< 2–3 days), merged via MR |
+| `hotfix/*` | Emergency fixes branched off `main`, merged back immediately |
+
+### Commit convention
+
+[Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`
+
+### Release process
+
+Releases follow [SemVer](https://semver.org/). See [CHANGELOG.md](CHANGELOG.md) for history.
+
+---
+
 ## Repository layout
 
 ```text
