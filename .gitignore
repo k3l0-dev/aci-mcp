@@ -17,6 +17,7 @@ data/schemas/
 schema-collector/mo-schemas/
 schema-collector/cobra-sdk/
 schema-collector/.venv/
+schema-collector/dist/
 
 # IDE
 .vscode/
