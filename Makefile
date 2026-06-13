@@ -1,5 +1,5 @@
 .PHONY: test test-mcp test-collect lint lint-mcp lint-collect \
-        deploy-dev deploy-prod mcp-deps help
+        deploy-dev deploy-prod mcp-deps mcp-client help
 
 MCP_DIR     := mcp
 COLLECT_DIR := schema-collector
@@ -13,6 +13,7 @@ help:
 	@printf '  %s\n' 'Deploy'
 	@printf '  %-24s %s\n' 'make deploy-dev'   'ensure .env + deps, then start mcp server (local)'
 	@printf '  %-24s %s\n' 'make deploy-prod'  'start production stack via docker-compose (Caddy + MCP)'
+	@printf '  %-24s %s\n' 'make mcp-client'   'print MCP client JSON config to stdout'
 	@printf '\n  %s\n' 'Tests'
 	@printf '  %-24s %s\n' 'make test'         'run all tests (mcp + schema-collector)'
 	@printf '  %-24s %s\n' 'make test-mcp'     'run mcp tests only'
@@ -57,6 +58,11 @@ deploy-prod: .env
 	@printf '\n'
 	@docker compose -f $(MCP_DIR)/deploy/docker-compose.yml ps
 	@printf '\n'
+
+# ── MCP client config ─────────────────────────────────────────────────────────
+
+mcp-client:
+	@cat $(MCP_DIR)/client/aci-mcp.json
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
