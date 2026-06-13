@@ -13,6 +13,26 @@ This module only generates eq() predicates from caller-supplied key/value pairs.
 More complex predicates (gt, lt, wcard, ne) can be added as needed.
 """
 
+import re
+
+from exceptions import FilterError
+
+# Valid ACI identifiers: letters/digits only, must start with a letter.
+_IDENT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
+
+
+def _validate_ident(value: str, label: str) -> None:
+    if not _IDENT_RE.match(value):
+        raise FilterError(
+            f"Invalid {label} '{value}': must start with a letter and contain only "
+            "letters and digits."
+        )
+
+
+def _escape_value(value: str) -> str:
+    """Escape double-quotes inside an APIC filter string value."""
+    return value.replace("\\", "\\\\").replace('"', '\\"')
+
 
 def build_filter(class_name: str, filters: dict[str, str]) -> str:
     """Build an APIC query-target-filter string from a dict of attribute filters.
@@ -32,6 +52,9 @@ def build_filter(class_name: str, filters: dict[str, str]) -> str:
         APIC filter string ready to pass as the query-target-filter parameter,
         or an empty string when filters is empty.
 
+    Raises:
+        FilterError: class_name or an attribute key is not a valid ACI identifier.
+
     Examples:
         >>> build_filter("fvBD", {})
         ''
@@ -43,7 +66,14 @@ def build_filter(class_name: str, filters: dict[str, str]) -> str:
     if not filters:
         return ""
 
-    parts = [f'eq({class_name}.{attr},"{val}")' for attr, val in filters.items()]
+    _validate_ident(class_name, "class_name")
+    for attr in filters:
+        _validate_ident(attr, "attribute")
+
+    parts = [
+        f'eq({class_name}.{attr},"{_escape_value(val)}")'
+        for attr, val in filters.items()
+    ]
 
     if len(parts) == 1:
         return parts[0]

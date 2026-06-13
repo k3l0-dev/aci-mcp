@@ -17,6 +17,7 @@ import logging
 from typing import Any
 
 import httpx
+from exceptions import ApicAuthError, ApicConnectionError, ApicResponseError
 from registry.filter import build_filter
 
 logger = logging.getLogger("aci-mcp.apic")
@@ -61,13 +62,32 @@ class ApicClient:
         are authenticated automatically.
 
         Raises:
-            httpx.HTTPStatusError: When the APIC returns a non-2xx status.
-            httpx.RequestError:    On network-level failures.
+            ApicAuthError:       APIC returned a non-2xx response to the login.
+            ApicConnectionError: Host unreachable or request timed out.
+            ApicResponseError:   Response body is not valid JSON or missing token.
         """
-        payload = {"aaaUser": {"attributes": {"name": self._user, "pwd": self._password}}}
-        resp = await self._client.post(f"{self._base}/api/aaaLogin.json", json=payload)
-        resp.raise_for_status()
-        token: str = resp.json()["imdata"][0]["aaaLogin"]["attributes"]["token"]
+        url = f"{self._base}/api/aaaLogin.json"
+        payload = {
+            "aaaUser": {"attributes": {"name": self._user, "pwd": self._password}}
+        }
+        try:
+            resp = await self._client.post(url, json=payload)
+        except httpx.TimeoutException as exc:
+            raise ApicConnectionError(self._host, f"request timed out: {exc}") from exc
+        except httpx.ConnectError as exc:
+            raise ApicConnectionError(self._host, str(exc)) from exc
+
+        if not resp.is_success:
+            raise ApicAuthError(self._host, resp.status_code)
+
+        try:
+            data = resp.json()
+            token: str = data["imdata"][0]["aaaLogin"]["attributes"]["token"]
+        except (KeyError, IndexError, ValueError) as exc:
+            raise ApicResponseError(
+                url, f"unexpected login response body: {exc}"
+            ) from exc
+
         self._client.cookies.set("APIC-cookie", token)
         logger.info("Authenticated to APIC as %s @ %s", self._user, self._host)
 
@@ -154,17 +174,45 @@ class ApicClient:
             params["page"] = str(page)
 
         logger.debug("GET %s params=%s", url, params)
-        resp = await self._client.get(url, params=params)
+        try:
+            resp = await self._client.get(url, params=params)
+        except httpx.TimeoutException as exc:
+            raise ApicConnectionError(self._host, f"request timed out: {exc}") from exc
+        except httpx.ConnectError as exc:
+            raise ApicConnectionError(self._host, str(exc)) from exc
 
         if resp.status_code in (401, 403):
-            logger.warning("APIC returned %d — re-authenticating and retrying", resp.status_code)
+            logger.warning(
+                "APIC returned %d — re-authenticating and retrying", resp.status_code
+            )
             await self.authenticate()
-            resp = await self._client.get(url, params=params)
+            try:
+                resp = await self._client.get(url, params=params)
+            except httpx.TimeoutException as exc:
+                raise ApicConnectionError(
+                    self._host, f"request timed out after re-auth: {exc}"
+                ) from exc
+            except httpx.ConnectError as exc:
+                raise ApicConnectionError(self._host, str(exc)) from exc
+            if resp.status_code in (401, 403):
+                raise ApicAuthError(
+                    self._host,
+                    resp.status_code,
+                    "still unauthorized after re-authentication",
+                )
 
         resp.raise_for_status()
 
+        try:
+            body = resp.json()
+        except ValueError as exc:
+            raise ApicResponseError(url, f"response is not valid JSON: {exc}") from exc
+
+        if "imdata" not in body:
+            raise ApicResponseError(url, "response body missing 'imdata' key")
+
         objects: list[dict[str, Any]] = []
-        for item in resp.json().get("imdata", []):
+        for item in body.get("imdata", []):
             for cls, obj in item.items():
                 attrs: dict[str, Any] = dict(obj.get("attributes", {}))
                 attrs["_class"] = cls

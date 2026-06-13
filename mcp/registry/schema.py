@@ -12,8 +12,13 @@ them in a flattened structure suitable for consumption by an LLM tool call.
 """
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+from exceptions import SchemaLoadError
+
+logger = logging.getLogger("aci-mcp.registry")
 
 # Keys extracted from the raw jsonmeta root object.
 # Heavy fields (writeAccess, events, stats, faults, …) are intentionally omitted
@@ -65,7 +70,18 @@ def load_schema(class_name: str, schemas_dir: Path) -> dict[str, Any]:
             return {}
         path = matches[0]
 
-    raw = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise SchemaLoadError(class_name, str(path), str(exc)) from exc
+    except OSError as exc:
+        raise SchemaLoadError(class_name, str(path), str(exc)) from exc
+
+    if not raw:
+        raise SchemaLoadError(
+            class_name, str(path), "file is empty or contains an empty object"
+        )
+
     root: dict[str, Any] = raw[next(iter(raw))]
 
     result: dict[str, Any] = {k: root[k] for k in _SCALAR_KEYS if k in root}
@@ -79,8 +95,12 @@ def load_schema(class_name: str, schemas_dir: Path) -> dict[str, Any]:
     if raw_rel_to:
         result["relationTo"] = {
             rel: {
-                "targetClass": data if isinstance(data, str) else data.get("targetClass", ""),
-                "cardinality": "" if isinstance(data, str) else data.get("cardinality", ""),
+                "targetClass": data
+                if isinstance(data, str)
+                else data.get("targetClass", ""),
+                "cardinality": ""
+                if isinstance(data, str)
+                else data.get("cardinality", ""),
             }
             for rel, data in raw_rel_to.items()
         }
@@ -89,7 +109,11 @@ def load_schema(class_name: str, schemas_dir: Path) -> dict[str, Any]:
     raw_rel_from: dict[str, Any] = root.get("relationFrom") or {}
     if raw_rel_from:
         result["relationFrom"] = {
-            rel: {"sourceClass": data if isinstance(data, str) else data.get("sourceClass", "")}
+            rel: {
+                "sourceClass": data
+                if isinstance(data, str)
+                else data.get("sourceClass", "")
+            }
             for rel, data in raw_rel_from.items()
         }
 

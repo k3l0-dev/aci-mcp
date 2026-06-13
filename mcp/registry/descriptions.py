@@ -11,6 +11,8 @@ fields.  It is loaded once at server startup and kept in the lifespan context.
 import json
 from pathlib import Path
 
+from exceptions import DescriptionsLoadError
+
 
 def load_descriptions(path: Path) -> dict[str, dict[str, str]]:
     """Load class-descriptions.json into memory.
@@ -21,8 +23,26 @@ def load_descriptions(path: Path) -> dict[str, dict[str, str]]:
     Returns:
         Dict mapping ACI class name → {"label": str, "comment": str}.
         Either key may be absent when the source schema had no value.
+
+    Raises:
+        DescriptionsLoadError: File not found or contains invalid JSON.
     """
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise DescriptionsLoadError(
+            f"class-descriptions.json not found at {path}. "
+            "Regenerate it with: aci-collect run --from descriptions"
+        ) from None
+    except OSError as exc:
+        raise DescriptionsLoadError(f"Cannot read {path}: {exc}") from exc
+
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise DescriptionsLoadError(
+            f"class-descriptions.json at {path} is not valid JSON: {exc}"
+        ) from exc
 
 
 def search(
@@ -51,6 +71,8 @@ def search(
           comment    — one-sentence description (may be empty)
     """
     kw = keyword.lower()
+    if not kw:
+        return []
     results: list[tuple[int, dict[str, str]]] = []
 
     for cls, meta in descriptions.items():
@@ -64,7 +86,9 @@ def search(
         if kw in comment.lower():
             score += 1
         if score > 0:
-            results.append((score, {"class_name": cls, "label": label, "comment": comment}))
+            results.append(
+                (score, {"class_name": cls, "label": label, "comment": comment})
+            )
 
     results.sort(key=lambda x: x[0], reverse=True)
     return [item for _, item in results[:limit]]

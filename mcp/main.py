@@ -59,6 +59,7 @@ from typing import Any
 
 from apic.client import ApicClient
 from dotenv import load_dotenv
+from exceptions import ConfigurationError, UnknownClassError
 from fastmcp import Context, FastMCP
 from fastmcp.server.lifespan import lifespan
 from registry.descriptions import load_descriptions
@@ -98,9 +99,24 @@ async def app_lifespan(server: FastMCP):
     descriptions = load_descriptions(DESCRIPTIONS_FILE)
     logger.info("Registry loaded — %d class descriptions", len(descriptions))
 
-    host = os.environ["APIC_HOST"].removeprefix("https://").removeprefix("http://")
+    host = (
+        os.environ.get("APIC_HOST", "")
+        .removeprefix("https://")
+        .removeprefix("http://")
+        .strip()
+    )
+    if not host:
+        raise ConfigurationError(
+            "APIC_HOST is not set. Add it to .env or export it before starting the server."
+        )
+
+    password = os.environ.get("APIC_PASSWORD", "")
+    if not password:
+        raise ConfigurationError(
+            "APIC_PASSWORD is not set. Add it to .env or export it before starting the server."
+        )
+
     user = os.environ.get("APIC_USER", "admin")
-    password = os.environ["APIC_PASSWORD"]
     verify_ssl = os.environ.get("APIC_VERIFY_SSL", "false").lower() == "true"
     backend = ApicClient(host=host, user=user, password=password, verify_ssl=verify_ssl)
     await backend.authenticate()
@@ -237,7 +253,7 @@ async def query(
     rsp_subtree_include: str | None = None,
     time_range: str | None = None,
     page: int | None = None,
-) -> list[dict[str, Any]] | dict[str, Any]:
+) -> list[dict[str, Any]]:
     """Query ACI objects of a given class from the APIC.
 
     ⚠ PREREQUISITE — before calling this tool you MUST have:
@@ -276,7 +292,10 @@ async def query(
         The "dn" attribute is always present and encodes the full object path.
         When include_children is set, each dict also contains "_children":
         a list of child attribute dicts, each with their own "_class" key.
-        Returns an error dict if class_name is not found in the registry.
+
+    Raises:
+        UnknownClassError: class_name is not in the registry — includes closest
+                           matches so the LLM can self-correct.
     """
     descriptions: dict = ctx.lifespan_context["descriptions"]
     backend: ApicClient = ctx.lifespan_context["backend"]
@@ -287,16 +306,11 @@ async def query(
         suggestions = desc_search(class_name, descriptions, limit=5)
         suggestion_names = [s["class_name"] for s in suggestions]
         await ctx.warning(f"query called with unknown class {class_name!r}")
-        return {
-            "error": (
-                f"Unknown ACI class '{class_name}' — not found in the"
-                f" {len(descriptions)}-class registry."
-            ),
-            "action": "Call search_classes() with a keyword to find the correct class name.",
-            "closest_matches": suggestion_names,
-        }
+        raise UnknownClassError(class_name, suggestion_names, len(descriptions))
 
-    await ctx.info(f"query({class_name!r}, filters={filters!r}, scope={scope_dn!r}, limit={limit})")
+    await ctx.info(
+        f"query({class_name!r}, filters={filters!r}, scope={scope_dn!r}, limit={limit})"
+    )
 
     results = await backend.query_class(
         class_name=class_name,
@@ -319,7 +333,13 @@ async def query(
 
 async def _serve() -> None:
     load_dotenv(ENV_FILE)
-    port = int(os.environ.get("MCP_PORT", 8000))
+    _port_raw = os.environ.get("MCP_PORT", "8000")
+    try:
+        port = int(_port_raw)
+    except ValueError:
+        raise ConfigurationError(
+            f"MCP_PORT must be an integer, got '{_port_raw}'."
+        ) from None
     await mcp.run_http_async(
         host="0.0.0.0",
         port=port,
