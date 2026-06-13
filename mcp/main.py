@@ -54,6 +54,7 @@ query() parameters
 import asyncio
 import logging
 import os
+import signal
 from pathlib import Path
 from typing import Any
 
@@ -62,7 +63,7 @@ from dotenv import load_dotenv
 from exceptions import ConfigurationError, UnknownClassError
 from fastmcp import Context, FastMCP
 from fastmcp.server.lifespan import lifespan
-from middleware.auth import ApiKeyMiddleware, load_api_keys
+from middleware.auth import ApiKeyMiddleware, KeyStore, load_api_keys
 from middleware.oauth import OAuthDiscoveryMiddleware
 from registry.descriptions import load_descriptions
 from registry.descriptions import search as desc_search
@@ -343,23 +344,37 @@ async def _serve() -> None:
             f"MCP_PORT must be an integer, got '{_port_raw}'."
         ) from None
 
-    api_keys = load_api_keys()
     from starlette.middleware import Middleware
 
-    # OAuthDiscoveryMiddleware must be outermost (first in list) so it intercepts
-    # /.well-known/ discovery paths before ApiKeyMiddleware sees them.
-    if api_keys:
-        logger.info("API key authentication enabled (%d key(s) loaded)", len(api_keys))
-        middleware = [
-            Middleware(OAuthDiscoveryMiddleware),
-            Middleware(ApiKeyMiddleware, api_keys=api_keys),
-        ]
+    key_store = KeyStore(load_api_keys())
+    if key_store:
+        logger.info("API key authentication enabled (%d key(s) loaded)", len(key_store))
     else:
         logger.warning(
             "MCP_API_KEYS is not set — server is running WITHOUT authentication. "
             "Set MCP_API_KEYS in .env before deploying to production."
         )
-        middleware = [Middleware(OAuthDiscoveryMiddleware)]
+
+    # SIGHUP reloads MCP_API_KEYS from .env without restarting the server.
+    # Send with: kill -HUP <pid>  or  kill -HUP $(cat .lab.pid)
+    def _handle_sighup(signum, frame):  # noqa: ARG001
+        load_dotenv(ENV_FILE, override=True)
+        new_keys = load_api_keys()
+        key_store.reload(new_keys)
+        n = len(new_keys)
+        if n:
+            logger.info("SIGHUP — API keys reloaded (%d key(s))", n)
+        else:
+            logger.warning("SIGHUP — MCP_API_KEYS is empty after reload, auth disabled")
+
+    signal.signal(signal.SIGHUP, _handle_sighup)
+
+    # OAuthDiscoveryMiddleware must be outermost so it handles /.well-known/
+    # paths before ApiKeyMiddleware validates tokens.
+    middleware = [
+        Middleware(OAuthDiscoveryMiddleware),
+        Middleware(ApiKeyMiddleware, key_store=key_store),
+    ]
 
     await mcp.run_http_async(
         host="0.0.0.0",
