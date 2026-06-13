@@ -1,0 +1,55 @@
+{
+  "_meta": {
+    "description": "Golden query set for search_classes evaluation. 4 tiers of increasing difficulty.",
+    "tiers": {
+      "1": "Direct label or class name match — naive substring should handle these but may fail on rank ties",
+      "2": "Tokenization — lowercased camelCase class names typed without separators",
+      "3": "Functional / prop_labels — the query matches an APIC property label, not the class label",
+      "4": "Synonyms — no textual overlap with the class description; requires semantic understanding"
+    }
+  },
+  "queries": [
+    {"query": "bridge domain",          "expected": "fvBD",            "tier": 1},
+    {"query": "tenant",                 "expected": "fvTenant",        "tier": 1},
+    {"query": "contract",               "expected": "vzBrCP",          "tier": 1},
+    {"query": "VRF",                    "expected": "fvCtx",           "tier": 1},
+    {"query": "subnet",                 "expected": "fvSubnet",        "tier": 1},
+    {"query": "application EPG",        "expected": "fvAEPg",          "tier": 1},
+    {"query": "L3 outside",             "expected": "l3extOut",        "tier": 1},
+    {"query": "fabric node",            "expected": "fabricNode",      "tier": 1},
+    {"query": "OSPF interface policy",  "expected": "ospfIfPol",       "tier": 1},
+    {"query": "contract subject",       "expected": "vzSubj",          "tier": 1},
+    {"query": "filter",                 "expected": "vzFilter",        "tier": 1},
+    {"query": "physical domain",        "expected": "physDomP",        "tier": 1},
+    {"query": "VMM domain",             "expected": "vmmDomP",         "tier": 1},
+    {"query": "logical node profile",   "expected": "l3extLNodeP",     "tier": 1},
+    {"query": "BGP peer",               "expected": "bgpPeerP",        "tier": 1},
+    {"query": "client end point",       "expected": "fvCEp",           "tier": 1},
+    {"query": "PC vPC interface policy","expected": "infraAccBndlGrp", "tier": 1},
+    {"query": "fabric path",            "expected": "fabricPath",      "tier": 1},
+    {"query": "EPG",                    "expected": "fvAEPg",          "tier": 1},
+    {"query": "layer 3 outside",        "expected": "l3extOut",        "tier": 1},
+
+    {"query": "fvbd",                   "expected": "fvBD",            "tier": 2},
+    {"query": "vzbrcp",                 "expected": "vzBrCP",          "tier": 2},
+    {"query": "fvaepg",                 "expected": "fvAEPg",          "tier": 2},
+    {"query": "fvtenant",               "expected": "fvTenant",        "tier": 2},
+    {"query": "l3extout",               "expected": "l3extOut",        "tier": 2},
+
+    {"query": "ARP flooding",           "expected": "fvBD",            "tier": 3},
+    {"query": "unicast routing",        "expected": "fvBD",            "tier": 3},
+    {"query": "MAC address",            "expected": "fvBD",            "tier": 3},
+    {"query": "MTU",                    "expected": "fvBD",            "tier": 3},
+    {"query": "link aggregation",       "expected": "infraAccBndlGrp", "tier": 3},
+    {"query": "data plane learning",    "expected": "fvCtx",           "tier": 3},
+    {"query": "policy enforcement",     "expected": "fvCtx",           "tier": 3},
+    {"query": "QoS class",              "expected": "vzBrCP",          "tier": 3},
+    {"query": "dead interval",          "expected": "ospfIfPol",       "tier": 3},
+    {"query": "hello interval",         "expected": "ospfIfPol",       "tier": 3},
+    {"query": "BGP multihop TTL",       "expected": "bgpPeerP",        "tier": 3},
+
+    {"query": "gateway",                "expected": "fvSubnet",        "tier": 4},
+    {"query": "security policy",        "expected": "vzBrCP",          "tier": 4},
+    {"query": "routing instance",       "expected": "fvCtx",           "tier": 4}
+  ]
+}
