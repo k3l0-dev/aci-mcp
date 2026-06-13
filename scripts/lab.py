@@ -4,7 +4,7 @@
 # requires-python = ">=3.11"
 # dependencies = [
 #   "click>=8.1,<9.0",
-#   "rich>=13.0,<14.0",
+#   "rich>=14.2,<15.0",
 #   "pyfiglet>=1.0,<2.0",
 #   "textual>=8.0,<9.0",
 # ]
