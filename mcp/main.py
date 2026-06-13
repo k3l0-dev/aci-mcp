@@ -63,6 +63,7 @@ from exceptions import ConfigurationError, UnknownClassError
 from fastmcp import Context, FastMCP
 from fastmcp.server.lifespan import lifespan
 from middleware.auth import ApiKeyMiddleware, load_api_keys
+from middleware.oauth import OAuthDiscoveryMiddleware
 from registry.descriptions import load_descriptions
 from registry.descriptions import search as desc_search
 from registry.schema import load_schema
@@ -343,17 +344,22 @@ async def _serve() -> None:
         ) from None
 
     api_keys = load_api_keys()
+    from starlette.middleware import Middleware
+
+    # OAuthDiscoveryMiddleware must be outermost (first in list) so it intercepts
+    # /.well-known/ discovery paths before ApiKeyMiddleware sees them.
     if api_keys:
         logger.info("API key authentication enabled (%d key(s) loaded)", len(api_keys))
-        from starlette.middleware import Middleware
-
-        middleware = [Middleware(ApiKeyMiddleware, api_keys=api_keys)]
+        middleware = [
+            Middleware(OAuthDiscoveryMiddleware),
+            Middleware(ApiKeyMiddleware, api_keys=api_keys),
+        ]
     else:
         logger.warning(
             "MCP_API_KEYS is not set — server is running WITHOUT authentication. "
             "Set MCP_API_KEYS in .env before deploying to production."
         )
-        middleware = None
+        middleware = [Middleware(OAuthDiscoveryMiddleware)]
 
     await mcp.run_http_async(
         host="0.0.0.0",
