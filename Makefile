@@ -1,5 +1,5 @@
 .PHONY: test test-mcp test-collect lint lint-mcp lint-collect \
-        deploy deploy-prod mcp-deps help
+        deploy-dev deploy-prod mcp-deps help
 
 MCP_DIR     := mcp
 COLLECT_DIR := schema-collector
@@ -11,7 +11,7 @@ COLLECT_DIR := schema-collector
 help:
 	@printf '\n  aci-mcp — root Makefile\n\n'
 	@printf '  %s\n' 'Deploy'
-	@printf '  %-24s %s\n' 'make deploy'       'ensure .env + deps, then start mcp server (local)'
+	@printf '  %-24s %s\n' 'make deploy-dev'   'ensure .env + deps, then start mcp server (local)'
 	@printf '  %-24s %s\n' 'make deploy-prod'  'start production stack via docker-compose (Caddy + MCP)'
 	@printf '\n  %s\n' 'Tests'
 	@printf '  %-24s %s\n' 'make test'         'run all tests (mcp + schema-collector)'
@@ -32,7 +32,7 @@ help:
 #           → mcp-deps (always: uv sync is a no-op when lock file unchanged)
 #           → launch server in foreground (Ctrl-C to stop)
 
-deploy: .env mcp-deps
+deploy-dev: .env mcp-deps
 	@printf '\n── starting aci-mcp (local) ─────────────────────────────\n\n'
 	cd $(MCP_DIR) && uv run python main.py
 
