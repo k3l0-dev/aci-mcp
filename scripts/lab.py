@@ -46,6 +46,7 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -145,6 +146,39 @@ def _schema_age_label() -> str:
     return f"[red]{int(age_s / 86400)}d ago[/] — consider re-collecting"
 
 
+def _check_apic(env: dict[str, str]) -> None:
+    """Probe the APIC host for TCP reachability and print a status line.
+
+    Parses APIC_HOST from env to extract hostname and port, then attempts a
+    5-second TCP connect. This validates network-level access before the MCP
+    server starts, so the operator sees a clear warning rather than silent
+    failures later when queries are issued.
+
+    Prints green on success, yellow on failure. Does NOT abort — the MCP
+    server can still start (useful for unit-test runs that do not need a live
+    APIC). If APIC_HOST is absent from .env, prints a warning and returns.
+    """
+    import socket
+
+    raw = env.get("APIC_HOST", "").strip()
+    if not raw:
+        console.print("[yellow]⚠[/]  APIC_HOST not set — queries will fail at runtime")
+        return
+
+    parsed = urllib.parse.urlparse(raw)
+    hostname = parsed.hostname or raw
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+
+    console.print(f"[bold cyan]→[/] checking APIC reachability ({hostname}:{port}) …")
+    try:
+        with socket.create_connection((hostname, port), timeout=5):
+            pass
+        console.print(f"[green]✓[/] APIC reachable  ({hostname}:{port})")
+    except OSError as exc:
+        console.print(f"[yellow]⚠[/]  APIC unreachable ({hostname}:{port}) — {exc}")
+        console.print("    MCP will start but all queries will fail until the APIC is accessible.")
+
+
 # ── commands ──────────────────────────────────────────────────────────────────
 
 
@@ -159,6 +193,7 @@ def up() -> None:
     _splash()
 
     env = _require_env()
+    _check_apic(env)
 
     # Guard: already running?
     if PID_FILE.exists():
