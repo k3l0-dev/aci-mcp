@@ -150,28 +150,12 @@ def _schema_age_label() -> str:
 
 @click.group()
 def cli() -> None:
-    """ACI-MCP lab control — start, test, collect, and manage the local lab."""
+    """ACI-MCP lab control — start, stop, test, collect, and manage API keys."""
 
 
 @cli.command()
 def up() -> None:
-    """Start the lab: sync deps → launch MCP server in background → health check.
-
-    Execution steps:
-      1. Print the splash banner.
-      2. Load .env and abort if it is missing.
-      3. Guard against double-start: if .lab.pid exists and the process is
-         alive, print a warning and exit cleanly.
-      4. Run `uv sync --project mcp/` to ensure dependencies are up to date.
-      5. Spawn `python main.py` from mcp/ as a background process. stdout and
-         stderr are redirected to .lab-server.log at the repo root. The PID is
-         written to .lab.pid for later use by `down` and `status`.
-      6. Poll the /mcp HTTP endpoint every 0.7 s for up to 14 s. A 401/403/405
-         response is treated as "server is up" because it means the auth
-         middleware is active and responding correctly.
-      7. Print a summary panel: endpoint URL, auth status, APIC host,
-         schema age, PID, and log file path.
-    """
+    """Sync deps, start the MCP server in background, wait for health check, print summary."""
     _splash()
 
     env = _require_env()
@@ -266,15 +250,7 @@ def up() -> None:
 
 @cli.command()
 def down() -> None:
-    """Stop the background MCP server started by `up`.
-
-    Reads the PID from .lab.pid and sends SIGTERM to the process. Waits up
-    to 3 seconds for a clean exit before declaring success. Cleans up
-    .lab.pid regardless of outcome so subsequent `up` calls are not blocked.
-
-    If .lab.pid does not exist the server is assumed to already be stopped
-    (or was started manually outside this script).
-    """
+    """Send SIGTERM to the background MCP server and clean up .lab.pid."""
     if not PID_FILE.exists():
         console.print("[yellow]⚠[/]  no .lab.pid found — server not running (or started manually)")
         return
@@ -301,20 +277,7 @@ def down() -> None:
     help="Include integration tests (requires a running MCP + live APIC).",
 )
 def test(live: bool) -> None:
-    """Run the pytest suite for the mcp/ subproject.
-
-    Without --live, the integration/ folder is excluded so tests run fast
-    and without any network dependency. This is the default mode for local
-    iteration and CI.
-
-    With --live, all tests are included. The MCP server must already be
-    running (`lab up`) and APIC credentials in .env must point to a
-    reachable sandbox or production APIC. Output is verbose (pytest -v)
-    so individual test names and failure details are visible.
-
-    The process exit code mirrors pytest's, so this command integrates
-    cleanly with CI pipelines.
-    """
+    """Run pytest — unit tests only by default, add --live for full integration suite."""
     args = [
         "uv", "run", "--project", str(MCP_DIR),
         "pytest", str(MCP_DIR / "tests"),
@@ -329,20 +292,7 @@ def test(live: bool) -> None:
 
 @cli.command()
 def collect() -> None:
-    """Run the full schema-collector pipeline to refresh the ACI class index.
-
-    Executes schema-collector/collect.py via uv, which runs the four-step
-    pipeline in order:
-      1. fetch_cobra.py   — download the acimodel wheel from the APIC
-      2. gen_classes.py   — extract the full class list → classes.yaml
-      3. fetch_schemas.py — fetch jsonmeta files → mo-schemas/
-      4. gen_descriptions.py — build the keyword index → data/class-descriptions.json
-
-    Requires a live APIC reachable at APIC_HOST with valid credentials.
-    The output file (data/class-descriptions.json) is what the MCP server's
-    `search_classes` tool reads at startup — restart the server after collecting
-    to pick up the updated index.
-    """
+    """Run the schema-collector pipeline and refresh data/class-descriptions.json."""
     collect_dir = REPO_ROOT / "schema-collector"
     if not collect_dir.exists():
         console.print("[red]✗[/]  schema-collector/ not found in repo root")
@@ -359,18 +309,7 @@ def collect() -> None:
 
 @cli.command()
 def status() -> None:
-    """Print a live dashboard of the lab environment.
-
-    Displays a summary panel covering:
-      - Server liveness: checks whether the PID in .lab.pid corresponds to
-        a running process. Detects and reports stale PID files.
-      - Endpoint URL derived from MCP_PORT in .env.
-      - APIC host from .env (useful to confirm which environment is targeted).
-      - Number of API keys configured in MCP_API_KEYS.
-      - Schema age: how recently data/class-descriptions.json was last generated.
-
-    Does not require the server to be running — safe to call at any time.
-    """
+    """Show server liveness, endpoint, APIC host, API key count, and schema age."""
     env = _read_env()
 
     if PID_FILE.exists():
@@ -402,20 +341,7 @@ def status() -> None:
 @cli.command()
 @click.argument("count", default=1, type=click.IntRange(min=1, max=20))
 def keys(count: int) -> None:
-    """Generate COUNT new cryptographically secure API keys and save them to .env.
-
-    Each key is produced by secrets.token_urlsafe(32), which gives 256 bits
-    of entropy — suitable for production use as a pre-shared bearer token.
-
-    New keys are appended to the existing MCP_API_KEYS comma-separated list
-    in .env. If MCP_API_KEYS is not yet present in .env the line is added.
-    If .env does not exist at all, the keys are printed to stdout only and
-    a warning is shown.
-
-    COUNT defaults to 1 and is capped at 20 per call to avoid accidental
-    key sprawl. Always print the new keys to stdout so they can be shared
-    with clients that need them.
-    """
+    """Generate COUNT bearer tokens (default 1, max 20) and append them to MCP_API_KEYS in .env."""
     import secrets
 
     new_keys = [secrets.token_urlsafe(32) for _ in range(count)]
