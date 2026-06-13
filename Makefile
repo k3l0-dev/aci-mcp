@@ -62,7 +62,7 @@ deploy-prod: .env
 # ── MCP client config ─────────────────────────────────────────────────────────
 
 mcp-client:
-	@cat $(MCP_DIR)/client/aci-mcp.json
+	@python3 scripts/mcp-client.py
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 
