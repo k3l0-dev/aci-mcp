@@ -1,0 +1,56 @@
+# docker-compose.yml — Production stack: aci-mcp + Caddy TLS proxy
+#
+# Prerequisites:
+#   1. Copy ../.env.example to ../../.env (repo root) and fill in all values
+#   2. Set MCP_DOMAIN to your public hostname or internal FQDN
+#   3. Set MCP_API_KEYS to a comma-separated list of pre-shared bearer tokens
+#
+# Start:
+#   docker compose -f mcp/deploy/docker-compose.yml up -d
+#
+# The MCP server is NOT exposed on the host — all external traffic enters
+# through Caddy on ports 80/443.
+
+services:
+  mcp:
+    build:
+      context: ../..
+      dockerfile: mcp/deploy/Dockerfile
+    env_file: ../../.env
+    expose:
+      - "8000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - internal
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    env_file: ../../.env
+    depends_on:
+      mcp:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - internal
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  internal:
+    driver: bridge

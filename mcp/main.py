@@ -62,6 +62,7 @@ from dotenv import load_dotenv
 from exceptions import ConfigurationError, UnknownClassError
 from fastmcp import Context, FastMCP
 from fastmcp.server.lifespan import lifespan
+from middleware.auth import ApiKeyMiddleware, load_api_keys
 from registry.descriptions import load_descriptions
 from registry.descriptions import search as desc_search
 from registry.schema import load_schema
@@ -340,11 +341,26 @@ async def _serve() -> None:
         raise ConfigurationError(
             f"MCP_PORT must be an integer, got '{_port_raw}'."
         ) from None
+
+    api_keys = load_api_keys()
+    if api_keys:
+        logger.info("API key authentication enabled (%d key(s) loaded)", len(api_keys))
+        from starlette.middleware import Middleware
+
+        middleware = [Middleware(ApiKeyMiddleware, api_keys=api_keys)]
+    else:
+        logger.warning(
+            "MCP_API_KEYS is not set — server is running WITHOUT authentication. "
+            "Set MCP_API_KEYS in .env before deploying to production."
+        )
+        middleware = None
+
     await mcp.run_http_async(
         host="0.0.0.0",
         port=port,
         stateless_http=True,
         json_response=True,
+        middleware=middleware,
     )
 
 

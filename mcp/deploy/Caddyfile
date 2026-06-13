@@ -1,0 +1,40 @@
+# Caddyfile — TLS-terminating reverse proxy for aci-mcp
+#
+# Usage modes:
+#
+#   Public domain (Let's Encrypt auto-cert):
+#     Set MCP_DOMAIN=mcp.yourdomain.com in .env
+#     Ensure ports 80 and 443 are reachable from the internet
+#
+#   Internal / LAN (Caddy self-signed CA):
+#     Set MCP_DOMAIN=mcp.internal.example.com in .env
+#     Add the Caddy root CA to your trust store once:
+#       docker compose exec caddy caddy trust
+#
+# The MCP server listens on port 8000 inside the Docker network.
+# Caddy terminates TLS and proxies to it — the server itself never
+# handles certificates.
+
+{
+    # Disable the admin API in production.
+    admin off
+}
+
+{$MCP_DOMAIN} {
+    reverse_proxy mcp:8000
+
+    # Log access in structured JSON format
+    log {
+        output stdout
+        format json
+        level INFO
+    }
+
+    # Standard security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        -Server
+    }
+}
