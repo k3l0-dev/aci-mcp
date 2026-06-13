@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "aci-mcp": {
+      "type": "remote",
+      "url": "http://localhost:8000/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer YAl4UsbVTFIs1sI8F7n7t2k7gFAbVB4Q4PwokkhEeaI"
+      }
+    }
+  }
+}

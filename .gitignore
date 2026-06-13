@@ -19,5 +19,10 @@ schema-collector/cobra-sdk/
 schema-collector/.venv/
 schema-collector/dist/
 
+# Lab runtime files
+.lab.pid
+.lab-server.log
+tmp/
+
 # IDE
 .vscode/

@@ -52,16 +52,21 @@ query() parameters
 """
 
 import asyncio
+import json
 import logging
 import os
+import signal
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 
 from apic.client import ApicClient
 from dotenv import load_dotenv
 from exceptions import ConfigurationError, UnknownClassError
 from fastmcp import Context, FastMCP
 from fastmcp.server.lifespan import lifespan
+from middleware.auth import ApiKeyMiddleware, KeyStore, load_api_keys
+from middleware.oauth import OAuthDiscoveryMiddleware
+from pydantic import BeforeValidator
 from registry.descriptions import load_descriptions
 from registry.descriptions import search as desc_search
 from registry.schema import load_schema
@@ -73,6 +78,30 @@ REPO_ROOT = BASE_DIR.parent
 SCHEMAS_DIR = REPO_ROOT / "data" / "schemas"
 DESCRIPTIONS_FILE = REPO_ROOT / "data" / "class-descriptions.json"
 ENV_FILE = REPO_ROOT / ".env"
+
+# ── Tool parameter coercion ───────────────────────────────────────────────────
+
+
+def _coerce_json_str(v: object) -> object:
+    """JSON-decode a string before Pydantic validates it.
+
+    LLMs sometimes JSON-encode list/dict arguments as strings instead of
+    sending native JSON arrays/objects.  This runs as a BeforeValidator so
+    '["fvSubnet"]' is silently unwrapped to ["fvSubnet"] before type checking.
+    If the string is not valid JSON, it is returned unchanged and Pydantic
+    will raise the appropriate type error.
+    """
+    if isinstance(v, str):
+        try:
+            return json.loads(v)
+        except (json.JSONDecodeError, ValueError):
+            pass
+    return v
+
+
+# Pydantic types with transparent JSON-string coercion for LLM tool callers.
+_JsonList = Annotated[list[str], BeforeValidator(_coerce_json_str)]
+_JsonDict = Annotated[dict[str, str], BeforeValidator(_coerce_json_str)]
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 
@@ -244,11 +273,11 @@ async def get_schema(
 async def query(
     class_name: str,
     ctx: Context,
-    filters: dict[str, str] | None = None,
+    filters: _JsonDict | None = None,
     scope_dn: str | None = None,
     limit: int = 20,
     order_by: str | None = None,
-    include_children: list[str] | None = None,
+    include_children: _JsonList | None = None,
     filter_expr: str | None = None,
     rsp_subtree_include: str | None = None,
     time_range: str | None = None,
@@ -340,11 +369,45 @@ async def _serve() -> None:
         raise ConfigurationError(
             f"MCP_PORT must be an integer, got '{_port_raw}'."
         ) from None
+
+    from starlette.middleware import Middleware
+
+    key_store = KeyStore(load_api_keys())
+    if key_store:
+        logger.info("API key authentication enabled (%d key(s) loaded)", len(key_store))
+    else:
+        logger.warning(
+            "MCP_API_KEYS is not set — server is running WITHOUT authentication. "
+            "Set MCP_API_KEYS in .env before deploying to production."
+        )
+
+    # SIGHUP reloads MCP_API_KEYS from .env without restarting the server.
+    # Send with: kill -HUP <pid>  or  kill -HUP $(cat .lab.pid)
+    def _handle_sighup(signum, frame):  # noqa: ARG001
+        load_dotenv(ENV_FILE, override=True)
+        new_keys = load_api_keys()
+        key_store.reload(new_keys)
+        n = len(new_keys)
+        if n:
+            logger.info("SIGHUP — API keys reloaded (%d key(s))", n)
+        else:
+            logger.warning("SIGHUP — MCP_API_KEYS is empty after reload, auth disabled")
+
+    signal.signal(signal.SIGHUP, _handle_sighup)
+
+    # OAuthDiscoveryMiddleware must be outermost so it handles /.well-known/
+    # paths before ApiKeyMiddleware validates tokens.
+    middleware = [
+        Middleware(OAuthDiscoveryMiddleware),
+        Middleware(ApiKeyMiddleware, key_store=key_store),
+    ]
+
     await mcp.run_http_async(
         host="0.0.0.0",
         port=port,
         stateless_http=True,
         json_response=True,
+        middleware=middleware,
     )
 
 

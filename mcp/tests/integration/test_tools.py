@@ -255,3 +255,5 @@ async def test_query_unknown_class_error_carries_registry_size(tool_ctx):
     assert exc_info.value.registry_size == len(
         tool_ctx.lifespan_context["descriptions"]
     )
+
+

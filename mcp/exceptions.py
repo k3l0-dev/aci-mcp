@@ -8,6 +8,7 @@ Hierarchy
 ---------
 AciMcpError
 ├── ConfigurationError        — missing or invalid startup configuration
+├── AuthenticationError       — incoming request lacks a valid API key
 ├── RegistryError             — base for registry load failures
 │   ├── DescriptionsLoadError — class-descriptions.json absent or malformed
 │   └── SchemaLoadError       — jsonmeta schema file malformed (exists but invalid)
@@ -33,6 +34,18 @@ class ConfigurationError(AciMcpError):
     """Required environment variable is missing or has an invalid value.
 
     Raised at server startup before any tool is served.
+    """
+
+
+# ── Authentication ────────────────────────────────────────────────────────────
+
+
+class AuthenticationError(AciMcpError):
+    """Incoming MCP request is missing or carrying an invalid API key.
+
+    Not raised programmatically by the middleware (which returns a 401 HTTP
+    response directly) — provided here so test code and future callers can
+    catch a typed exception instead of inspecting response status codes.
     """
 
 
