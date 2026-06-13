@@ -1,5 +1,5 @@
 .PHONY: test test-mcp test-collect lint lint-mcp lint-collect \
-        deploy-dev deploy-prod mcp-deps mcp-client help
+        deploy-dev deploy-prod mcp-deps mcp-client lab help
 
 MCP_DIR     := mcp
 COLLECT_DIR := schema-collector
@@ -10,20 +10,28 @@ COLLECT_DIR := schema-collector
 
 help:
 	@printf '\n  aci-mcp — root Makefile\n\n'
-	@printf '  %s\n' 'Deploy'
-	@printf '  %-24s %s\n' 'make deploy-dev'   'ensure .env + deps, then start mcp server (local)'
-	@printf '  %-24s %s\n' 'make deploy-prod'  'start production stack via docker-compose (Caddy + MCP)'
-	@printf '  %-24s %s\n' 'make mcp-client'   'print MCP client JSON config to stdout'
+	@printf '  %s\n' 'Lab (primary dev loop)'
+	@printf '  %-28s %s\n' 'make lab'            'fire up the lab (splash + sync + start MCP server)'
+	@printf '  %-28s %s\n' 'python scripts/lab.py down'    'stop the MCP server'
+	@printf '  %-28s %s\n' 'python scripts/lab.py status'  'server status + schema age + env summary'
+	@printf '  %-28s %s\n' 'python scripts/lab.py test'    'run unit tests'
+	@printf '  %-28s %s\n' 'python scripts/lab.py test --live'  'run all tests incl. integration (live APIC)'
+	@printf '  %-28s %s\n' 'python scripts/lab.py collect' 'run schema-collector pipeline'
+	@printf '  %-28s %s\n' 'python scripts/lab.py keys [N]' 'generate N new API keys → .env'
+	@printf '\n  %s\n' 'Deploy'
+	@printf '  %-28s %s\n' 'make deploy-dev'   'ensure .env + deps, then start mcp server (local)'
+	@printf '  %-28s %s\n' 'make deploy-prod'  'start production stack via docker-compose (Caddy + MCP)'
+	@printf '  %-28s %s\n' 'make mcp-client'   'print MCP client JSON config to stdout'
 	@printf '\n  %s\n' 'Tests'
-	@printf '  %-24s %s\n' 'make test'         'run all tests (mcp + schema-collector)'
-	@printf '  %-24s %s\n' 'make test-mcp'     'run mcp tests only'
-	@printf '  %-24s %s\n' 'make test-collect' 'run schema-collector tests only'
+	@printf '  %-28s %s\n' 'make test'         'run all tests (mcp + schema-collector)'
+	@printf '  %-28s %s\n' 'make test-mcp'     'run mcp tests only'
+	@printf '  %-28s %s\n' 'make test-collect' 'run schema-collector tests only'
 	@printf '\n  %s\n' 'Lint'
-	@printf '  %-24s %s\n' 'make lint'         'ruff check + fix both subprojects'
-	@printf '  %-24s %s\n' 'make lint-mcp'     'ruff check + fix mcp/'
-	@printf '  %-24s %s\n' 'make lint-collect' 'ruff check + fix schema-collector/'
+	@printf '  %-28s %s\n' 'make lint'         'ruff check + fix both subprojects'
+	@printf '  %-28s %s\n' 'make lint-mcp'     'ruff check + fix mcp/'
+	@printf '  %-28s %s\n' 'make lint-collect' 'ruff check + fix schema-collector/'
 	@printf '\n  %s\n' 'Build'
-	@printf '  %-24s %s\n' 'make -C schema-collector build' 'compile aci-collect binary (OrbStack on macOS)'
+	@printf '  %-28s %s\n' 'make -C schema-collector build' 'compile aci-collect binary (OrbStack on macOS)'
 	@printf '\n'
 
 # ── Deploy — local ─────────────────────────────────────────────────────────────
@@ -58,6 +66,11 @@ deploy-prod: .env
 	@printf '\n'
 	@docker compose -f $(MCP_DIR)/deploy/docker-compose.yml ps
 	@printf '\n'
+
+# ── Lab ───────────────────────────────────────────────────────────────────────
+
+lab:
+	uv run scripts/lab.py up
 
 # ── MCP client config ─────────────────────────────────────────────────────────
 
