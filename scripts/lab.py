@@ -62,6 +62,8 @@ REPO_ROOT = Path(__file__).parent.parent
 ENV_FILE = REPO_ROOT / ".env"
 PID_FILE = REPO_ROOT / ".lab.pid"
 LOG_FILE = REPO_ROOT / ".lab-server.log"
+OPENCODE_PID_FILE = REPO_ROOT / ".lab-opencode.pid"
+OPENCODE_LOG_FILE = REPO_ROOT / ".lab-opencode.log"
 MCP_DIR = REPO_ROOT / "mcp"
 SCHEMA_FILE = REPO_ROOT / "data" / "class-descriptions.json"
 
@@ -264,6 +266,25 @@ def up() -> None:
         raise click.Abort()
 
     console.print(f"[green]✓[/] MCP server is up  (pid {proc.pid})")
+
+    # Launch OpenCode web UI in background
+    console.print("[bold cyan]→[/] starting OpenCode web UI on port 4096 …")
+    with OPENCODE_LOG_FILE.open("w") as oc_log:
+        oc_proc = subprocess.Popen(
+            ["opencode", "web", "--port", "4096", "--log-level", "DEBUG", "--print-logs"],
+            cwd=REPO_ROOT,
+            stdout=oc_log,
+            stderr=oc_log,
+        )
+    OPENCODE_PID_FILE.write_text(str(oc_proc.pid))
+    time.sleep(1.5)
+    if oc_proc.poll() is not None:
+        console.print(
+            f"[yellow]⚠[/]  OpenCode exited immediately — "
+            f"check [bold]{OPENCODE_LOG_FILE.name}[/]"
+        )
+    else:
+        console.print(f"[green]✓[/] OpenCode web UI ready  (pid {oc_proc.pid})")
     console.print()
 
     # Summary panel
@@ -282,16 +303,20 @@ def up() -> None:
     table.add_row("[dim]schema[/]", _schema_age_label())
     table.add_row("[dim]pid[/]", str(proc.pid))
     table.add_row("[dim]logs[/]", str(log_file.relative_to(REPO_ROOT)))
+    table.add_row("[dim]opencode[/]", "[bold]http://localhost:4096[/]")
     console.print(Panel(table, title="[bold yellow]lab ready[/]", border_style="yellow"))
 
 
-@cli.command()
-def down() -> None:
-    """Send SIGTERM to the background MCP server and clean up .lab.pid."""
-    if not PID_FILE.exists():
-        console.print("[yellow]⚠[/]  no .lab.pid found — server not running (or started manually)")
+def _stop_process(pid_file: Path, label: str) -> None:
+    """Send SIGTERM to the process referenced by pid_file and remove the file.
+
+    Waits up to 3 seconds for clean exit. Cleans up the PID file regardless
+    of whether the process was alive, so stale files are never left behind.
+    """
+    if not pid_file.exists():
+        console.print(f"[yellow]⚠[/]  no {pid_file.name} found — {label} not running")
         return
-    pid = int(PID_FILE.read_text().strip())
+    pid = int(pid_file.read_text().strip())
     try:
         os.kill(pid, signal.SIGTERM)
         for _ in range(15):
@@ -300,11 +325,18 @@ def down() -> None:
                 os.kill(pid, 0)
             except ProcessLookupError:
                 break
-        PID_FILE.unlink(missing_ok=True)
-        console.print(f"[green]✓[/] MCP server stopped (pid {pid})")
+        pid_file.unlink(missing_ok=True)
+        console.print(f"[green]✓[/] {label} stopped (pid {pid})")
     except ProcessLookupError:
-        PID_FILE.unlink(missing_ok=True)
-        console.print(f"[yellow]⚠[/]  process {pid} was already gone — cleaned up .lab.pid")
+        pid_file.unlink(missing_ok=True)
+        console.print(f"[yellow]⚠[/]  process {pid} was already gone — cleaned up {pid_file.name}")
+
+
+@cli.command()
+def down() -> None:
+    """Send SIGTERM to the MCP server and OpenCode web UI, clean up PID files."""
+    _stop_process(PID_FILE, "MCP server")
+    _stop_process(OPENCODE_PID_FILE, "OpenCode web UI")
 
 
 @cli.command()

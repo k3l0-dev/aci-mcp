@@ -22,6 +22,8 @@ schema-collector/dist/
 # Lab runtime files
 .lab.pid
 .lab-server.log
+.lab-opencode.pid
+.lab-opencode.log
 tmp/
 
 # IDE
