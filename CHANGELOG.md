@@ -9,6 +9,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ---
 
+## [0.2.0] - 2026-06-13
+
+### Added
+
+- `mcp/middleware/auth.py` — `ApiKeyMiddleware`: Starlette `BaseHTTPMiddleware` validating
+  `Authorization: Bearer <token>` or `X-API-Key: <token>` on every incoming request.
+  Token comparison uses `hmac.compare_digest` to prevent timing-oracle attacks.
+  No-op (with startup warning) when `MCP_API_KEYS` is unset — preserves local dev UX.
+- `mcp/deploy/Caddyfile` — TLS-terminating reverse proxy; supports Let's Encrypt (public domain)
+  and Caddy's internal CA (LAN/self-signed). Security headers included (`HSTS`, `X-Frame-Options`, …).
+- `mcp/deploy/docker-compose.yml` — two-service production stack: `mcp` (internal only) + `caddy`
+  (ports 80/443). MCP container is not exposed on the host — all traffic enters via Caddy.
+- `mcp/exceptions.py` — `AuthenticationError` added to the exception hierarchy.
+- `docs/` — project wiki: architecture diagrams (Mermaid), deployment guides, tools reference,
+  internals documentation, and full settings reference.
+- `.env.example` — expanded with `MCP_API_KEYS` and `MCP_DOMAIN` variables.
+- 26 new unit tests for `middleware.auth` (load, extract, validate, HTTP integration).
+
+### Changed
+
+- `mcp/pyproject.toml` — version bumped to `0.2.0`; added `license = {text = "Proprietary"}`;
+  all dependency version constraints now have explicit upper bounds.
+- `mcp/main.py` — `_serve()` now conditionally applies `ApiKeyMiddleware` via
+  `run_http_async(middleware=[...])` when `MCP_API_KEYS` is configured.
+
+### Security
+
+- All MCP endpoints are now protected behind API key authentication when `MCP_API_KEYS` is set.
+- TLS is provided end-to-end by Caddy when deployed via `docker-compose.yml`.
+- The MCP server port (`8000`) is never exposed directly to the host in the production stack.
+
+---
+
 ## [0.1.0] - 2026-06-12
 
 ### Added
