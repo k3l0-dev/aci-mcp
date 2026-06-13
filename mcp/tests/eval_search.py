@@ -12,17 +12,18 @@ Run from mcp/:
     python tests/eval_search.py --limit 5     # restrict result window
     python tests/eval_search.py --verbose     # show misses and near-misses
 
-Reference results — APIC mo-apic-v6.0_9c, 14 603 classes
+Reference results — APIC mo-apic-v6.0_9c, 15 152 classes
 ──────────────────────────────────────────────────────────
-Strategy                   R@1     R@5     MRR    Avg ms
-─────────────────────────  ──────  ──────  ─────  ──────
-Baseline (naive substring) 15.4%   35.9%   0.229   3.2
-+ Rs/Rt penalty  (axe 1)   28.2%   41.0%   0.338   3.2
+Strategy                        R@1     R@5     MRR    Avg ms
+──────────────────────────────  ──────  ──────  ─────  ──────
+Baseline (naive substring)      15.4%   35.9%   0.229   3.2
++ Rs/Rt penalty       (axe 1)   28.2%   41.0%   0.338   3.2
++ prop_labels search  (axe 2)   30.8%   53.8%   0.400  11.4
 
-Tier breakdown after axe 1:
+Tier breakdown after axe 1 + axe 2:
   Tier 1 — direct label/name   R@1=35%   R@5= 55%
   Tier 2 — camelCase lookup    R@1=80%   R@5=100%
-  Tier 3 — prop_labels         R@1= 0%   R@5=  0%   (requires axe 2)
+  Tier 3 — prop_labels         R@1= 9%   R@5= 45%
   Tier 4 — synonyms            R@1= 0%   R@5=  0%   (requires semantic search)
 
 Add a row to the table above whenever a scoring change is shipped.

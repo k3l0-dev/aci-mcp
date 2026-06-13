@@ -126,6 +126,14 @@ def search(
             score += 2
         if kw in comment.lower():
             score += 1
+        if score == 0:
+            # Only scan prop_labels when the class didn't already match on
+            # name/label/comment — avoids inflating scores for well-matched classes
+            # and keeps the hot path fast for the majority of queries.
+            for pl in meta.get("prop_labels", ()):
+                if kw in pl.lower():
+                    score = 1
+                    break
         if score > 0:
             if _RS_RT_RE.match(cls):
                 score -= 3
