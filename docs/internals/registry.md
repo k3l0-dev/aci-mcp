@@ -50,18 +50,33 @@ flowchart LR
 
 ### `search(keyword, descriptions, limit)`
 
-O(n) linear scan with relevance scoring. On 15k classes, a single search completes in < 5 ms (verified by perf tests).
+O(n) linear scan with relevance scoring. See [search-algorithm.md](search-algorithm.md) for the full algorithm rationale, measured gains, and evolution history.
+
+**Scoring rules (applied in order):**
 
 ```python
 score = 0
-if keyword in class_name.lower():  score += 3
-if keyword in label.lower():       score += 2
-if keyword in comment.lower():     score += 1
+if keyword in class_name.lower():  score += 3   # class name match
+if keyword in label.lower():       score += 2   # label match
+if keyword in comment.lower():     score += 1   # comment match
+
+# Fallback: scan prop_labels only when no match found above
+if score == 0:
+    for pl in meta.get("prop_labels", ()):
+        if keyword in pl.lower():
+            score = 1
+            break   # no accumulation across multiple prop_labels
+
+# Rs/Rt relation classes are penalised: they are internal plumbing and
+# should never rank above canonical domain objects.
+if score > 0 and _RS_RT_RE.match(class_name):
+    score -= 3
 ```
 
 **Edge cases handled:**
 - Empty keyword → returns `[]` immediately (no scan)
-- Missing `label` or `comment` key → treated as `""` via `meta.get(..., "")`
+- Missing `label`, `comment`, or `prop_labels` key → safe default via `.get()`
+- Rs/Rt class whose penalised score reaches 0 → excluded from results
 
 ---
 

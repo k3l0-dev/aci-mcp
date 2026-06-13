@@ -44,19 +44,37 @@ An empty list means no class matched the keyword. Refine or broaden the search t
 ## Scoring
 
 ```mermaid
-flowchart LR
+flowchart TD
     KW["keyword (lowercased)"]
 
-    KW -->|"found in class name"| W3["+3"]
-    KW -->|"found in label"| W2["+2"]
-    KW -->|"found in comment"| W1["+1"]
+    KW -->|"in class name"| W3["+3"]
+    KW -->|"in label"| W2["+2"]
+    KW -->|"in comment"| W1["+1"]
+    W3 & W2 & W1 --> CHECK{score > 0?}
 
-    W3 --> SORT["sort desc → return top N"]
-    W2 --> SORT
-    W1 --> SORT
+    CHECK -->|"no — fallback"| PL["scan prop_labels\n+1 on first hit, then break"]
+    CHECK -->|"yes"| RSRT
+
+    PL --> RSRT{Rs/Rt class?}
+    RSRT -->|"yes"| PEN["-3 penalty"]
+    RSRT -->|"no"| SORT
+
+    PEN --> ZERO{score > 0?}
+    ZERO -->|"yes"| SORT["sort desc → return top N"]
+    ZERO -->|"no → excluded"| DROP["(not in results)"]
 ```
 
-A class that matches in both its name and label scores 5 and ranks above a comment-only match (score 1).
+**Scoring summary:**
+
+| Match location | Score added | Notes |
+|---|---|---|
+| Class name | +3 | Strongest signal |
+| Label | +2 | Official human name |
+| Comment | +1 | Contextual description |
+| Prop label (fallback) | +1 | Only when score = 0 on above; no cumul |
+| Rs/Rt class name pattern | −3 | Applied after above; may exclude class |
+
+For the algorithm rationale, observed gains, and known limits, see [internals/search-algorithm.md](../internals/search-algorithm.md).
 
 ---
 
