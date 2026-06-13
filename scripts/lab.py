@@ -6,38 +6,31 @@
 #   "click>=8.1,<9.0",
 #   "rich>=13.0,<14.0",
 #   "pyfiglet>=1.0,<2.0",
+#   "textual>=8.0,<9.0",
 # ]
 # ///
 """
-scripts/lab.py — ACI-MCP lab control CLI.
+scripts/lab.py — ACI-MCP lab control.
 
-This is the primary development-loop controller for the aci-mcp project.
-It wraps every repetitive dev task (starting the server, running tests,
-collecting schemas, managing API keys) into a single, consistent command-line
-interface with rich terminal output.
+Running with no arguments (or `tui`) starts the full pipeline — dependency sync,
+Cisco ACI sandbox reachability check, MCP server, OpenCode web UI — then opens
+the synthwave TUI dashboard.
 
-All commands read configuration from the repo-root .env file. The server
-process is managed via a .lab.pid file so it can be started and stopped
-independently across terminal sessions.
+Sub-commands are available for scripting and CI:
+
+    tui      Default: pipeline (if needed) + TUI dashboard
+    up       Start the pipeline without the TUI
+    down     Stop MCP server and OpenCode
+    logs     Stream the MCP server log in real time (Ctrl-C to stop)
+    test     Run pytest  (add --live for integration tests against a live APIC)
+    collect  Refresh data/class-descriptions.json from a live APIC
+    keys     Generate bearer tokens and append them to MCP_API_KEYS in .env
 
 Usage:
-    uv run scripts/lab.py <command> [options]
-    make lab                              # alias for `up`
-
-Commands:
-    up       Start the lab (sync deps → APIC check → launch MCP server → health check).
-    down     Stop the background MCP server process.
-    logs     Stream the MCP server log in real time (Ctrl-C to stop).
-    test     Run the pytest suite. Unit tests only by default; pass --live
-             to also run integration tests against a live APIC sandbox.
-    collect  Execute the full schema-collector pipeline to refresh
-             data/class-descriptions.json from a live APIC.
-    status   Print a dashboard: server liveness, schema age, env summary.
-    keys     Generate cryptographically secure API keys and append them
-             to MCP_API_KEYS in .env.
-
-Dependencies (resolved automatically by uv via PEP 723 inline metadata):
-    click, rich, pyfiglet
+    uv run scripts/lab.py              # default: tui
+    uv run scripts/lab.py up           # pipeline only (no TUI)
+    uv run scripts/lab.py down
+    uv run scripts/lab.py test --live
 """
 
 import os
@@ -59,6 +52,9 @@ from rich.table import Table
 from rich.text import Text
 
 REPO_ROOT = Path(__file__).parent.parent
+# Make scripts/ importable so `from scripts.tui.app import ACILabControl` works.
+sys.path.insert(0, str(REPO_ROOT))
+
 ENV_FILE = REPO_ROOT / ".env"
 PID_FILE = REPO_ROOT / ".lab.pid"
 LOG_FILE = REPO_ROOT / ".lab-server.log"
@@ -74,12 +70,7 @@ console = Console()
 
 
 def _splash() -> None:
-    """Render the MCP-ACI ASCII-art banner with copyright line.
-
-    Uses pyfiglet's 'doom' font (blocky, non-italic) rendered in bold yellow
-    via Rich. The copyright notice is right-aligned below the art. Only called
-    once, at the start of the `up` command, so it doesn't clutter other output.
-    """
+    """Render the MCP-ACI ASCII banner and copyright line."""
     art = pyfiglet.figlet_format("MCP-ACI", font="doom")
     console.print(Text(art.rstrip(), style="bold yellow"))
     console.print(
@@ -91,12 +82,9 @@ def _splash() -> None:
 
 
 def _read_env() -> dict[str, str]:
-    """Parse the repo-root .env file and return its key-value pairs as a dict.
+    """Parse the repo-root .env file and return its key=value pairs.
 
-    Ignores blank lines and lines starting with '#'. Values are not
-    shell-expanded (no variable substitution). Returns an empty dict if
-    .env does not exist, so callers can handle the missing-file case
-    explicitly without catching exceptions.
+    Ignores comments and blank lines. Returns an empty dict if the file is absent.
     """
     if not ENV_FILE.exists():
         return {}
@@ -112,36 +100,33 @@ def _read_env() -> dict[str, str]:
 
 
 def _require_env() -> dict[str, str]:
-    """Return the parsed .env dict, or abort with a helpful message if absent.
-
-    Used by commands that cannot run without a configured environment
-    (e.g. `up`, which needs APIC_HOST and MCP_PORT). Raises click.Abort
-    so Click exits cleanly without a Python traceback.
-    """
+    """Return the parsed .env or abort with a helpful message if absent."""
     env = _read_env()
     if not env:
         console.print(
-            "[red]✗[/]  .env not found — create one first "
-            "([bold]python scripts/setup-env.py[/] or copy [bold].env.example[/])"
+            "[red]✗[/]  .env not found — copy [bold].env.example[/] and "
+            "fill in APIC_HOST, APIC_USER, APIC_PASSWORD"
         )
         raise click.Abort()
     return env
 
 
+def _pid_alive(pid_file: Path) -> tuple[bool, int]:
+    """Return (alive, pid) from a PID file; (False, 0) if absent or dead."""
+    if not pid_file.exists():
+        return False, 0
+    try:
+        pid = int(pid_file.read_text().strip())
+        os.kill(pid, 0)
+        return True, pid
+    except (ValueError, OSError, ProcessLookupError):
+        return False, 0
+
+
 def _schema_age_label() -> str:
-    """Return a Rich-formatted string describing how fresh the schema index is.
-
-    Compares the mtime of data/class-descriptions.json against the current
-    time and returns a color-coded label:
-      - green  : updated less than 1 hour ago
-      - yellow : between 1 hour and 24 hours old
-      - red    : older than 24 hours, or file not found at all
-
-    This is used both in the `up` summary panel and the `status` dashboard
-    so the operator always knows whether schemas need refreshing.
-    """
+    """Return a Rich-formatted freshness label for data/class-descriptions.json."""
     if not SCHEMA_FILE.exists():
-        return "[red]not found — run: python scripts/lab.py collect[/]"
+        return "[red]not found — run: lab collect[/]"
     age_s = time.time() - SCHEMA_FILE.stat().st_mtime
     if age_s < 3600:
         return f"[green]{int(age_s / 60)}m ago[/]"
@@ -151,16 +136,10 @@ def _schema_age_label() -> str:
 
 
 def _check_apic(env: dict[str, str]) -> None:
-    """Probe the APIC host for TCP reachability and print a status line.
+    """TCP-probe APIC_HOST and print a status line.
 
-    Parses APIC_HOST from env to extract hostname and port, then attempts a
-    5-second TCP connect. This validates network-level access before the MCP
-    server starts, so the operator sees a clear warning rather than silent
-    failures later when queries are issued.
-
-    Prints green on success, yellow on failure. Does NOT abort — the MCP
-    server can still start (useful for unit-test runs that do not need a live
-    APIC). If APIC_HOST is absent from .env, prints a warning and returns.
+    Does not abort on failure — the MCP server can still start (useful for
+    unit-test runs that do not need a live APIC).
     """
     import socket
 
@@ -172,149 +151,20 @@ def _check_apic(env: dict[str, str]) -> None:
     parsed = urllib.parse.urlparse(raw)
     hostname = parsed.hostname or raw
     port = parsed.port or (443 if parsed.scheme == "https" else 80)
-
-    console.print(f"[bold cyan]→[/] checking APIC reachability ({hostname}:{port}) …")
+    console.print(f"[bold cyan]→[/] checking APIC sandbox ({hostname}:{port}) …")
     try:
         with socket.create_connection((hostname, port), timeout=5):
             pass
-        console.print(f"[green]✓[/] APIC reachable  ({hostname}:{port})")
+        console.print(f"[green]✓[/] APIC sandbox reachable  ({hostname}:{port})")
     except OSError as exc:
-        console.print(f"[yellow]⚠[/]  APIC unreachable ({hostname}:{port}) — {exc}")
-        console.print("    MCP will start but all queries will fail until the APIC is accessible.")
-
-
-# ── commands ──────────────────────────────────────────────────────────────────
-
-
-@click.group()
-def cli() -> None:
-    """ACI-MCP lab control — start, stop, test, collect, and manage API keys."""
-
-
-@cli.command()
-def up() -> None:
-    """Sync deps, start the MCP server in background, wait for health check, print summary."""
-    _splash()
-
-    env = _require_env()
-    _check_apic(env)
-
-    # Guard: already running?
-    if PID_FILE.exists():
-        pid = int(PID_FILE.read_text().strip())
-        try:
-            os.kill(pid, 0)
-            console.print(f"[yellow]⚠[/]  MCP server already running (pid {pid})")
-            console.print("    Run [bold]python scripts/lab.py status[/] for details.")
-            return
-        except ProcessLookupError:
-            PID_FILE.unlink()
-
-    # Sync deps
-    console.print("[bold cyan]→[/] syncing mcp dependencies …")
-    result = subprocess.run(
-        ["uv", "sync", "--project", str(MCP_DIR)],
-        capture_output=True,
-        text=True,
-    )
-    if result.returncode != 0:
-        console.print(f"[red]✗[/]  uv sync failed:\n{result.stderr.strip()}")
-        raise click.Abort()
-    console.print("[green]✓[/] dependencies up to date")
-
-    # Launch MCP server in background
-    port = env.get("MCP_PORT", "8000")
-    console.print(f"[bold cyan]→[/] starting MCP server on port {port} …")
-    log_file = LOG_FILE
-    with log_file.open("w") as log:
-        proc = subprocess.Popen(
-            ["uv", "run", "--project", str(MCP_DIR), "python", "main.py"],
-            cwd=MCP_DIR,
-            stdout=log,
-            stderr=log,
-        )
-    PID_FILE.write_text(str(proc.pid))
-
-    # Health check — 401/403/405 counts as "server is up" (auth middleware active)
-    url = f"http://localhost:{port}/mcp"
-    ready = False
-    for _ in range(20):
-        time.sleep(0.7)
-        if proc.poll() is not None:
-            console.print(
-                f"[red]✗[/]  server process exited unexpectedly — "
-                f"check [bold]{log_file.relative_to(REPO_ROOT)}[/]"
-            )
-            PID_FILE.unlink(missing_ok=True)
-            raise click.Abort()
-        try:
-            urllib.request.urlopen(url, timeout=2)
-            ready = True
-            break
-        except urllib.error.HTTPError as exc:
-            if exc.code in (401, 403, 405):
-                ready = True
-                break
-        except Exception:
-            continue
-
-    if not ready:
-        console.print(
-            f"[red]✗[/]  server did not respond after 14s — "
-            f"check [bold]{log_file.relative_to(REPO_ROOT)}[/]"
-        )
-        raise click.Abort()
-
-    console.print(f"[green]✓[/] MCP server is up  (pid {proc.pid})")
-
-    # Launch OpenCode web UI in background
-    console.print("[bold cyan]→[/] starting OpenCode web UI on port 4096 …")
-    with OPENCODE_LOG_FILE.open("w") as oc_log:
-        oc_proc = subprocess.Popen(
-            ["opencode", "web", "--port", "4096", "--log-level", "DEBUG", "--print-logs"],
-            cwd=REPO_ROOT,
-            stdout=oc_log,
-            stderr=oc_log,
-        )
-    OPENCODE_PID_FILE.write_text(str(oc_proc.pid))
-    time.sleep(1.5)
-    if oc_proc.poll() is not None:
-        console.print(
-            f"[yellow]⚠[/]  OpenCode exited immediately — "
-            f"check [bold]{OPENCODE_LOG_FILE.name}[/]"
-        )
-    else:
-        console.print(f"[green]✓[/] OpenCode web UI ready  (pid {oc_proc.pid})")
-    console.print()
-
-    # Summary panel
-    api_keys_raw = env.get("MCP_API_KEYS", "")
-    key_count = len([k for k in api_keys_raw.split(",") if k.strip()])
-    auth_label = (
-        f"[green]enabled[/] ({key_count} key{'s' if key_count != 1 else ''})"
-        if key_count
-        else "[yellow]DISABLED — server is open[/]"
-    )
-
-    table = Table.grid(padding=(0, 2))
-    table.add_row("[dim]endpoint[/]", f"[bold]http://localhost:{port}/mcp[/]")
-    table.add_row("[dim]auth[/]", auth_label)
-    table.add_row("[dim]apic[/]", env.get("APIC_HOST", "[red]not set[/]"))
-    table.add_row("[dim]schema[/]", _schema_age_label())
-    table.add_row("[dim]pid[/]", str(proc.pid))
-    table.add_row("[dim]logs[/]", str(log_file.relative_to(REPO_ROOT)))
-    table.add_row("[dim]opencode[/]", "[bold]http://localhost:4096[/]")
-    console.print(Panel(table, title="[bold yellow]lab ready[/]", border_style="yellow"))
+        console.print(f"[yellow]⚠[/]  APIC sandbox unreachable — {exc}")
+        console.print("    MCP will start but queries will fail until the APIC is accessible.")
 
 
 def _stop_process(pid_file: Path, label: str) -> None:
-    """Send SIGTERM to the process referenced by pid_file and remove the file.
-
-    Waits up to 3 seconds for clean exit. Cleans up the PID file regardless
-    of whether the process was alive, so stale files are never left behind.
-    """
+    """Send SIGTERM to the process in pid_file, wait up to 3 s, remove the file."""
     if not pid_file.exists():
-        console.print(f"[yellow]⚠[/]  no {pid_file.name} found — {label} not running")
+        console.print(f"[yellow]⚠[/]  no {pid_file.name} — {label} not running")
         return
     pid = int(pid_file.read_text().strip())
     try:
@@ -326,27 +176,171 @@ def _stop_process(pid_file: Path, label: str) -> None:
             except ProcessLookupError:
                 break
         pid_file.unlink(missing_ok=True)
-        console.print(f"[green]✓[/] {label} stopped (pid {pid})")
+        console.print(f"[green]✓[/] {label} stopped  (pid {pid})")
     except ProcessLookupError:
         pid_file.unlink(missing_ok=True)
-        console.print(f"[yellow]⚠[/]  process {pid} was already gone — cleaned up {pid_file.name}")
+        console.print(f"[yellow]⚠[/]  pid {pid} already gone — cleaned up {pid_file.name}")
+
+
+def _start_pipeline(env: dict[str, str]) -> None:
+    """Sync deps, check APIC, start MCP server and OpenCode.
+
+    Prints Rich-formatted progress to the console. Raises click.Abort on
+    any critical failure (uv sync error, server crash before health check).
+    Is a no-op for already-running components (prints a warning instead).
+    """
+    # ── MCP server ────────────────────────────────────────────────────────────
+    mcp_alive, mcp_pid = _pid_alive(PID_FILE)
+    if mcp_alive:
+        console.print(f"[yellow]⚠[/]  MCP already running (pid {mcp_pid}) — skipping")
+    else:
+        # Sync dependencies
+        console.print("[bold cyan]→[/] syncing mcp dependencies …")
+        result = subprocess.run(
+            ["uv", "sync", "--project", str(MCP_DIR)],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            console.print(f"[red]✗[/]  uv sync failed:\n{result.stderr.strip()}")
+            raise click.Abort()
+        console.print("[green]✓[/] dependencies up to date")
+
+        # APIC sandbox reachability
+        _check_apic(env)
+
+        # Launch MCP in background
+        port = env.get("MCP_PORT", "8000")
+        console.print(f"[bold cyan]→[/] starting MCP server on :{port} …")
+        with LOG_FILE.open("w") as log:
+            proc = subprocess.Popen(
+                ["uv", "run", "--project", str(MCP_DIR), "python", "main.py"],
+                cwd=MCP_DIR,
+                stdout=log,
+                stderr=log,
+            )
+        PID_FILE.write_text(str(proc.pid))
+
+        # Health check — 401/403/405 counts as "server up" (auth middleware active)
+        url = f"http://localhost:{port}/mcp"
+        ready = False
+        for _ in range(20):
+            time.sleep(0.7)
+            if proc.poll() is not None:
+                console.print(
+                    f"[red]✗[/]  MCP server exited unexpectedly — "
+                    f"check [bold]{LOG_FILE.relative_to(REPO_ROOT)}[/]"
+                )
+                PID_FILE.unlink(missing_ok=True)
+                raise click.Abort()
+            try:
+                urllib.request.urlopen(url, timeout=2)
+                ready = True
+                break
+            except urllib.error.HTTPError as exc:
+                if exc.code in (401, 403, 405):
+                    ready = True
+                    break
+            except Exception:
+                continue
+
+        if not ready:
+            console.print(
+                f"[red]✗[/]  MCP server did not respond after 14 s — "
+                f"check [bold]{LOG_FILE.relative_to(REPO_ROOT)}[/]"
+            )
+            raise click.Abort()
+        console.print(f"[green]✓[/] MCP server up  (pid {proc.pid})")
+
+    # ── OpenCode web UI ───────────────────────────────────────────────────────
+    oc_alive, oc_pid = _pid_alive(OPENCODE_PID_FILE)
+    if oc_alive:
+        console.print(f"[yellow]⚠[/]  OpenCode already running (pid {oc_pid}) — skipping")
+    else:
+        console.print("[bold cyan]→[/] starting OpenCode web UI on :4096 …")
+        with OPENCODE_LOG_FILE.open("w") as oc_log:
+            oc_proc = subprocess.Popen(
+                ["opencode", "web", "--port", "4096", "--log-level", "DEBUG", "--print-logs"],
+                cwd=REPO_ROOT,
+                stdout=oc_log,
+                stderr=oc_log,
+            )
+        OPENCODE_PID_FILE.write_text(str(oc_proc.pid))
+        time.sleep(1.5)
+        if oc_proc.poll() is not None:
+            console.print(
+                f"[yellow]⚠[/]  OpenCode exited immediately — "
+                f"check [bold]{OPENCODE_LOG_FILE.name}[/]"
+            )
+        else:
+            console.print(f"[green]✓[/] OpenCode web UI ready  (pid {oc_proc.pid})")
+
+
+# ── commands ──────────────────────────────────────────────────────────────────
+
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+def cli(ctx: click.Context) -> None:
+    """ACI-MCP lab — no arguments starts the pipeline and opens the TUI."""
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(tui)
+
+
+@cli.command()
+def tui() -> None:
+    """Start the pipeline (if not running), then open the TUI dashboard."""
+    env = _require_env()
+    mcp_alive, _ = _pid_alive(PID_FILE)
+    if not mcp_alive:
+        _splash()
+        _start_pipeline(env)
+        console.print()
+        time.sleep(0.3)  # let terminal settle before Textual takes over the screen
+
+    from scripts.tui.app import ACILabControl  # noqa: PLC0415
+    ACILabControl().run()
+
+
+@cli.command()
+def up() -> None:
+    """Start the pipeline (MCP + APIC check + OpenCode) without the TUI."""
+    _splash()
+    env = _require_env()
+    _start_pipeline(env)
+
+    port = env.get("MCP_PORT", "8000")
+    api_keys_raw = env.get("MCP_API_KEYS", "")
+    key_count = len([k for k in api_keys_raw.split(",") if k.strip()])
+    auth_label = (
+        f"[green]enabled[/] ({key_count} key{'s' if key_count != 1 else ''})"
+        if key_count
+        else "[yellow]DISABLED — server is open[/]"
+    )
+    console.print()
+    table = Table.grid(padding=(0, 2))
+    table.add_row("[dim]endpoint[/]", f"[bold]http://localhost:{port}/mcp[/]")
+    table.add_row("[dim]auth[/]", auth_label)
+    table.add_row("[dim]apic[/]", env.get("APIC_HOST", "[red]not set[/]"))
+    table.add_row("[dim]schema[/]", _schema_age_label())
+    table.add_row("[dim]opencode[/]", "[bold]http://localhost:4096[/]")
+    console.print(Panel(table, title="[bold yellow]lab ready[/]", border_style="yellow"))
 
 
 @cli.command()
 def down() -> None:
-    """Send SIGTERM to the MCP server and OpenCode web UI, clean up PID files."""
+    """Stop the MCP server and OpenCode."""
     _stop_process(PID_FILE, "MCP server")
-    _stop_process(OPENCODE_PID_FILE, "OpenCode web UI")
+    _stop_process(OPENCODE_PID_FILE, "OpenCode")
 
 
 @cli.command()
-@click.option("--lines", "-n", default=50, show_default=True, help="Past lines to show before following.")
+@click.option("--lines", "-n", default=50, show_default=True, help="Past lines to show.")
 def logs(lines: int) -> None:
-    """Stream the MCP server log in real time — Ctrl-C to stop."""
+    """Stream the MCP server log in real time (Ctrl-C to stop)."""
     if not LOG_FILE.exists():
         console.print(f"[red]✗[/]  {LOG_FILE.name} not found — run [bold]lab up[/] first")
         raise click.Abort()
-    # tail -n N -f streams past lines then follows new output
     subprocess.run(["tail", f"-n{lines}", "-f", str(LOG_FILE)])
 
 
@@ -357,7 +351,7 @@ def logs(lines: int) -> None:
     help="Include integration tests (requires a running MCP + live APIC).",
 )
 def test(live: bool) -> None:
-    """Run pytest — unit tests only by default, add --live for full integration suite."""
+    """Run pytest — unit tests only by default; add --live for full suite."""
     args = [
         "uv", "run", "--project", str(MCP_DIR),
         "pytest", str(MCP_DIR / "tests"),
@@ -366,8 +360,7 @@ def test(live: bool) -> None:
         args += ["-v", "--tb=short"]
     else:
         args += ["-q", "--ignore", str(MCP_DIR / "tests" / "integration")]
-    result = subprocess.run(args, cwd=REPO_ROOT)
-    sys.exit(result.returncode)
+    sys.exit(subprocess.run(args, cwd=REPO_ROOT).returncode)
 
 
 @cli.command()
@@ -378,54 +371,19 @@ def collect() -> None:
         console.print("[red]✗[/]  schema-collector/ not found in repo root")
         raise click.Abort()
     console.print("[bold cyan]→[/] running schema-collector pipeline …")
-    result = subprocess.run(
-        ["uv", "run", "python", "collect.py"],
-        cwd=collect_dir,
-    )
+    result = subprocess.run(["uv", "run", "python", "collect.py"], cwd=collect_dir)
     if result.returncode == 0:
-        console.print("[green]✓[/] schema collection complete — data/class-descriptions.json updated")
+        console.print("[green]✓[/] data/class-descriptions.json updated")
     sys.exit(result.returncode)
-
-
-@cli.command()
-def status() -> None:
-    """Show server liveness, endpoint, APIC host, API key count, and schema age."""
-    env = _read_env()
-
-    if PID_FILE.exists():
-        pid = int(PID_FILE.read_text().strip())
-        try:
-            os.kill(pid, 0)
-            server_label = f"[green]running[/] (pid {pid})"
-        except ProcessLookupError:
-            server_label = "[red]stopped[/] (stale .lab.pid — run [bold]lab down[/] to clean up)"
-    else:
-        server_label = "[red]stopped[/]"
-
-    port = env.get("MCP_PORT", "8000")
-    api_keys_raw = env.get("MCP_API_KEYS", "")
-    key_count = len([k for k in api_keys_raw.split(",") if k.strip()])
-
-    table = Table.grid(padding=(0, 2))
-    table.add_row("[dim]server[/]", server_label)
-    table.add_row("[dim]endpoint[/]", f"http://localhost:{port}/mcp")
-    table.add_row("[dim]apic[/]", env.get("APIC_HOST", "[red]not set[/]"))
-    table.add_row(
-        "[dim]api keys[/]",
-        f"{key_count} key(s) configured" if key_count else "[yellow]none — auth disabled[/]",
-    )
-    table.add_row("[dim]schema[/]", _schema_age_label())
-    console.print(Panel(table, title="lab status", border_style="cyan"))
 
 
 @cli.command()
 @click.argument("count", default=1, type=click.IntRange(min=1, max=20))
 def keys(count: int) -> None:
-    """Generate COUNT bearer tokens (default 1, max 20) and append them to MCP_API_KEYS in .env."""
+    """Generate COUNT bearer tokens (default 1) and append them to MCP_API_KEYS in .env."""
     import secrets
 
     new_keys = [secrets.token_urlsafe(32) for _ in range(count)]
-
     env = _read_env()
     existing = [k.strip() for k in env.get("MCP_API_KEYS", "").split(",") if k.strip()]
     all_keys = existing + new_keys
@@ -442,9 +400,9 @@ def keys(count: int) -> None:
         else:
             content += f"\nMCP_API_KEYS={','.join(all_keys)}\n"
         ENV_FILE.write_text(content, encoding="utf-8")
-        console.print(f"[green]✓[/] {count} new key(s) appended to .env ({len(all_keys)} total)")
+        console.print(f"[green]✓[/] {count} new key(s) appended to .env  ({len(all_keys)} total)")
     else:
-        console.print("[yellow]⚠[/]  .env not found — printing keys only (not saved)")
+        console.print("[yellow]⚠[/]  .env not found — keys not saved")
 
     for k in new_keys:
         console.print(f"  [bold yellow]{k}[/]")
