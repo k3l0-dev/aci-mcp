@@ -25,8 +25,9 @@ Usage:
     make lab                              # alias for `up`
 
 Commands:
-    up       Start the lab (sync deps → launch MCP server → health check).
+    up       Start the lab (sync deps → APIC check → launch MCP server → health check).
     down     Stop the background MCP server process.
+    logs     Stream the MCP server log in real time (Ctrl-C to stop).
     test     Run the pytest suite. Unit tests only by default; pass --live
              to also run integration tests against a live APIC sandbox.
     collect  Execute the full schema-collector pipeline to refresh
@@ -60,6 +61,7 @@ from rich.text import Text
 REPO_ROOT = Path(__file__).parent.parent
 ENV_FILE = REPO_ROOT / ".env"
 PID_FILE = REPO_ROOT / ".lab.pid"
+LOG_FILE = REPO_ROOT / ".lab-server.log"
 MCP_DIR = REPO_ROOT / "mcp"
 SCHEMA_FILE = REPO_ROOT / "data" / "class-descriptions.json"
 
@@ -221,7 +223,7 @@ def up() -> None:
     # Launch MCP server in background
     port = env.get("MCP_PORT", "8000")
     console.print(f"[bold cyan]→[/] starting MCP server on port {port} …")
-    log_file = REPO_ROOT / ".lab-server.log"
+    log_file = LOG_FILE
     with log_file.open("w") as log:
         proc = subprocess.Popen(
             ["uv", "run", "--project", str(MCP_DIR), "python", "main.py"],
@@ -303,6 +305,17 @@ def down() -> None:
     except ProcessLookupError:
         PID_FILE.unlink(missing_ok=True)
         console.print(f"[yellow]⚠[/]  process {pid} was already gone — cleaned up .lab.pid")
+
+
+@cli.command()
+@click.option("--lines", "-n", default=50, show_default=True, help="Past lines to show before following.")
+def logs(lines: int) -> None:
+    """Stream the MCP server log in real time — Ctrl-C to stop."""
+    if not LOG_FILE.exists():
+        console.print(f"[red]✗[/]  {LOG_FILE.name} not found — run [bold]lab up[/] first")
+        raise click.Abort()
+    # tail -n N -f streams past lines then follows new output
+    subprocess.run(["tail", f"-n{lines}", "-f", str(LOG_FILE)])
 
 
 @cli.command()

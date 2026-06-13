@@ -71,7 +71,7 @@ flowchart TD
 
 Sortie attendue :
 
-```
+```text
  ____   __  __  ___    ____     _     ____ ___
 |  _ \ |  \/  ||  _|  |  _ \  / \   / ___|_ _|
 | | | || |\/| || |    | |_) |/ _ \ | |    | |
@@ -94,6 +94,25 @@ Sortie attendue :
 │ logs      .lab-server.log            │
 ╰──────────────────────────╯
 ```
+
+---
+
+### `logs` — Voir les logs en temps réel
+
+```bash
+# Affiche les 50 dernières lignes puis suit le flux (défaut)
+uv run scripts/lab.py logs
+
+# Afficher les 200 dernières lignes
+uv run scripts/lab.py logs -n 200
+```
+
+Stream le fichier `.lab-server.log` en temps réel via `tail -f`. Affiche
+d'abord les `N` dernières lignes déjà enregistrées, puis suit les nouvelles
+entrées au fur et à mesure que le serveur les écrit. **Ctrl-C** pour arrêter.
+
+> Si `.lab-server.log` n'existe pas, le serveur n'a pas encore été démarré —
+> lancer `make lab` d'abord.
 
 ---
 
@@ -156,7 +175,7 @@ uv run scripts/lab.py collect
 
 Lance le pipeline complet du dossier `schema-collector/` :
 
-```
+```text
 fetch_cobra.py      → télécharge le wheel acimodel depuis l'APIC
 gen_classes.py      → extrait la liste de toutes les classes → classes.yaml
 fetch_schemas.py    → récupère les fichiers jsonmeta → mo-schemas/
