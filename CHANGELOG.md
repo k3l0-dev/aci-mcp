@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+---
+
+## [0.3.0] - 2026-06-13
+
 ### Added
 
 - `scripts/lab.py` — lab control CLI (click + rich + pyfiglet). Commands: `up`, `down`, `logs`,
@@ -110,5 +114,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ---
 
-[Unreleased]: https://gitlab.com/monark-aiops-group/aci-mcp/-/compare/v0.1.0...HEAD
+[Unreleased]: https://gitlab.com/monark-aiops-group/aci-mcp/-/compare/v0.3.0...HEAD
+[0.3.0]: https://gitlab.com/monark-aiops-group/aci-mcp/-/compare/v0.2.0...v0.3.0
+[0.2.0]: https://gitlab.com/monark-aiops-group/aci-mcp/-/compare/v0.1.0...v0.2.0
 [0.1.0]: https://gitlab.com/monark-aiops-group/aci-mcp/-/tags/v0.1.0
