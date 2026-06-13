@@ -36,6 +36,12 @@
 | [`get_schema`](tools/get_schema.md) | Class schema inspection — identifiers, containment, relations |
 | [`query`](tools/query.md) | Full APIC query — filters, scope, pagination, children |
 
+### Scripts
+
+| Page                     | Description                                |
+|--------------------------|--------------------------------------------|
+| [lab.py](scripts/lab.md) | CLI du lab — up, down, test, collect, keys |
+
 ### Internals
 
 | Page | Description |
