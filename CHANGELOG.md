@@ -7,6 +7,48 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+### Added
+
+- `scripts/lab.py` — lab control CLI (click + rich + pyfiglet). Commands: `up`, `down`, `logs`,
+  `test`, `collect`, `status`, `keys`. PEP 723 inline deps — `uv run scripts/lab.py` installs
+  click/rich/pyfiglet automatically. `make lab` fires `up`.
+  - `up` checks APIC TCP reachability before starting the server.
+  - `up` streams server stdout/stderr to `.lab-server.log`; `logs [-n N]` tails it live.
+  - `keys [N]` generates `secrets.token_urlsafe(32)` bearer tokens and appends to `.env`.
+- `mcp/middleware/oauth.py` — `OAuthDiscoveryMiddleware`: intercepts
+  `/.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp`,
+  returning RFC 9728 Protected Resource Metadata JSON. Prevents spec-compliant MCP clients
+  (OpenCode, Claude Desktop) from crashing on a plain-text "Not Found" response.
+- `mcp/middleware/auth.py` — `KeyStore`: thread-safe, hot-reloadable key container.
+  `reload()` swaps the key set atomically; in-flight requests are unaffected.
+- `mcp/middleware/auth.py` — `RateLimiter`: fixed-window per-IP limiter (default 30 attempts /
+  60 s). Returns 429 with `Retry-After: 60` after threshold. Successful requests do not
+  consume budget.
+- `docs/scripts/lab.md` — full command reference with Mermaid `up` flowchart, file lifecycle
+  table, and troubleshooting section.
+- 21 new unit tests for `middleware.auth` (KeyStore, RateLimiter, WWW-Authenticate, hot-reload).
+  Total: 199 tests.
+
+### Changed
+
+- `mcp/middleware/auth.py` — `ApiKeyMiddleware` now takes a `KeyStore` instead of a raw
+  `frozenset`; accepts an optional `RateLimiter`.
+- `mcp/middleware/auth.py` — 401 responses include
+  `WWW-Authenticate: Bearer resource_metadata="<url>"` per RFC 9728, so clients locate
+  the discovery endpoint without probing multiple `/.well-known/` candidates.
+- `mcp/main.py` — `ApiKeyMiddleware` is always added to the middleware stack (no-op when
+  `KeyStore` is empty, eliminating the conditional branch). `OAuthDiscoveryMiddleware` added
+  as outermost middleware in all modes.
+- `mcp/main.py` — SIGHUP handler installed at startup: `kill -HUP $(cat .lab.pid)` reloads
+  `MCP_API_KEYS` from `.env` without restarting the server.
+- `Makefile` — added `lab` target and expanded help section.
+
+### Security
+
+- Per-IP rate limiting on failed auth attempts prevents brute-force token enumeration.
+- `WWW-Authenticate` header now hints at the discovery URL, allowing clients to complete
+  the MCP 2025-03-26 OAuth discovery flow without exposing internal server details.
+
 ---
 
 ## [0.2.0] - 2026-06-13
