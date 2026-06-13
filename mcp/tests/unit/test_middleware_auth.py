@@ -18,7 +18,13 @@ async def _echo(request: Request) -> JSONResponse:
 
 
 def _app(api_keys: frozenset[str]) -> Starlette:
-    app = Starlette(routes=[Route("/mcp", _echo)])
+    app = Starlette(routes=[
+        Route("/mcp", _echo),
+        Route("/.well-known/oauth-protected-resource", _echo),
+        Route("/.well-known/oauth-authorization-server", _echo),
+        Route("/.well-known/openid-configuration", _echo),
+        Route("/register", _echo, methods=["POST"]),
+    ])
     app.add_middleware(ApiKeyMiddleware, api_keys=api_keys)
     return app
 
@@ -224,4 +230,48 @@ def test_invalid_bearer_with_valid_x_api_key_returns_401():
         "/mcp",
         headers={"Authorization": "Bearer wrong", "X-API-Key": "valid-key-1"},
     )
+    assert resp.status_code == 401
+
+
+# ── ApiKeyMiddleware — unauthenticated paths (OAuth discovery) ────────────────
+
+
+def test_well_known_oauth_protected_resource_bypasses_auth():
+    """MCP OAuth discovery endpoint must be accessible without a token."""
+    client = TestClient(_app(KEYS))
+    resp = client.get("/.well-known/oauth-protected-resource")
+    assert resp.status_code == 200
+
+
+def test_well_known_oauth_authorization_server_bypasses_auth():
+    client = TestClient(_app(KEYS))
+    resp = client.get("/.well-known/oauth-authorization-server")
+    assert resp.status_code == 200
+
+
+def test_well_known_openid_configuration_bypasses_auth():
+    client = TestClient(_app(KEYS))
+    resp = client.get("/.well-known/openid-configuration")
+    assert resp.status_code == 200
+
+
+def test_register_endpoint_bypasses_auth():
+    """Dynamic client registration must be accessible without a token."""
+    client = TestClient(_app(KEYS))
+    resp = client.post("/register")
+    assert resp.status_code == 200
+
+
+def test_well_known_subpath_bypasses_auth():
+    """Any /.well-known/* subpath is exempt, not just specific known ones."""
+    client = TestClient(_app(KEYS))
+    resp = client.get("/.well-known/oauth-protected-resource/mcp")
+    # 404 from the router is acceptable — the middleware did not block it
+    assert resp.status_code != 401
+
+
+def test_protected_path_still_requires_auth_after_well_known_bypass():
+    """Bypassing /.well-known/ must not affect protection of /mcp."""
+    client = TestClient(_app(KEYS))
+    resp = client.get("/mcp")
     assert resp.status_code == 401

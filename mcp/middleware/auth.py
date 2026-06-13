@@ -30,6 +30,13 @@ from starlette.responses import JSONResponse
 logger = logging.getLogger("aci-mcp.auth")
 
 _BEARER_PREFIX = "Bearer "
+
+# MCP 2025-03-26: clients probe these endpoints before attempting auth.
+# Blocking them prevents OAuth discovery and breaks spec-compliant clients.
+# Let them through unauthenticated so FastMCP can respond (or return 404).
+_UNAUTHENTICATED_PREFIXES = ("/.well-known/",)
+_UNAUTHENTICATED_PATHS = frozenset({"/register"})
+
 _UNAUTHORIZED = JSONResponse(
     {"error": "Unauthorized", "detail": "A valid API key is required."},
     status_code=401,
@@ -63,6 +70,10 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         if not self._keys:
+            return await call_next(request)
+
+        path = request.url.path
+        if path in _UNAUTHENTICATED_PATHS or any(path.startswith(p) for p in _UNAUTHENTICATED_PREFIXES):
             return await call_next(request)
 
         token = _extract_token(request)
