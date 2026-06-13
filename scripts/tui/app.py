@@ -9,8 +9,7 @@ The TUI assumes the pipeline (MCP + OpenCode) is already running.
 Start it with `lab.py` or `lab.py up` before opening the TUI standalone.
 
 Key bindings:
-  q   Quit TUI  (processes keep running in background)
-  S   Stop all  (SIGTERM MCP + OpenCode, then quit)
+  q   Quit TUI and stop all services (SIGTERM MCP + OpenCode)
   r   Force-refresh sidebar status
   t   Run test suite in background
   b   Open OpenCode in default browser
@@ -23,6 +22,7 @@ import asyncio
 import json
 import os
 import signal
+import socket
 import time
 import urllib.parse
 import webbrowser
@@ -101,6 +101,23 @@ def _pid_alive(pid_file: Path) -> tuple[bool, int]:
         os.kill(pid, 0)
         return True, pid
     except (ValueError, OSError, ProcessLookupError):
+        return False, 0
+
+
+def _opencode_alive() -> tuple[bool, int]:
+    """Return (alive, pid) for OpenCode.
+
+    OpenCode may fork after startup so the stored PID can belong to an
+    already-exited launcher process. We fall back to a quick port-4096 TCP
+    probe so the sidebar reflects the true running state.
+    """
+    alive, pid = _pid_alive(OPENCODE_PID_FILE)
+    if alive:
+        return True, pid
+    try:
+        with socket.create_connection(("localhost", 4096), timeout=0.1):
+            return True, 0  # port is open, PID unknown
+    except OSError:
         return False, 0
 
 
@@ -209,10 +226,11 @@ class Sidebar(VerticalScroll):
         schema_label, schema_color = _schema_age()
         schema_dot = f"[{schema_color}]●[/]"
 
-        oc_alive, oc_pid = _pid_alive(OPENCODE_PID_FILE)
+        oc_alive, oc_pid = _opencode_alive()
         oc_dot = f"[{_GN}]●[/]" if oc_alive else f"[{_RD}]●[/]"
+        oc_pid_str = f"pid {oc_pid}  " if oc_pid else ""
         oc_info = (
-            f"[{_DM}]pid {oc_pid}  :4096[/]"
+            f"[{_DM}]{oc_pid_str}:4096[/]"
             if oc_alive
             else f"[{_RD}]stopped[/]"
         )
@@ -350,8 +368,7 @@ class ACILabControl(App):
     SUB_TITLE = ""
 
     BINDINGS = [
-        Binding("q", "quit_tui", "Quit (keep running)", priority=True),
-        Binding("S", "stop_all", "Stop all + quit"),
+        Binding("q", "quit_lab", "Quit & stop all", priority=True),
         Binding("r", "refresh", "Refresh"),
         Binding("t", "run_tests", "Tests"),
         Binding("b", "open_browser", "Browser"),
@@ -372,32 +389,33 @@ class ACILabControl(App):
 
     # ── actions ───────────────────────────────────────────────────────────────
 
-    def action_quit_tui(self) -> None:
-        """Exit the TUI — MCP and OpenCode keep running in the background."""
-        self.notify("TUI closed — processes still running", severity="information", timeout=2)
-        self.exit()
-
-    def action_stop_all(self) -> None:
-        """SIGTERM MCP and OpenCode, then exit the TUI."""
+    def action_quit_lab(self) -> None:
+        """Stop all services cleanly, then exit the TUI."""
         self.run_worker(self._do_stop_all(), name="stop-all", exclusive=True)
 
     async def _do_stop_all(self) -> None:
-        """Stop both processes without blocking the event loop."""
+        """SIGTERM MCP and OpenCode gracefully, wait for exit, then quit."""
         for pid_file, label in [
             (PID_FILE, "MCP server"),
             (OPENCODE_PID_FILE, "OpenCode"),
         ]:
             alive, pid = _pid_alive(pid_file)
-            if alive:
-                try:
-                    os.kill(pid, signal.SIGTERM)
-                    pid_file.unlink(missing_ok=True)
-                    self.notify(f"{label} stopped", severity="warning", timeout=3)
-                except Exception as exc:
-                    self.notify(f"Failed to stop {label}: {exc}", severity="error", timeout=5)
-            else:
-                self.notify(f"{label} not running", severity="information", timeout=2)
-        await asyncio.sleep(0.5)
+            if not alive:
+                pid_file.unlink(missing_ok=True)
+                continue
+            try:
+                os.kill(pid, signal.SIGTERM)
+                # Wait up to 3 s for clean exit before giving up.
+                for _ in range(15):
+                    await asyncio.sleep(0.2)
+                    try:
+                        os.kill(pid, 0)
+                    except ProcessLookupError:
+                        break
+                pid_file.unlink(missing_ok=True)
+                self.notify(f"{label} stopped", severity="warning", timeout=2)
+            except Exception as exc:
+                self.notify(f"Failed to stop {label}: {exc}", severity="error", timeout=4)
         self.exit()
 
     def action_refresh(self) -> None:
