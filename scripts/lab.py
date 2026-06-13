@@ -274,6 +274,8 @@ def _start_pipeline(env: dict[str, str]) -> None:
             )
         else:
             console.print(f"[green]✓[/] OpenCode web UI ready  (pid {oc_proc.pid})")
+            import webbrowser
+            webbrowser.open("http://localhost:4096")
 
 
 # ── commands ──────────────────────────────────────────────────────────────────
