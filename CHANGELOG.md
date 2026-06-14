@@ -7,6 +7,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+### Changed
+
+- `scripts/`, `Makefile`, `.env.example` moved to the `ai-netlab` repository.
+  This repo now contains only the MCP server (`mcp/`) and the schema collector (`schema-collector/`).
+
 ---
 
 ## [0.3.0] - 2026-06-13

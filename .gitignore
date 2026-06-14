@@ -19,12 +19,13 @@ schema-collector/cobra-sdk/
 schema-collector/.venv/
 schema-collector/dist/
 
-# Lab runtime files
-.lab.pid
-.lab-server.log
-.lab-opencode.pid
-.lab-opencode.log
+# Runtime artifacts (from ai-netlab lab runner)
+.lab*.pid
+.lab*.log
 tmp/
 
 # IDE
 .vscode/
+.DS_Store
+.ruff_cache/
+.sisyphus/

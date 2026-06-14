@@ -38,7 +38,7 @@ All ACI domain knowledge (15 k+ jsonmeta class schemas, label + description inde
 ### Quick start
 
 ```bash
-cp .env.example .env        # fill in APIC_HOST, APIC_USER, APIC_PASSWORD
+# Create .env at repo root with: APIC_HOST, APIC_USER, APIC_PASSWORD, MCP_PORT (see table below)
 cd mcp && uv sync
 python main.py              # starts on port 8000
 ```
@@ -146,7 +146,7 @@ make build
 
 Output: `schema-collector/dist/<git-tag>/aci-collect`
 
-The version string is resolved from the current git tag. Run `make help` for all available targets.
+The version string is resolved from the current git tag.
 
 ---
 
