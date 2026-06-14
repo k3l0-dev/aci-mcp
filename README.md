@@ -1,174 +1,34 @@
 # aci-mcp
 
+[![Version](https://img.shields.io/badge/version-0.3.0-blue)](CHANGELOG.md)
 [![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![FastMCP](https://img.shields.io/badge/FastMCP-3.1+-00C896?logo=python&logoColor=white)](https://github.com/jlowin/fastmcp)
-[![uv](https://img.shields.io/badge/uv-package%20manager-DE5FE9?logo=astral&logoColor=white)](https://github.com/astral-sh/uv)
+[![FastMCP](https://img.shields.io/badge/FastMCP-3.1+-00C896)](https://github.com/jlowin/fastmcp)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](mcp/deploy/Dockerfile)
 [![MCP](https://img.shields.io/badge/protocol-MCP-orange)](https://modelcontextprotocol.io)
-[![Cisco ACI](https://img.shields.io/badge/Cisco-ACI%20APIC-1BA0D7?logo=cisco&logoColor=white)](https://developer.cisco.com/docs/aci/)
 [![License](https://img.shields.io/badge/license-Proprietary-red)](LICENSE)
 
-> Schema-driven MCP server for Cisco ACI — lets any LLM navigate the full ACI object model through three generic tools, with no hardcoded class knowledge.
+**Schema-driven MCP server for Cisco ACI.** Lets any LLM navigate the full APIC object model through three generic tools — no hardcoded class knowledge, no prompt engineering per object type.
 
 ---
 
-## Monorepo
+## Overview
 
-| Project | Description |
-| --- | --- |
-| [`mcp/`](mcp/) | FastMCP server — three tools for discovering, inspecting, and querying ACI objects |
-| [`schema-collector/`](schema-collector/) | Standalone scripts to pull jsonmeta schemas from an APIC and generate the data files used by the server |
+The APIC exposes 15 000+ managed object classes. Querying them requires knowing exact class names, DN structures, and filter syntax — knowledge that changes across APIC versions and is impractical to embed in a prompt.
 
----
-
-## mcp — ACI MCP Server
-
-### How it works
-
-The server exposes three tools that an LLM must call in order:
+`aci-mcp` solves this by shipping the object model itself as a queryable index. The LLM discovers classes at runtime using `search_classes`, inspects their schema with `get_schema`, and executes typed queries with `query`. It learns what it needs on-demand instead of relying on baked-in knowledge.
 
 ```text
-1. search_classes("bridge domain")   →  fvBD
-2. get_schema("fvBD")                →  identifiedBy, containedBy, properties, relations
-3. query("fvBD", scope_dn="uni/tn-OT", filters={"name": "servers"})  →  objects
+LLM                          aci-mcp                        APIC
+ │                              │                              │
+ │── search_classes("vrf") ────>│  scan class-descriptions     │
+ │<─ [{fvCtx, "VRF", ...}] ────│                              │
+ │                              │                              │
+ │── get_schema("fvCtx") ──────>│  read jsonmeta file          │
+ │<─ {identifiedBy, props...} ──│                              │
+ │                              │                              │
+ │── query("fvCtx", ...) ──────>│─── GET /api/class/fvCtx ───>│
+ │<─ [{dn, name, pcEnfPref}] ───│<─── 200 [{imdata: [...]}] ──│
 ```
-
-All ACI domain knowledge (15 k+ jsonmeta class schemas, label + description index) lives in `mcp/data/` — not in code.
-
-### Quick start
-
-```bash
-# Create .env at repo root with: APIC_HOST, APIC_USER, APIC_PASSWORD, MCP_PORT (see table below)
-cd mcp && uv sync
-python main.py              # starts on port 8000
-```
-
-### Connect an MCP client
-
-Point your client at `http://localhost:8000/mcp`. A ready-made config is in [`mcp/client/aci-mcp.json`](mcp/client/aci-mcp.json).
-
-### Docker
-
-```bash
-# Build (context must be mcp/)
-docker build -f mcp/deploy/Dockerfile mcp/ -t aci-mcp
-
-# Run
-docker run --env-file mcp/.env -p 8000:8000 aci-mcp
-```
-
-### Tools reference
-
-| Tool | Description |
-| --- | --- |
-| `search_classes(keyword)` | Case-insensitive keyword search across class name, label, and description. Returns ranked matches. |
-| `get_schema(class_name)` | Returns `identifiedBy`, `rnFormat`, `containedBy`, `dnFormats`, `properties`, `relationTo`, `relationFrom` for a class. |
-| `query(class_name, ...)` | Queries objects from the APIC. Supports `filters`, `scope_dn`, `filter_expr`, `include_children`, `order_by`, `page`, `time_range`, `rsp_subtree_include`. |
-
-### Environment variables
-
-| Variable | Default | Description |
-| --- | --- | --- |
-| `APIC_HOST` | — | APIC hostname or IP |
-| `APIC_USER` | `admin` | APIC username |
-| `APIC_PASSWORD` | — | APIC password |
-| `APIC_VERIFY_SSL` | `false` | Set `true` to enforce TLS verification |
-| `MCP_PORT` | `8000` | HTTP port |
-
----
-
-## schema-collector — APIC Schema Fetcher
-
-Standalone tooling to pull the full jsonmeta schema collection from a live APIC and build the data files consumed by the MCP server. The four pipeline steps (cobra download, class extraction, schema fetch, description index) are unified in a single CLI entry point.
-
-```bash
-cd schema-collector
-rm -rf .venv && uv sync      # first time — or if the venv is broken
-
-# aci-collect is available three ways:
-uv run aci-collect run       # no activation needed
-# — or —
-source .venv/bin/activate && aci-collect run
-# — or install globally —
-uv tool install . && aci-collect run
-
-# Run the full pipeline
-aci-collect run
-
-# Resume from a specific step (skip earlier ones)
-aci-collect run --from schemas
-
-# Re-run everything even if artifacts already exist
-aci-collect run --force
-
-# Tune parallel requests (default: 20)
-aci-collect run --concurrency 40
-
-# Check artifact state
-aci-collect status
-
-# Remove generated artifacts (add --all to also remove the cobra wheel)
-aci-collect clean
-```
-
-The `.env` at the repo root is shared with `mcp/` — no separate credentials file needed.
-
-### Pipeline steps
-
-| Step | What it does | Output |
-| --- | --- | --- |
-| `cobra` | Downloads the `acimodel` wheel from `/cobra/_downloads` on the APIC | `cobra-sdk/*.whl` |
-| `classes` | Extracts all `Mo` subclasses from the wheel | `classes.yaml` |
-| `schemas` | Fetches jsonmeta JSON for every class | `mo-schemas/*.json` |
-| `descriptions` | Builds label + description index | `../data/class-descriptions.json` |
-
-### Building a standalone binary
-
-The collector can be compiled into a self-contained Linux x86_64 binary (no Python required on the target server).
-
-#### macOS prerequisites — OrbStack + Rosetta 2
-
-Docker Desktop uses QEMU to emulate x86_64, which is 5–10× slower than native for CPU-intensive tasks like Nuitka compilation. OrbStack uses Apple's Rosetta 2 instead — the overhead drops to ~1.5× and filesystem I/O is significantly faster.
-
-1. Install [OrbStack](https://orbstack.dev) — it replaces Docker Desktop as a drop-in
-2. Rosetta 2 is enabled by default for `linux/amd64` containers — no extra configuration needed
-3. Confirm: `docker context show` should return `orbstack`
-
-#### Build
-
-```bash
-cd schema-collector
-
-# macOS (requires OrbStack — builds inside a Docker linux/amd64 container via Rosetta 2)
-# Linux  (builds natively — requires root for apt deps)
-make build
-```
-
-Output: `schema-collector/dist/<git-tag>/aci-collect`
-
-The version string is resolved from the current git tag.
-
----
-
-## Contributing
-
-### Branch strategy
-
-This project follows a **trunk-based** workflow:
-
-| Branch | Role |
-| --- | --- |
-| `main` | Always deployable — releases are tags on this branch |
-| `feature/*` | Short-lived feature branches (< 2–3 days), merged via MR |
-| `hotfix/*` | Emergency fixes branched off `main`, merged back immediately |
-
-### Commit convention
-
-[Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`, `test:`
-
-### Release process
-
-Releases follow [SemVer](https://semver.org/). See [CHANGELOG.md](CHANGELOG.md) for history.
 
 ---
 
@@ -176,24 +36,239 @@ Releases follow [SemVer](https://semver.org/). See [CHANGELOG.md](CHANGELOG.md) 
 
 ```text
 aci-mcp/
-├── mcp/                        MCP server
-│   ├── main.py
-│   ├── apic/client.py          APIC REST client (httpx, cookie auth)
-│   ├── registry/               Schema loading, search, filter building
-│   ├── data/
-│   │   ├── class-descriptions.json
-│   │   └── schemas/            (gitignored — 15 k+ jsonmeta files)
-│   ├── client/                 MCP client config + LLM skill doc
-│   ├── deploy/Dockerfile
+├── mcp/                        MCP server (FastMCP, Python 3.12)
+│   ├── main.py                 Server entry point — tools, lifespan, middleware
+│   ├── apic/
+│   │   └── client.py           APIC REST client (httpx, cookie auth, auto-reauth)
+│   ├── registry/
+│   │   ├── descriptions.py     Class index loader + weighted keyword search
+│   │   ├── schema.py           Lazy jsonmeta loader (on-demand, per class)
+│   │   └── filter.py           APIC query-target-filter builder
+│   ├── middleware/
+│   │   ├── auth.py             Bearer token auth, KeyStore hot-reload, rate limiter
+│   │   └── oauth.py            RFC 9728 OAuth Protected Resource Metadata
+│   ├── client/
+│   │   ├── aci-mcp.json        Ready-made MCP client config
+│   │   └── SKILL.md            LLM skill doc — ACI object model + tool usage guide
+│   ├── deploy/
+│   │   ├── Dockerfile
+│   │   ├── docker-compose.yml  Production stack (MCP + Caddy TLS)
+│   │   └── Caddyfile
 │   └── tests/
-├── schema-collector/
-│   ├── collect.py              single CLI entry point (aci-collect)
-│   ├── pyproject.toml
-│   ├── classes.yaml            (generated — class list from wheel)
-│   ├── cobra-sdk/              (gitignored — downloaded wheel)
-│   └── mo-schemas/             (gitignored — 15 k+ jsonmeta files)
+│       ├── unit/               Pure-logic tests (filter, search, schema)
+│       └── integration/        Tool tests using an in-memory StubBackend
+├── schema-collector/           Pipeline to fetch schemas from a live APIC
 ├── data/
-│   └── class-descriptions.json (committed — built by aci-collect)
-├── CLAUDE.md
-└── .gitignore
+│   ├── class-descriptions.json Committed — label + keyword index (15 k+ classes)
+│   └── schemas/                Gitignored — raw jsonmeta files per APIC version
+├── docs/                       Architecture, deployment, tools, internals
+└── scripts/
+    └── list-configurable-classes.sh  Query configurable classes from jsonmeta
 ```
+
+---
+
+## Tools
+
+The server exposes three tools. The LLM must call them in order — skipping steps silently returns empty results.
+
+### `search_classes(keyword)`
+
+Case-insensitive weighted search across class name (×3), label (×2), comment (×1), and property labels (×1 fallback). Returns up to 10 ranked matches.
+
+Relation classes (`Rs`/`Rt`) receive a −3 penalty so canonical objects always rank above internal plumbing.
+
+```python
+search_classes("bridge domain")
+# → [{"class_name": "fvBD", "label": "Bridge Domain", "comment": "..."}]
+```
+
+### `get_schema(class_name)`
+
+Reads the APIC jsonmeta file for a class and returns the fields needed for query planning:
+
+| Field | Description |
+|---|---|
+| `identifiedBy` | Attributes that form the RN (used in DN paths) |
+| `rnFormat` | RN template, e.g. `BD-{name}` |
+| `containedBy` | Parent classes |
+| `dnFormats` | Valid DN patterns |
+| `properties` | Configurable attributes with type + allowed values |
+| `relationTo` / `relationFrom` | Rs/Rt wiring |
+
+```python
+get_schema("fvBD")
+# → {identifiedBy: ["name"], containedBy: ["fv:Tenant"], ...}
+```
+
+### `query(class_name, ...)`
+
+Executes a class query against the APIC with full filter support.
+
+| Parameter | Description |
+|---|---|
+| `class_name` | Validated against the local index before hitting the APIC |
+| `filters` | Dict of attribute → value equality filters |
+| `filter_expr` | Raw APIC filter string for complex expressions |
+| `scope_dn` | Scope the query under a specific DN subtree |
+| `include_children` | Inline children of each result object |
+| `order_by` | Sort expression, e.g. `faultInst.severity\|desc` |
+| `page` / `page_size` | Pagination |
+| `time_range` | Time-scoped stats queries |
+| `rsp_subtree_include` | APIC subtree modifier (faults, health, …) |
+
+```python
+query("fvBD", scope_dn="uni/tn-Production", filters={"name": "servers"})
+# → [{"_class": "fvBD", "dn": "uni/tn-Production/BD-servers", "unicastRoute": "yes", ...}]
+```
+
+---
+
+## Quick start
+
+### Local
+
+```bash
+# 1. Create .env at repo root
+cat > .env <<EOF
+APIC_HOST=https://sandboxapicdc.cisco.com
+APIC_USER=admin
+APIC_PASSWORD=your_password
+MCP_PORT=8000
+EOF
+
+# 2. Install and run
+cd mcp
+uv sync
+python main.py
+```
+
+### Docker
+
+```bash
+# Build
+docker build -f mcp/deploy/Dockerfile mcp/ -t aci-mcp
+
+# Run
+docker run --env-file .env -p 8000:8000 aci-mcp
+```
+
+### Production (MCP + Caddy TLS)
+
+```bash
+docker compose -f mcp/deploy/docker-compose.yml up -d
+```
+
+Caddy handles TLS termination. The MCP port is never exposed directly — all traffic enters via Caddy on 443.
+
+---
+
+## Connect a client
+
+Point your MCP client at `http://localhost:8000/mcp`.
+
+A ready-made config is at [`mcp/client/aci-mcp.json`](mcp/client/aci-mcp.json). Copy it into your client's MCP server list.
+
+If `MCP_API_KEYS` is set, pass the token as a `Authorization: Bearer <token>` header.
+
+---
+
+## Environment variables
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `APIC_HOST` | — | ✓ | APIC hostname or URL |
+| `APIC_USER` | `admin` | | APIC username |
+| `APIC_PASSWORD` | — | ✓ | APIC password |
+| `APIC_VERIFY_SSL` | `false` | | Set `true` to enforce TLS verification |
+| `MCP_PORT` | `8000` | | HTTP port |
+| `MCP_API_KEYS` | — | | Comma-separated bearer tokens. If unset, auth is disabled (dev only) |
+
+Sending `SIGHUP` to the server process reloads `MCP_API_KEYS` from `.env` without a restart.
+
+---
+
+## Schema collector
+
+The `schema-collector/` project fetches the jsonmeta schema files from a live APIC and rebuilds `data/class-descriptions.json`. Run it when upgrading to a new APIC version.
+
+```bash
+cd schema-collector
+uv sync
+uv run aci-collect run              # full pipeline
+uv run aci-collect run --from descriptions  # rebuild index only
+uv run aci-collect status           # check artifact state
+```
+
+Pipeline steps:
+
+| Step | Input | Output |
+|---|---|---|
+| `cobra` | APIC `/cobra/_downloads` | `cobra-sdk/*.whl` |
+| `classes` | cobra wheel | `classes.yaml` |
+| `schemas` | `classes.yaml` | `mo-schemas/{version}/*.json` |
+| `descriptions` | `mo-schemas/` | `data/class-descriptions.json` |
+
+### Standalone binary
+
+The collector can be compiled to a self-contained Linux x86_64 binary (no Python on the target):
+
+```bash
+cd schema-collector
+make build   # requires OrbStack on macOS (Rosetta 2), or Linux root
+```
+
+Output: `schema-collector/dist/<version>/aci-collect`
+
+---
+
+## Development
+
+### Run tests
+
+```bash
+cd mcp
+uv sync --extra dev
+pytest                          # unit tests only
+pytest tests/ -v                # all tests
+pytest tests/integration/ -v    # integration (requires running server + APIC)
+```
+
+### Search algorithm
+
+The keyword search uses weighted substring matching with two scoring adjustments:
+
+- **Rs/Rt penalty (−3):** Relation classes inherit their target's label, causing them to outscore canonical objects on label-only queries. The penalty keeps them below canonical classes while still surfacing them when the name match is strong.
+- **prop_labels fallback:** When no name/label/comment match is found, property labels (e.g. "ARP Flooding", "Unicast Routing") are scanned as a catch-all at score +1.
+
+Measured on the 39-query golden set (`mcp/tests/fixtures/search_golden.json`):
+
+| Strategy | R@1 | R@5 | MRR |
+|---|---|---|---|
+| Baseline (substring) | 15.4% | 35.9% | 0.229 |
+| + Rs/Rt penalty | 28.2% | 41.0% | 0.338 |
+| + prop_labels | 30.8% | 53.8% | 0.400 |
+
+See [`docs/internals/search-algorithm.md`](docs/internals/search-algorithm.md) for full analysis.
+
+---
+
+## Security
+
+- API key authentication via `Authorization: Bearer` or `X-API-Key`
+- Per-IP rate limiting on failed auth attempts (default: 30 attempts / 60 s, returns 429)
+- `WWW-Authenticate` header with RFC 9728 discovery URL on 401
+- TLS termination via Caddy in the production stack — MCP port never exposed
+- Hot-reload of API keys via SIGHUP — no downtime key rotation
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+---
+
+## License
+
+Proprietary — © 2026 Khalid El-Ouiali, MONARK AIOPS SRL. All rights reserved.
