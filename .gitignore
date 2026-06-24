@@ -27,6 +27,7 @@ tmp/
 .vscode/
 .claude/
 .opencode/
+CLAUDE.md
 .DS_Store
 .ruff_cache/
 .sisyphus/
