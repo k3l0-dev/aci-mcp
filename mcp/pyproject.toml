@@ -3,7 +3,7 @@ name = "aci-mcp"
 version = "0.3.0"
 description = "Schema-driven FastMCP server for Cisco ACI APIC"
 readme = "README.md"
-license = {text = "Proprietary"}
+license = {text = "AGPL-3.0-or-later"}
 requires-python = ">=3.12"
 dependencies = [
     "fastmcp>=3.1.1,<4.0",

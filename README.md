@@ -5,7 +5,8 @@
 [![FastMCP](https://img.shields.io/badge/FastMCP-3.1+-00C896)](https://github.com/jlowin/fastmcp)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](mcp/deploy/Dockerfile)
 [![MCP](https://img.shields.io/badge/protocol-MCP-orange)](https://modelcontextprotocol.io)
-[![License](https://img.shields.io/badge/license-Proprietary-red)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-blue)](LICENSE)
+[![Commercial License](https://img.shields.io/badge/license-Commercial-orange)](LICENSE-COMMERCIAL.md)
 
 **Schema-driven MCP server for Cisco ACI.** Lets any LLM navigate the full APIC object model through three generic tools — no hardcoded class knowledge, no prompt engineering per object type.
 
@@ -271,4 +272,6 @@ See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-Proprietary — © 2026 Khalid El-Ouiali, MONARK AIOPS SRL. All rights reserved.
+[AGPL v3](LICENSE) — © 2026 Khalid El-Ouiali, MONARK AIOPS srl.
+
+Free to use and modify under AGPL v3 terms. A [commercial license](LICENSE-COMMERCIAL.md) is available for proprietary integrations and deployments that cannot comply with AGPL copyleft. Contact: [monark.aiops@pm.me](mailto:monark.aiops@pm.me)
