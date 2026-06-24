@@ -8,19 +8,19 @@ The three tools **must** be called in this order. Skipping `search_classes` or `
 flowchart TD
     START([LLM receives user query]) --> S1
 
-    S1["① search_classes(keyword)<br/>e.g. 'bridge domain'"]
+    S1["① search_classes(keyword)\ne.g. 'bridge domain'"]
     S1 --> D1{match found?}
-    D1 -->|no| RETRY["refine keyword\nand retry"]
+    D1 -->|no| RETRY["refine keyword and retry"]
     RETRY --> S1
     D1 -->|yes| S2
 
-    S2["② get_schema(class_name)<br/>e.g. 'fvBD'"]
+    S2["② get_schema(class_name)\ne.g. 'fvBD'"]
     S2 --> NOTE2["learns: identifiedBy, containedBy,\nproperties, relationTo"]
     NOTE2 --> S3
 
-    S3["③ query(class_name, filters, scope_dn)<br/>e.g. query('fvBD', filters={'name':'servers'},\nscope_dn='uni/tn-OT')"]
+    S3["③ query(class_name, filters, scope_dn)\ne.g. query('fvBD', filters={'name':'servers'},\nscope_dn='uni/tn-OT')"]
     S3 --> D3{result empty?}
-    D3 -->|yes + bad filter| GOBACK["go back to ② —\ncheck valid properties"]
+    D3 -->|yes + bad filter| GOBACK["go back to ② — check valid properties"]
     GOBACK --> S2
     D3 -->|yes + bad scope| S3B["retry without scope_dn"]
     S3B --> DONE
@@ -37,12 +37,12 @@ flowchart TD
 sequenceDiagram
     participant LLM
     participant tool as search_classes()
-    participant desc as descriptions dict<br/>(in-memory)
+    participant desc as descriptions dict (in-memory)
 
     LLM->>tool: search_classes("bridge domain")
     tool->>desc: iterate 15k entries
-    Note over desc: score per entry:<br/>class name match → +3<br/>label match → +2<br/>comment match → +1
-    desc-->>tool: scored list, sorted desc, limit 10
+    Note over desc: score per entry:<br/>class name match → +3<br/>label match → +2<br/>comment match → +1<br/>prop_labels fallback → +1 (no accumulation)<br/>Rs/Rt class name → −3 penalty
+    desc-->>tool: scored list, sorted desc, capped at limit
     tool-->>LLM: [{class_name, label, comment}, ...]
 ```
 
@@ -54,17 +54,18 @@ sequenceDiagram
 sequenceDiagram
     participant LLM
     participant tool as get_schema()
-    participant fs as data/schemas/<br/>jsonmeta files
+    participant fs as data/schemas/{version}/
 
     LLM->>tool: get_schema("fvBD")
-    tool->>fs: read fvBD.json (lazy — first call only)
+    tool->>fs: look up fvBD.json
+    Note over fs: 1. try schemas_dir/fvBD.json<br/>2. fallback: glob schemas_dir/*/fvBD.json
     fs-->>tool: raw jsonmeta object
 
-    Note over tool: extract only query-planning fields:<br/>identifiedBy, rnFormat, containedBy,<br/>dnFormats, relationTo, relationFrom,<br/>properties (names only), isAbstract,<br/>isConfigurable, className, classPkg, label
+    Note over tool: extract query-planning fields only:<br/>identifiedBy, rnFormat, containedBy (normalised to list),<br/>dnFormats, relationTo, relationFrom,<br/>properties (names only), isAbstract,<br/>isConfigurable, className, classPkg, label
 
-    Note over tool: discard heavy fields:<br/>writeAccess, events, stats, faults
+    Note over tool: discard heavy fields:<br/>writeAccess, events, stats, faults,<br/>full property metadata
 
-    tool-->>LLM: flattened schema dict
+    tool-->>LLM: flattened schema dict (or {} if not found)
 ```
 
 ---
@@ -85,7 +86,7 @@ sequenceDiagram
     tool->>desc: "fvBD" in descriptions?
     alt unknown class
         desc-->>tool: not found
-        tool-->>LLM: UnknownClassError + suggestions
+        tool-->>LLM: UnknownClassError + nearest suggestions
     end
 
     tool->>filter: build_filter("fvBD", {"name":"srv"})
@@ -101,10 +102,13 @@ sequenceDiagram
 
     cisco-->>apic: {"imdata": [{fvBD: {attributes: {...}}}]}
 
-    alt 401 / 403
-        apic->>cisco: POST /api/aaaLogin.json (re-auth)
-        cisco-->>apic: new token
+    alt 401 or 403 (token expired)
+        apic->>cisco: POST /api/aaaLogin.json (re-authenticate)
+        cisco-->>apic: new APIC-cookie token
         apic->>cisco: retry original GET
+        alt still 401/403
+            apic-->>tool: raise ApicAuthError
+        end
     end
 
     apic-->>tool: [{"dn": ..., "name": ..., "_class": "fvBD"}]
@@ -118,21 +122,23 @@ sequenceDiagram
 The URL and query parameters built by `ApicClient.query_class()`:
 
 ```mermaid
-flowchart LR
-    subgraph url["URL"]
-        U1["scope_dn set?"]
-        U1 -->|yes| URL_MO["/api/mo/{scope_dn}.json<br/>+ query-target=subtree<br/>+ target-subtree-class=CLASS"]
-        U1 -->|no| URL_CLASS["/api/class/CLASS.json"]
-    end
+flowchart TD
+    SD{scope_dn set?}
 
-    subgraph params["Query parameters"]
+    SD -->|"yes"| URL_MO["/api/mo/{scope_dn}.json\n?query-target=subtree\n&target-subtree-class={class_name}"]
+    SD -->|"no"| URL_CLASS["/api/class/{class_name}.json"]
+
+    URL_MO --> PARAMS
+    URL_CLASS --> PARAMS
+
+    subgraph PARAMS["Query parameters added when present"]
         P1["page-size = limit"]
-        P2["query-target-filter = build_filter() result"]
+        P2["query-target-filter = build_filter() + filter_expr combined with and()"]
         P3["order-by = order_by"]
-        P4["rsp-subtree=children<br/>+ rsp-subtree-class=X,Y"]
-        P5["rsp-subtree-include = faults / health / ..."]
-        P6["time-range = 24h / 1week / date|date"]
-        P7["page = N"]
+        P4["rsp-subtree=children + rsp-subtree-class=X,Y (when include_children set)"]
+        P5["rsp-subtree-include (faults / health / audit-logs / ...)"]
+        P6["time-range (24h / 1week / date|date)"]
+        P7["page = N (0-based)"]
     end
 ```
 
@@ -140,7 +146,8 @@ flowchart LR
 
 ## Schema-collector pipeline
 
-The `aci-collect` CLI runs four sequential steps to build the data files consumed by the MCP server:
+The `aci-collect` CLI runs four sequential steps to build the data files consumed by the MCP server.
+Artifacts are versioned by APIC release so multiple versions can coexist.
 
 ```mermaid
 flowchart LR
@@ -148,18 +155,18 @@ flowchart LR
 
     subgraph pipeline["aci-collect run"]
         direction TB
-        S1["cobra<br/>Download acimodel wheel\nfrom APIC /cobra/_downloads"]
-        S2["classes<br/>Extract Mo subclasses\nfrom wheel → classes.yaml"]
-        S3["schemas<br/>Fetch jsonmeta JSON\nfor each class\n→ mo-schemas/*.json"]
-        S4["descriptions<br/>Build label+comment index\n→ data/class-descriptions.json"]
+        S1["cobra\nDownload acimodel wheel\nfrom APIC /cobra/_downloads"]
+        S2["classes\nExtract Mo subclasses\nfrom wheel → cobra-sdk/{version}/classes.yaml"]
+        S3["schemas\nFetch jsonmeta JSON for each class\n→ schemas/{version}/*.json"]
+        S4["descriptions\nBuild label+comment index\n→ data/class-descriptions.json"]
         S1 --> S2 --> S3 --> S4
     end
 
     subgraph out["Outputs"]
-        O1["cobra-sdk/<br/>(gitignored)"]
-        O2["classes.yaml<br/>(gitignored)"]
-        O3["mo-schemas/*.json<br/>(gitignored — 15k+ files)"]
-        O4["data/class-descriptions.json<br/>(committed)"]
+        O1["cobra-sdk/{version}/\n(gitignored)"]
+        O2["cobra-sdk/{version}/classes.yaml\n(gitignored)"]
+        O3["schemas/{version}/*.json\n(gitignored — 15k+ files)"]
+        O4["data/class-descriptions.json\n(committed)"]
     end
 
     ENV --> pipeline

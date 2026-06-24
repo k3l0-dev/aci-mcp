@@ -9,23 +9,23 @@ Three modules under `mcp/registry/` that work together to serve `search_classes`
 ```mermaid
 graph TD
     subgraph registry["mcp/registry/"]
-        desc["descriptions.py<br/>load_descriptions()<br/>search()"]
-        schema["schema.py<br/>load_schema()"]
-        filt["filter.py<br/>build_filter()"]
+        desc["descriptions.py\nload_descriptions()\nsearch()"]
+        schema["schema.py\nload_schema()"]
+        filt["filter.py\nbuild_filter()"]
     end
 
     subgraph data["data/"]
-        json["class-descriptions.json<br/>15k+ entries (in-memory at startup)"]
-        schemas_dir["schemas/*.json<br/>one file per class (lazy, on-disk)"]
+        json["class-descriptions.json\n15k+ entries (in-memory at startup)"]
+        schemas_dir["schemas/{version}/*.json\none file per class (lazy, on-disk)"]
     end
 
-    main["main.py\napp_lifespan"]
+    main["main.py\napp_lifespan + query() tool"]
 
     main -->|"load at startup"| desc
     desc -->|"reads once"| json
-    main -->|"tools use path"| schema
+    main -->|"passes schemas_dir path to tools"| schema
     schema -->|"reads on demand"| schemas_dir
-    filt -->|"called by query()"| main
+    main -->|"calls via ApicClient"| filt
 ```
 
 ---
@@ -34,7 +34,7 @@ graph TD
 
 ### `load_descriptions(path)`
 
-Reads `class-descriptions.json` into a Python dict at startup. Called once — the result is stored in the lifespan context and shared across all requests.
+Reads `class-descriptions.json` into memory at startup. Called once — the result is stored in the FastMCP lifespan context and shared across all requests.
 
 ```mermaid
 flowchart LR
@@ -44,13 +44,14 @@ flowchart LR
 ```
 
 **Error handling:**
+
 - File missing → `DescriptionsLoadError` (server refuses to start)
 - Not valid JSON → `DescriptionsLoadError`
 - OS permission error → `DescriptionsLoadError`
 
 ### `search(keyword, descriptions, limit)`
 
-O(n) linear scan with relevance scoring. See [search-algorithm.md](search-algorithm.md) for the full algorithm rationale, measured gains, and evolution history.
+O(n) linear scan with relevance scoring. For the full algorithm rationale, measured gains, and evolution history see [search-algorithm.md](search-algorithm.md).
 
 **Scoring rules (applied in order):**
 
@@ -60,22 +61,22 @@ if keyword in class_name.lower():  score += 3   # class name match
 if keyword in label.lower():       score += 2   # label match
 if keyword in comment.lower():     score += 1   # comment match
 
-# Fallback: scan prop_labels only when no match found above
+# Fallback: scan prop_labels only when no match above
 if score == 0:
     for pl in meta.get("prop_labels", ()):
         if keyword in pl.lower():
             score = 1
             break   # no accumulation across multiple prop_labels
 
-# Rs/Rt relation classes are penalised: they are internal plumbing and
-# should never rank above canonical domain objects.
+# Rs/Rt relation classes are penalised — internal plumbing, never the primary target
 if score > 0 and _RS_RT_RE.match(class_name):
     score -= 3
 ```
 
-**Edge cases handled:**
+**Edge cases:**
+
 - Empty keyword → returns `[]` immediately (no scan)
-- Missing `label`, `comment`, or `prop_labels` key → safe default via `.get()`
+- Missing `label`, `comment`, or `prop_labels` → safe default via `.get()`
 - Rs/Rt class whose penalised score reaches 0 → excluded from results
 
 ---
@@ -84,25 +85,27 @@ if score > 0 and _RS_RT_RE.match(class_name):
 
 ### `load_schema(class_name, schemas_dir)`
 
-Lazy per-class loader. No caching — OS page cache handles repeated reads efficiently.
+Lazy per-class loader. No in-memory cache — the OS page cache handles repeated reads efficiently.
 
 ```mermaid
 flowchart TD
     CALL["load_schema('fvBD', schemas_dir)"]
-    CALL --> EXISTS{schemas_dir/fvBD.json exists?}
-    EXISTS -->|"no — try subdirectory"| GLOB["schemas_dir/**/fvBD.json"]
+    CALL --> EXISTS{"schemas_dir/fvBD.json\nexists?"}
+    EXISTS -->|"no — try versioned subdir"| GLOB["glob schemas_dir/*/fvBD.json"]
     GLOB -->|"not found"| EMPTY["return {}"]
     EXISTS -->|"yes"| READ["read + json.loads()"]
-    GLOB -->|"found"| READ
-    READ --> EXTRACT["extract query-planning fields only"]
-    EXTRACT --> NORM["normalise containedBy dict → list\nnormalise relationTo/From"]
-    NORM --> PROPS["properties = sorted(keys)"]
+    GLOB -->|"found (first match)"| READ
+    READ --> VALIDATE{"file empty?"}
+    VALIDATE -->|"yes"| ERR["raise SchemaLoadError"]
+    VALIDATE -->|"no"| EXTRACT["extract query-planning fields only"]
+    EXTRACT --> NORM["normalise containedBy dict → list\nnormalise relationTo / relationFrom"]
+    NORM --> PROPS["properties = sorted(keys of raw properties dict)"]
     PROPS --> RETURN["return dict"]
 ```
 
 ### Extracted fields
 
-Only these fields are kept — heavy fields are discarded at read time to keep tool responses token-efficient:
+Only these fields are kept — heavy fields are discarded to keep tool responses token-efficient:
 
 **Kept:** `identifiedBy`, `rnFormat`, `containedBy`, `dnFormats`, `relationTo`, `relationFrom`, `properties` (names only), `isAbstract`, `isConfigurable`, `className`, `classPkg`, `label`
 
@@ -122,37 +125,49 @@ In raw jsonmeta, `containedBy` is a dict with class names as keys:
 ["fv:Tenant", "uni:Infra"]
 ```
 
+### Schema file lookup
+
+The server supports two layouts for `data/schemas/`:
+
+| Layout | Path tried | Used when |
+|---|---|---|
+| Flat | `schemas_dir/fvBD.json` | Schemas collected without versioning |
+| Versioned | `schemas_dir/{version}/fvBD.json` | Default — `aci-collect` stores schemas under `schemas/{apic_version}/` |
+
+`load_schema()` tries the flat path first, then falls back to a glob for the first versioned match.
+
 ---
 
 ## filter.py
 
 ### `build_filter(class_name, filters)`
 
-Builds an APIC `query-target-filter` string from a plain dict.
+Builds an APIC `query-target-filter` string from a plain dict. Called by `ApicClient.query_class()`.
 
 ```mermaid
 flowchart LR
     DICT["{\"name\": \"servers\",\n\"arpFlood\": \"yes\"}"]
-    DICT --> VAL["validate class_name and each key\nagainst _IDENT_RE = [A-Za-z][A-Za-z0-9]*"]
+    DICT --> VAL["validate class_name and each key\nagainst ^[A-Za-z][A-Za-z0-9]*$"]
     VAL --> PRED["build eq() predicates:\neq(fvBD.name,\"servers\")\neq(fvBD.arpFlood,\"yes\")"]
     PRED --> WRAP{"n predicates?"}
+    WRAP -->|"0"| EMPTY_STR["return ''"]
     WRAP -->|"1"| SINGLE["eq(fvBD.name,\"servers\")"]
     WRAP -->|"2+"| AND["and(eq(...),eq(...))"]
 ```
 
 ### Value escaping
 
-`"` and `\` inside filter values are escaped before embedding in the APIC string:
+`"` and `\` inside filter values are escaped before embedding:
 
 ```python
 value.replace("\\", "\\\\").replace('"', '\\"')
 ```
 
-This prevents filter injection when attribute values contain special characters.
+This prevents injection when attribute values contain special characters.
 
 ### Identifier validation
 
-Class names and attribute keys are validated against `^[A-Za-z][A-Za-z0-9]*$` before use. Values that do not match raise `FilterError`, preventing malformed APIC query strings.
+Class names and attribute keys are validated against `^[A-Za-z][A-Za-z0-9]*$` before use:
 
 | Input | Result |
 |---|---|
@@ -160,3 +175,5 @@ Class names and attribute keys are validated against `^[A-Za-z][A-Za-z0-9]*$` be
 | `"fv BD"` | `FilterError` (space) |
 | `"123abc"` | `FilterError` (starts with digit) |
 | `"fvBD; DROP"` | `FilterError` (semicolon) |
+
+An empty `filters` dict returns `""` — the APIC client omits the `query-target-filter` parameter entirely when the string is empty.

@@ -2,27 +2,24 @@
 
 `mcp/middleware/auth.py` — API key authentication for every incoming HTTP request.
 
+For a broader view of the full middleware stack (HealthMiddleware, OAuthDiscoveryMiddleware, and how they compose), see [middleware.md](middleware.md).
+
 ---
 
-## Architecture
+## Overview
 
-```mermaid
-flowchart TD
-    REQ["Incoming HTTP request"]
-    REQ --> MW["ApiKeyMiddleware.dispatch()"]
+`ApiKeyMiddleware` is a Starlette `BaseHTTPMiddleware` that validates bearer tokens. It is the innermost layer of the middleware stack, applied after health and discovery middleware.
 
-    MW --> EMPTY{api_keys empty?}
-    EMPTY -->|"yes (dev mode)"| PASSTHROUGH["call_next(request)\n→ forward to FastMCP"]
-    EMPTY -->|"no (production)"| EXTRACT["_extract_token(request)"]
+Key components in `auth.py`:
 
-    EXTRACT --> T{token found?}
-    T -->|"no"| R401["return 401\n{error, detail}\nWWW-Authenticate: Bearer"]
-    T -->|"yes"| VALID["_is_valid(token, api_keys)"]
-
-    VALID -->|"false"| R401
-    VALID -->|"true"| PASSTHROUGH
-    PASSTHROUGH --> RESP["Response"]
-```
+| Symbol | Role |
+|---|---|
+| `KeyStore` | Thread-safe, hot-reloadable container for the set of valid API keys |
+| `RateLimiter` | Fixed-window per-IP counter that returns 429 after threshold |
+| `_authenticate(token, keys)` | Pure auth function — raises `AuthenticationError` (no HTTP concerns) |
+| `_extract_token(request)` | Reads bearer token from headers |
+| `_is_valid(token, keys)` | Constant-time multi-key comparison via `hmac.compare_digest` |
+| `load_api_keys()` | Reads `MCP_API_KEYS` from environment |
 
 ---
 
@@ -30,25 +27,43 @@ flowchart TD
 
 Two accepted header forms, checked in priority order:
 
-```mermaid
-flowchart LR
-    REQ["request.headers"]
-    REQ --> AUTH["Authorization: Bearer <token>"]
-    REQ --> XAPI["X-API-Key: <token>"]
+| Header | Format | Priority |
+|---|---|---|
+| `Authorization` | `Bearer <token>` | First |
+| `X-API-Key` | `<token>` | Fallback (only when Authorization absent) |
 
-    AUTH -->|"starts with 'Bearer '"| TOK1["token = value after prefix"]
-    XAPI -->|"Authorization absent"| TOK2["token = header value"]
-    TOK1 --> VALIDATE
-    TOK2 --> VALIDATE["_is_valid()"]
+When `Authorization: Bearer` is present but the token is invalid, `X-API-Key` is **not** consulted. The `Authorization` header takes full precedence.
+
+---
+
+## Authentication logic
+
+The auth check lives in `_authenticate()` — a pure function with no HTTP concerns:
+
+```python
+def _authenticate(token: str | None, keys: frozenset[str]) -> None:
+    if token is None or not _is_valid(token, keys):
+        raise AuthenticationError("missing or invalid API key")
 ```
 
-If `Authorization: Bearer` is present but invalid, `X-API-Key` is **not** used as a fallback. The Bearer header takes full precedence.
+`dispatch()` calls this inside `try/except AuthenticationError` and converts the exception to the HTTP response:
+
+```python
+try:
+    _authenticate(_extract_token(request), keys)
+except AuthenticationError:
+    ip = request.client.host if request.client else "unknown"
+    if not self._limiter.is_allowed(ip):
+        logger.warning("Rate limit exceeded: %s", ip)
+        return _TOO_MANY_REQUESTS
+    logger.warning("Rejected unauthenticated request: %s %s from %s", ...)
+    return _build_unauthorized(request)
+return await call_next(request)
+```
 
 ---
 
 ## Timing-safe comparison
-
-All token comparisons use `hmac.compare_digest` to prevent timing-oracle attacks:
 
 ```python
 def _is_valid(token: str, keys: frozenset[str]) -> bool:
@@ -56,13 +71,56 @@ def _is_valid(token: str, keys: frozenset[str]) -> bool:
     return any(hmac.compare_digest(token_bytes, k.encode()) for k in keys)
 ```
 
-A naive `token in keys` would return early on the first match, leaking information about whether a partial token is close to a valid one. `hmac.compare_digest` always takes constant time relative to the compared values' length.
+`hmac.compare_digest` runs in constant time relative to the compared values' length. A naive `token in keys` would return early on the first match, leaking whether a partial token is close to a valid one.
+
+The function always iterates over all keys — time is proportional to the key count, not to the position of the matching key.
 
 ---
 
-## Configuration
+## 401 response
 
-`MCP_API_KEYS` is read from the environment at server startup via `load_api_keys()`:
+```json
+{"error": "Unauthorized", "detail": "A valid API key is required."}
+```
+
+```http
+HTTP/1.1 401 Unauthorized
+Content-Type: application/json
+WWW-Authenticate: Bearer resource_metadata="https://mcp.yourdomain.com/.well-known/oauth-protected-resource"
+```
+
+The `WWW-Authenticate` header includes a `resource_metadata` URL per [RFC 9728 §5.1](https://www.rfc-editor.org/rfc/rfc9728#section-5.1). MCP-compliant clients use this URL to find the OAuth discovery document without guessing paths.
+
+---
+
+## Rate limiting
+
+`RateLimiter` uses a fixed-window per-IP strategy. Defaults: 30 failed attempts per 60-second window.
+
+- Only failed auth attempts consume budget — successful requests do not
+- A blocked IP receives `429 Too Many Requests` with `Retry-After: 60`
+- Different IPs are tracked independently
+- The window rolls over automatically (old entries evicted via `time.monotonic`)
+
+---
+
+## KeyStore
+
+```python
+class KeyStore:
+    def get(self) -> frozenset[str]: ...      # atomic snapshot read
+    def reload(self, new_keys: frozenset[str]) -> None: ...  # atomic replacement
+    def __bool__(self) -> bool: ...           # True when keys present
+    def __len__(self) -> int: ...
+```
+
+When `KeyStore` is empty, the middleware is a no-op — all requests pass through. This is dev mode. Auth is enabled as soon as the store contains at least one key.
+
+`reload()` replaces the key set atomically under a `threading.Lock`. In-flight requests that already called `get()` continue with their snapshot uninterrupted.
+
+---
+
+## MCP_API_KEYS format
 
 ```python
 def load_api_keys() -> frozenset[str]:
@@ -70,85 +128,36 @@ def load_api_keys() -> frozenset[str]:
     return frozenset(k.strip() for k in raw.split(",") if k.strip())
 ```
 
-| `MCP_API_KEYS` value | Behaviour |
+| `MCP_API_KEYS` value | Result |
 |---|---|
-| Not set / empty | Returns empty `frozenset` → middleware is no-op |
+| Not set / empty | `frozenset()` — auth disabled |
 | `"token1"` | One valid token |
-| `"token1,token2"` | Two valid tokens — each key is independent |
-| `" token1 , token2 "` | Whitespace stripped — works correctly |
+| `"token1,token2"` | Two independent tokens |
+| `" token1 , token2 "` | Whitespace stripped |
 | `"token1,,token2,"` | Empty segments ignored |
 
----
-
-## Integration in `_serve()`
-
-The middleware is attached conditionally via FastMCP's `middleware` parameter:
-
-```python
-api_keys = load_api_keys()
-if api_keys:
-    from starlette.middleware import Middleware
-    middleware = [Middleware(ApiKeyMiddleware, api_keys=api_keys)]
-else:
-    logger.warning("MCP_API_KEYS is not set — running WITHOUT authentication.")
-    middleware = None
-
-await mcp.run_http_async(middleware=middleware, ...)
-```
-
-When `middleware=None` is passed to FastMCP, no middleware is applied.
+Comparison is always case-sensitive.
 
 ---
 
-## 401 response shape
+## Unauthenticated paths
 
-```json
-{
-  "error": "Unauthorized",
-  "detail": "A valid API key is required."
-}
-```
+These paths bypass token validation entirely:
 
-Headers:
+| Pattern | Why |
+|---|---|
+| `/.well-known/*` (prefix) | OAuth discovery — must be accessible before a token exists |
+| `/register` (exact) | Dynamic client registration (RFC 7591) |
 
-```
-HTTP/1.1 401 Unauthorized
-Content-Type: application/json
-WWW-Authenticate: Bearer
-```
+`/health` is handled by `HealthMiddleware` before this layer runs — it never reaches `ApiKeyMiddleware`.
 
 ---
 
-## Key rotation
+## No-op mode (development)
 
-Rotation is done by updating `MCP_API_KEYS` and restarting the server. Because keys are a comma-separated list, old and new keys can coexist during a rolling rotation:
+When `MCP_API_KEYS` is unset or empty, the middleware passes all requests through without validation. A warning is logged at startup:
 
-1. Add the new key: `MCP_API_KEYS=old-key,new-key`
-2. Restart the server
-3. Update all clients to use `new-key`
-4. Remove `old-key`: `MCP_API_KEYS=new-key`
-5. Restart again
-
-No code changes required — it is purely configuration.
-
----
-
-## Test coverage
-
-`mcp/tests/unit/test_middleware_auth.py` covers 26 scenarios:
-
-- `load_api_keys`: unset, single, multiple, whitespace, empty segments
-- `_extract_token`: `Authorization: Bearer`, `X-API-Key`, no headers, prefix-only
-- `_is_valid`: correct, wrong, one-of-many, empty set
-- Middleware no-op mode (empty keys)
-- Valid `Bearer` token passes
-- Valid `X-API-Key` passes
-- Missing header → 401
-- Wrong token → 401
-- Empty bearer → 401
-- 401 response has `WWW-Authenticate: Bearer` header
-- 401 response body is valid JSON with `error` and `detail`
-- Case-sensitive comparison
-- Partial token not accepted
-- `Authorization: Bearer` takes precedence over `X-API-Key`
-- Invalid `Authorization` with valid `X-API-Key` → 401 (no fallback)
+```text
+WARNING  aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication.
+         Set MCP_API_KEYS in .env before deploying to production.
+```

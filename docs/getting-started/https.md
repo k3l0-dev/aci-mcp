@@ -1,6 +1,7 @@
 # HTTPS with Caddy
 
-Production deployment — Caddy terminates TLS and proxies to the MCP server. The MCP container is never exposed directly on a host port.
+Production deployment — Caddy terminates TLS and proxies to the MCP server.
+The MCP container is never exposed directly on a host port.
 
 ---
 
@@ -14,14 +15,14 @@ graph LR
 
     subgraph host["Docker host"]
         subgraph compose["docker-compose stack"]
-            caddy["Caddy container<br/>ports: 80, 443<br/>TLS termination"]
-            mcp["aci-mcp container<br/>port 8000 (internal only)"]
+            caddy["Caddy\nports 80, 443\nTLS termination"]
+            mcp["aci-mcp\nport 8000 (internal only)"]
         end
         net["internal bridge network"]
     end
 
     subgraph apic_net["Network"]
-        apic["Cisco APIC<br/>HTTPS"]
+        apic["Cisco APIC\nHTTPS"]
     end
 
     client -->|"HTTPS :443"| caddy
@@ -39,9 +40,9 @@ graph LR
 ### 1 — Prepare .env
 
 ```dotenv
-APIC_HOST=10.41.71.11
+APIC_HOST=https://your-apic.example.com
 APIC_USER=admin
-APIC_PASSWORD=Cisco1234!
+APIC_PASSWORD=your_password
 
 MCP_API_KEYS=your-generated-token-here
 MCP_DOMAIN=mcp.yourdomain.com
@@ -59,15 +60,17 @@ python -c "import secrets; print(secrets.token_urlsafe(32))"
 docker compose -f mcp/deploy/docker-compose.yml up -d
 ```
 
+Caddy waits for the MCP container to pass its healthcheck (`GET /health`) before accepting traffic.
+
 ### 3 — Verify
 
 ```bash
-# Check both containers are healthy
+# Check both containers are up and healthy
 docker compose -f mcp/deploy/docker-compose.yml ps
 
-# Test authentication
+# Test through Caddy
 curl -H "Authorization: Bearer your-generated-token-here" \
-     https://mcp.yourdomain.com/mcp
+     https://mcp.yourdomain.com/health
 ```
 
 ---
@@ -84,22 +87,21 @@ Requirements:
 
 No extra configuration needed — the `Caddyfile` handles it.
 
-### Internal / LAN — Caddy's built-in CA
+### Internal / LAN — Caddy built-in CA
 
 Set `MCP_DOMAIN` to an internal FQDN (e.g. `mcp.corp.internal`). Caddy issues a certificate from its own CA.
 
 Add the CA to your trust store **once**:
 
 ```bash
-# On the Docker host — trusts Caddy's CA system-wide
+# Trust Caddy's CA on the Docker host (system-wide)
 docker compose -f mcp/deploy/docker-compose.yml exec caddy caddy trust
 
-# On each client machine
-# macOS
+# macOS client machines
 security add-trusted-cert -d -r trustRoot \
   -k /Library/Keychains/System.keychain caddy_root.crt
 
-# Windows (PowerShell)
+# Windows client machines (PowerShell)
 Import-Certificate -FilePath caddy_root.crt -CertStoreLocation Cert:\LocalMachine\Root
 ```
 
@@ -127,7 +129,7 @@ Caddy stores TLS certificates and ACME state in Docker volumes:
 | `caddy_data` | TLS certificates, ACME account keys |
 | `caddy_config` | Caddy runtime config |
 
-These volumes persist across `docker compose down` and container restarts. **Do not delete them** — deleting `caddy_data` forces certificate reissuance and may hit Let's Encrypt rate limits.
+These volumes persist across `docker compose down` and restarts. **Do not delete `caddy_data`** — it forces certificate reissuance and may hit Let's Encrypt rate limits.
 
 ---
 
@@ -149,12 +151,9 @@ docker compose -f mcp/deploy/docker-compose.yml logs -f
 ## Updating
 
 ```bash
-# Pull latest images
-docker compose -f mcp/deploy/docker-compose.yml pull
-
-# Rebuild aci-mcp image
+# Rebuild aci-mcp image with latest source
 docker compose -f mcp/deploy/docker-compose.yml build mcp
 
-# Rolling restart (Caddy stays up, zero downtime for TLS)
+# Restart only the MCP container (Caddy stays up — zero-downtime for TLS)
 docker compose -f mcp/deploy/docker-compose.yml up -d --no-deps mcp
 ```

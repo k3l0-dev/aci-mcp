@@ -108,7 +108,7 @@ WARNING  aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authenti
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `MCP_DOMAIN` | Yes (when using docker-compose) | — | Public hostname or internal FQDN for Caddy to serve TLS. See [HTTPS deployment](../deployment/https.md). |
+| `MCP_DOMAIN` | Yes (when using docker-compose) | — | Public hostname or internal FQDN for Caddy to serve TLS. See [HTTPS deployment](../getting-started/https.md). |
 
 ---
 

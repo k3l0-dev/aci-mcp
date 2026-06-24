@@ -14,20 +14,28 @@ __pycache__/
 data/schemas/
 data/cobra-sdk/
 
-# Schema collector
+# Schema collector — heavy artifacts (regenerate with aci-collect run)
 schema-collector/.venv/
 schema-collector/dist/
+schema-collector/mo-schemas/
+schema-collector/cobra-sdk/
 
 # Runtime artifacts
 .lab*
 tmp/
+.coverage
+mcp/.coverage
 
 # IDE and tooling
 .vscode/
 .claude/
 .opencode/
+.agents/
 CLAUDE.md
 .DS_Store
 .ruff_cache/
 .sisyphus/
 .markdownlint*
+
+# Agent / skill artifacts
+skills-lock.json
