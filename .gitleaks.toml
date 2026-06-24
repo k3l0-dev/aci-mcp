@@ -1,0 +1,8 @@
+title = "gitleaks config — aci-mcp"
+
+[allowlist]
+description = "Suppress false positives from documentation placeholder values"
+regexes = [
+    # curl examples in docs use placeholder tokens, not real secrets
+    "your-generated-token-here",
+]
