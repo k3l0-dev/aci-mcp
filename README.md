@@ -58,7 +58,7 @@ The schema collector fetches the full APIC object model and builds the local ind
 
 ```bash
 # Clone the repo
-git clone https://github.com/monark-aiops/aci-mcp.git
+git clone https://github.com/k3l0-dev/aci-mcp.git
 cd aci-mcp
 
 # Configure credentials
@@ -124,7 +124,7 @@ Two TLS modes are supported — configure via `MCP_DOMAIN` in `.env`:
 | **Let's Encrypt** | Public hostname, ports 80/443 reachable from the internet |
 | **Caddy internal CA** | LAN / self-signed — run `docker compose exec caddy caddy trust` once |
 
-See [`docs/deployment/https.md`](docs/deployment/https.md) for full TLS setup instructions.
+See [`docs/getting-started/https.md`](docs/getting-started/https.md) for full TLS setup instructions.
 
 ---
 
@@ -295,7 +295,7 @@ Full documentation is in [`docs/`](docs/):
 
 | Section | Contents |
 |---|---|
-| [`docs/deployment/`](docs/deployment/) | Quickstart, Docker, HTTPS / TLS setup |
+| [`docs/getting-started/`](docs/getting-started/) | Quickstart, Docker, HTTPS / TLS setup |
 | [`docs/tools/`](docs/tools/) | Tool reference with examples |
 | [`docs/configuration/`](docs/configuration/) | All environment variables |
 | [`docs/internals/`](docs/internals/) | Architecture, search algorithm, auth internals |

@@ -15,7 +15,7 @@ Get the server running locally in under 5 minutes.
 ### 1 — Clone the repo
 
 ```bash
-git clone https://github.com/monark-aiops/aci-mcp.git
+git clone https://github.com/k3l0-dev/aci-mcp.git
 cd aci-mcp
 ```
 

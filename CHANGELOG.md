@@ -126,7 +126,7 @@ First public open-source release.
 
 ---
 
-[1.0.0]: https://github.com/monark-aiops/aci-mcp/compare/v0.3.0...v1.0.0
-[0.3.0]: https://github.com/monark-aiops/aci-mcp/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/monark-aiops/aci-mcp/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/monark-aiops/aci-mcp/releases/tag/v0.1.0
+[1.0.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.3.0...v1.0.0
+[0.3.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/k3l0-dev/aci-mcp/releases/tag/v0.1.0

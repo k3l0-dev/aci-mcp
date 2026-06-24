@@ -29,11 +29,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/monark-aiops/aci-mcp"
-Repository = "https://github.com/monark-aiops/aci-mcp"
-Documentation = "https://github.com/monark-aiops/aci-mcp/tree/main/docs"
-Changelog = "https://github.com/monark-aiops/aci-mcp/blob/main/CHANGELOG.md"
-"Bug Tracker" = "https://github.com/monark-aiops/aci-mcp/issues"
+Homepage = "https://github.com/k3l0-dev/aci-mcp"
+Repository = "https://github.com/k3l0-dev/aci-mcp"
+Documentation = "https://github.com/k3l0-dev/aci-mcp/tree/main/docs"
+Changelog = "https://github.com/k3l0-dev/aci-mcp/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/k3l0-dev/aci-mcp/issues"
 "Commercial License" = "mailto:monark.aiops@pm.me"
 
 [project.optional-dependencies]

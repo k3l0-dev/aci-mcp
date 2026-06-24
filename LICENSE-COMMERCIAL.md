@@ -53,4 +53,4 @@ Commercial licenses are issued per organization. Pricing is negotiated based on 
 
 Whether using the PolyForm Noncommercial License or a commercial license, the following attribution must appear in your product documentation, README, or equivalent:
 
-> Powered by [aci-mcp](https://github.com/monark-aiops/aci-mcp) — © Khalid El-Ouiali, MONARK AIOPS srl
+> Powered by [aci-mcp](https://github.com/k3l0-dev/aci-mcp) — © Khalid El-Ouiali, MONARK AIOPS srl
