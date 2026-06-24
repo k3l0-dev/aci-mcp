@@ -128,20 +128,27 @@ See [`docs/deployment/https.md`](docs/deployment/https.md) for full TLS setup in
 
 ---
 
-## Step 3 — Connect a client
+## Step 3 — Connect your agent
 
-Point your MCP client at:
+Two things to do: **register the MCP server** and **load the ACI skill** so your agent knows how to navigate the object model.
+
+### Register the MCP server
+
+The server URL is:
 
 ```text
-http://localhost:8000/mcp       # local
-https://your-domain.com/mcp    # production
+http://localhost:8000/mcp       # local / dev
+https://your-domain.com/mcp    # production (Caddy + TLS)
 ```
 
-A ready-made config is available at [`mcp/client/aci-mcp.json`](mcp/client/aci-mcp.json).
+A ready-made client config is at [`mcp/client/aci-mcp.json`](mcp/client/aci-mcp.json).
 
-### Claude Desktop
+#### Claude Desktop
 
-Add to `claude_desktop_config.json`:
+Edit `claude_desktop_config.json`:
+
+- **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -157,11 +164,88 @@ Add to `claude_desktop_config.json`:
 }
 ```
 
-### OpenCode / Cursor / Windsurf
+Restart Claude Desktop. The server appears under **MCP** in the tool menu.
 
-Use the same URL and bearer token in your client's MCP server settings.
+> Omit `headers` if `MCP_API_KEYS` is not set (dev mode).
 
-If `MCP_API_KEYS` is **not** set, authentication is disabled — suitable for local development only.
+#### Claude Code (CLI)
+
+```bash
+claude mcp add aci-mcp --transport http http://localhost:8000/mcp
+```
+
+With authentication:
+
+```bash
+claude mcp add aci-mcp --transport http http://localhost:8000/mcp \
+  --header "Authorization: Bearer <your-token>"
+```
+
+#### OpenCode
+
+Add to your project's `.opencode/config.json`:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "aci-mcp": {
+        "type": "http",
+        "url": "http://localhost:8000/mcp",
+        "headers": {
+          "Authorization": "Bearer <your-token>"
+        }
+      }
+    }
+  }
+}
+```
+
+#### Cursor / Windsurf / any MCP client
+
+Use the same URL and bearer token in your client's MCP server settings. All MCP 2025-03-26-compliant clients are supported.
+
+---
+
+### Load the ACI skill
+
+The ACI object model has 15 000+ classes. Without context, any LLM will guess class names — and guessing silently returns empty results.
+
+The file [`mcp/client/SKILL.md`](mcp/client/SKILL.md) teaches your agent the full ACI object model, how to read schemas, how to build DN paths, and when to use each of the three tools. **Load it once and your agent stops guessing.**
+
+#### Claude Desktop / Claude Projects
+
+Create a [Claude Project](https://support.anthropic.com/en/articles/9517075-what-are-projects) and paste the contents of `mcp/client/SKILL.md` into the project instructions.
+
+#### Claude Code (CLI)
+
+```bash
+# Add the skill to your project context
+cp mcp/client/SKILL.md .claude/aci-mcp.md
+```
+
+Claude Code picks up any `.md` file under `.claude/` automatically.
+
+#### OpenCode
+
+```bash
+mkdir -p .opencode/skills/aci-mcp
+cp mcp/client/SKILL.md .opencode/skills/aci-mcp/SKILL.md
+```
+
+OpenCode loads skills from `.opencode/skills/` at session start.
+
+#### Other agents
+
+Paste the contents of `mcp/client/SKILL.md` into your agent's system prompt, project instructions, or context file — whatever your platform calls it.
+
+---
+
+Once both steps are done, ask your agent:
+
+> *"Show me all bridge domains in the OT tenant with their associated VRFs."*
+
+It will call `search_classes`, `get_schema`, and `query` in the correct order — no manual API work required.
 
 ---
 
