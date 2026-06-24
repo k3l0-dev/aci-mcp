@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl
+# SPDX-License-Identifier: AGPL-3.0-or-later
+
 """Unit tests for _coerce_json_str, _JsonList, _JsonDict in main.py.
 
 LLMs sometimes JSON-encode list/dict tool arguments as strings instead of
