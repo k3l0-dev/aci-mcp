@@ -1,16 +1,16 @@
-# Algorithme de recherche — search_classes
+# Search Algorithm — search_classes
 
-Ce document décrit en détail le problème posé par la recherche de classes ACI, les deux axes d'amélioration implémentés, les mécanismes précis de chaque algorithme, et les gains mesurés. Il sert de référence pour toute évolution future de `registry/descriptions.py`.
+This document describes the problem of searching ACI classes, the two improvement axes implemented, the precise mechanics of each algorithm, and the measured gains. It serves as a reference for any future evolution of `registry/descriptions.py`.
 
 ---
 
-## 1. Contexte : le problème de la recherche dans un corpus ACI
+## 1. Context: the problem of searching an ACI corpus
 
-### Le corpus
+### The corpus
 
-Le modèle objet Cisco ACI compte **15 152 classes** documentées dans les fichiers jsonmeta fournis par l'APIC. Chaque classe représente un objet manageable — une politique, une relation, une configuration réseau, un objet de monitoring, un artefact interne. La grande majorité de ces classes est invisible pour un opérateur réseau : seules quelques centaines correspondent à des objets directement manipulables.
+The Cisco ACI object model has **15 152 classes** documented in the jsonmeta files provided by the APIC. Each class represents a manageable object — a policy, a relation, a network configuration, a monitoring object, an internal artifact. The vast majority of these classes are invisible to a network operator: only a few hundred correspond to directly configurable objects.
 
-Le fichier `data/class-descriptions.json` indexe ces classes avec trois champs :
+The file `data/class-descriptions.json` indexes these classes with three fields:
 
 ```json
 {
@@ -21,130 +21,133 @@ Le fichier `data/class-descriptions.json` indexe ces classes avec trois champs :
 }
 ```
 
-C'est sur cet index que `search_classes` opère.
+`search_classes` operates on this index.
 
-### Ce que l'agent LLM demande
+### What the LLM agent asks
 
-Quand un agent LLM appelle `search_classes`, il peut formuler sa requête de plusieurs manières :
+When an LLM agent calls `search_classes`, it can phrase its query in several ways:
 
-| Type de requête | Exemple | Ce qui la rend difficile |
+| Query type | Example | What makes it difficult |
 |---|---|---|
-| Nom de classe approximatif | `"fvbd"`, `"vzbrcp"` | Pas de majuscules, pas de séparateurs |
-| Label exact ou proche | `"bridge domain"`, `"tenant"` | Plusieurs classes partagent le même label |
-| Concept fonctionnel | `"ARP flooding"`, `"dead interval"` | Absent du label et du commentaire de la classe |
-| Synonyme pur | `"gateway"`, `"security policy"` | Aucun ancrage textuel dans l'APIC |
+| Approximate class name | `"fvbd"`, `"vzbrcp"` | No capitalisation, no separators |
+| Exact or close label | `"bridge domain"`, `"tenant"` | Multiple classes share the same label |
+| Functional concept | `"ARP flooding"`, `"dead interval"` | Absent from the class label and comment |
+| Pure synonym | `"gateway"`, `"security policy"` | No textual anchor in the APIC |
 
-Un LLM entraîné sur de la documentation ACI gère souvent les deux premiers types intuitivement. C'est à partir des requêtes fonctionnelles et des synonymes que la recherche textuelle atteint ses limites.
+An LLM trained on ACI documentation often handles the first two types intuitively. It is with functional queries and synonyms that text search reaches its limits.
 
 ---
 
-## 2. L'approche naive (baseline)
+## 2. The naive approach (baseline)
 
-### Fonctionnement
+### How it works
 
-La fonction `search()` effectue un **scan linéaire** sur les 15 152 classes. Pour chaque classe, elle calcule un score par additivité de correspondances :
+The `search()` function performs a **linear scan** over all 15 152 classes. For each class it computes a score by additive matching:
 
 ```
 score = 0
-si keyword ∈ nom_de_classe  (insensible à la casse)  → score += 3
-si keyword ∈ label          (insensible à la casse)  → score += 2
-si keyword ∈ comment        (insensible à la casse)  → score += 1
+if keyword ∈ class_name  (case-insensitive)  → score += 3
+if keyword ∈ label        (case-insensitive)  → score += 2
+if keyword ∈ comment      (case-insensitive)  → score += 1
 ```
 
-Les classes avec `score > 0` sont triées par score décroissant. En cas d'égalité, l'ordre d'insertion dans le JSON est conservé.
+Classes with `score > 0` are sorted by descending score. On ties, the insertion order in the JSON is preserved.
 
-### Les poids choisis
+### The weights
 
-Les poids 3/2/1 reflètent la confiance décroissante sur chaque champ :
-- Le **nom de classe** est l'identifiant technique exact : si le keyword y apparaît, la correspondance est quasi certaine.
-- Le **label** est le nom humain officiel donné par Cisco : forte valeur sémantique.
-- Le **commentaire** est une description de quelques phrases : correspondance plus ambiguë (beaucoup de classes mentionnent "tenant", "VRF", "bridge domain" en passant).
+The 3/2/1 weights reflect decreasing confidence in each field:
 
-### Mesures baseline
+- The **class name** is the exact technical identifier: if the keyword appears there, the match is near-certain.
+- The **label** is the official human name given by Cisco: high semantic value.
+- The **comment** is a few-sentence description: more ambiguous matches (many classes mention "tenant", "VRF", "bridge domain" in passing).
 
-Évalué sur un golden set de **39 requêtes** réparties en 4 tiers de difficulté croissante (APIC mo-apic-v6.0_9c, 15 152 classes) :
+### Baseline measurements
 
-| Métrique | Score |
+Evaluated on a golden set of **39 queries** across 4 tiers of increasing difficulty (APIC mo-apic-v6.0_9c, 15 152 classes):
+
+| Metric | Score |
 |---|---|
 | Recall@1 | 15.4% |
 | Recall@5 | 35.9% |
 | MRR | 0.229 |
-| Tier 1 — label/nom direct | R@1 = 10%  /  R@5 = 50% |
-| Tier 2 — nom camelCase | R@1 = 80%  /  R@5 = 80% |
-| Tier 3 — prop fonctionnelle | R@1 = 0%   /  R@5 = 0% |
-| Tier 4 — synonyme pur | R@1 = 0%   /  R@5 = 0% |
-| Temps moyen de requête | 3.2 ms |
+| Tier 1 — direct label/name | R@1 = 10%  /  R@5 = 50% |
+| Tier 2 — camelCase name | R@1 = 80%  /  R@5 = 80% |
+| Tier 3 — functional property | R@1 = 0%   /  R@5 = 0% |
+| Tier 4 — pure synonym | R@1 = 0%   /  R@5 = 0% |
+| Average query time | 3.2 ms |
 
-### Analyse des échecs
+### Failure analysis
 
-**Pourquoi le tier 1 échoue à 90% en Recall@1 ?**
+**Why does tier 1 fail at 90% Recall@1?**
 
-Le problème n'est pas que la bonne classe est absente des résultats — elle est présente dans 50% des cas en top 5. Le problème est le classement. Exemple concret :
+The issue is not that the right class is absent from results — it appears in the top 5 in 50% of cases. The problem is ranking. Concrete example:
 
-- Requête : `"bridge domain"`
-- `fvBD` : label = `"Bridge Domain"` → `"bridge domain"` dans label → **score 2**
-- `fvABDPol` : label = `"Bridge Domain"` → `"bridge domain"` dans label → **score 2**
-- `eqptcapacityBDEntry` : label = `"Bridge Domain Entry"` → `"bridge domain"` dans label → **score 2**
+- Query: `"bridge domain"`
+- `fvBD`: label = `"Bridge Domain"` → `"bridge domain"` in label → **score 2**
+- `fvABDPol`: label = `"Bridge Domain"` → `"bridge domain"` in label → **score 2**
+- `eqptcapacityBDEntry`: label = `"Bridge Domain Entry"` → `"bridge domain"` in label → **score 2**
 
-Cisco utilise le même label humain pour la classe primaire et pour toutes les classes qui y sont liées (politiques, relations, variantes). Une dizaine de classes partagent le label `"Bridge Domain"`. Toutes obtiennent le même score 2. L'ordre d'insertion dans le JSON — arbitraire — décide du classement. `fvBD` peut finir rank 5 ou rank 8.
+Cisco assigns the same human label to the primary class and to all related classes (policies, relations, variants). About ten classes share the label `"Bridge Domain"`. They all get score 2. The insertion order in the JSON — arbitrary — decides the ranking. `fvBD` may end up at rank 5 or rank 8.
 
-**Le problème des classes Rs/Rt**
+#### The Rs/Rt class problem
 
-Les classes de relation ACI suivent une convention de nommage précise :
-- `fvRsCtx` : relation **R**e**s**olution **s**ource — de fvBD vers fvCtx
-- `l3extRtVrfValidationPol` : relation **R**ela**t**ion target — back-reference vers une policy VRF
+ACI relation classes follow a strict naming convention:
 
-Ces classes héritent systématiquement du **label de leur classe cible**. Exemple :
+- `fvRsCtx`: **R**elation **s**ource — from fvBD to fvCtx
+- `l3extRtVrfValidationPol`: **R**elation **t**arget — back-reference to a VRF policy
+
+These classes systematically inherit the **label of their target class**. Example:
 
 ```
-fvRsCtx        → label "Private Network"    (label de fvCtx)
-l3extRtVrfValidationPol → label "VRF"       (label de fvCtx)
-plannerRsBdVrf → label "VRF"                (label de fvCtx)
+fvRsCtx                 → label "Private Network"  (label of fvCtx)
+l3extRtVrfValidationPol → label "VRF"              (label of fvCtx)
+plannerRsBdVrf          → label "VRF"              (label of fvCtx)
 ```
 
-De plus, le nom de la classe relation **contient** souvent le concept cible : `l3extRtVrfValidationPol` contient `Vrf`. Résultat pour la requête `"VRF"` :
+Moreover, the relation class name **often contains** the target concept: `l3extRtVrfValidationPol` contains `Vrf`. Result for the query `"VRF"`:
 
-- `l3extRtVrfValidationPol` : `"vrf"` dans le nom (+3) + `"VRF"` label exact (+2) + `"vrf"` dans le commentaire (+1) = **score 6**
-- `plannerRsBdVrf` : `"vrf"` dans le nom (+3) + `"VRF"` label exact (+2) + commentaire (+1) = **score 6**
-- `fvCtx` : `"vrf"` absent du nom `fvctx` (0) + `"VRF"` label exact (+2) + `"vrf"` dans le commentaire (+1) = **score 3**
+- `l3extRtVrfValidationPol`: `"vrf"` in name (+3) + `"VRF"` exact label (+2) + `"vrf"` in comment (+1) = **score 6**
+- `plannerRsBdVrf`: `"vrf"` in name (+3) + `"VRF"` exact label (+2) + comment (+1) = **score 6**
+- `fvCtx`: `"vrf"` absent from name `fvctx` (0) + `"VRF"` exact label (+2) + `"vrf"` in comment (+1) = **score 3**
 
-`fvCtx`, la vraie classe VRF, est battu par ses propres classes de relation parce que ces dernières encodent le concept dans leur nom camelCase.
+`fvCtx`, the actual VRF class, is beaten by its own relation classes because they encode the concept in their camelCase name.
 
 ---
 
-## 3. Axe 1 — Pénalité Rs/Rt
+## 3. Axis 1 — Rs/Rt penalty
 
-### Le diagnostic
+### The diagnosis
 
-Les classes Rs et Rt sont des **artefacts internes** du modèle objet APIC. Elles ne représentent pas des objets qu'un opérateur réseau crée, modifie ou interroge directement — elles encodent les relations entre objets primaires. En pratique, un agent LLM qui appelle `query()` ne cible jamais une classe Rs/Rt : il cible la classe primaire (`fvBD`, `fvCtx`, `vzBrCP`…) et navigue éventuellement via les relations ensuite.
+Rs and Rt classes are **internal artifacts** of the APIC object model. They do not represent objects that a network operator creates, modifies, or queries directly — they encode relations between primary objects. In practice, an LLM agent calling `query()` never targets an Rs/Rt class: it targets the primary class (`fvBD`, `fvCtx`, `vzBrCP`…) and navigates via relations afterwards.
 
-Le problème est donc structurel et non statistique : les Rs/Rt **ne devraient pas** apparaître en tête des résultats de recherche. Ce n'est pas une question de score ambigu — c'est une règle sémantique du modèle objet APIC.
+The problem is therefore structural, not statistical: Rs/Rt classes **should not** appear at the top of search results. This is not a question of ambiguous score — it is a semantic rule of the APIC object model.
 
-### Le pattern de détection
+### The detection pattern
 
-La convention de nommage ACI est stricte et cohérente. Un classe relation se reconnaît à la présence de `Rs` ou `Rt` (majuscule incluse) immédiatement après le préfixe de package dans le nom camelCase :
+The ACI naming convention is strict and consistent. A relation class is identified by the presence of `Rs` or `Rt` (with capitalisation) immediately after the package prefix in the camelCase name:
 
 ```
-fvRsCtx           → préfixe "fv"    + Rs + "Ctx"
-l3extRtVrfValidationPol → préfixe "l3ext" + Rt + "VrfValidationPol"
-infraRsVpcBndlGrp → préfixe "infra" + Rs + "VpcBndlGrp"
+fvRsCtx               → prefix "fv"    + Rs + "Ctx"
+l3extRtVrfValidationPol → prefix "l3ext" + Rt + "VrfValidationPol"
+infraRsVpcBndlGrp     → prefix "infra" + Rs + "VpcBndlGrp"
 ```
 
-La regex de détection :
+The detection regex:
 
 ```python
 _RS_RT_RE = re.compile(r"^[a-z][a-z0-9]*(?:Rs|Rt)[A-Z]")
 ```
 
-Détails du pattern :
-- `^[a-z]` : le nom de classe commence toujours par une minuscule (convention ACI)
-- `[a-z0-9]*` : le préfixe peut contenir des chiffres (`l3`, `pol2`, `iso8583`)
-- `(?:Rs|Rt)` : le marqueur de relation, toujours en majuscule initiale
-- `[A-Z]` : suivi immédiatement d'une majuscule (début du nom de la relation cible)
+Pattern details:
 
-### La pénalité appliquée
+- `^[a-z]`: class name always starts with a lowercase (ACI convention)
+- `[a-z0-9]*`: prefix may contain digits (`l3`, `pol2`, `iso8583`)
+- `(?:Rs|Rt)`: the relation marker, always capitalized
+- `[A-Z]`: immediately followed by an uppercase letter (start of the target relation name)
 
-Après calcul du score habituel (nom/label/commentaire), les classes Rs/Rt reçoivent une pénalité de **-3 points** :
+### The penalty applied
+
+After computing the usual score (name/label/comment), Rs/Rt classes receive a penalty of **-3 points**:
 
 ```python
 if score > 0:
@@ -154,35 +157,36 @@ if score > 0:
         results.append(...)
 ```
 
-La pénalité est appliquée **après** le score initial pour deux raisons :
-1. Elle préserve l'ordre relatif entre classes Rs/Rt elles-mêmes (celles qui matchent mieux restent mieux classées entre elles)
-2. Les classes dont le score tombe à 0 ou moins sont **exclues des résultats** — un résultat non-pertinent n'a pas de valeur même en position 10
+The penalty is applied **after** the initial score for two reasons:
 
-### Cas concrets après application
+1. It preserves the relative order among Rs/Rt classes themselves (those that match better remain better ranked among themselves)
+2. Classes whose score drops to 0 or below are **excluded from results** — an irrelevant result has no value even at position 10
 
-**Requête `"VRF"` :**
+### Concrete cases after application
 
-| Classe | Score brut | Pénalité | Score final |
+**Query `"VRF"`:**
+
+| Class | Raw score | Penalty | Final score |
 |---|---|---|---|
-| `l3extRtVrfValidationPol` | 6 (nom+label+comment) | -3 (Rt) | **3** |
-| `plannerRsBdVrf` | 6 (nom+label+comment) | -3 (Rs) | **3** |
-| `fvCtx` | 3 (label+comment) | 0 (pas Rs/Rt) | **3** |
+| `l3extRtVrfValidationPol` | 6 (name+label+comment) | -3 (Rt) | **3** |
+| `plannerRsBdVrf` | 6 (name+label+comment) | -3 (Rs) | **3** |
+| `fvCtx` | 3 (label+comment) | 0 (not Rs/Rt) | **3** |
 
-Les trois classes finissent à score 3. L'égalité persiste — mais `fvCtx` est maintenant **dans la course**, ce qui n'était pas le cas avant (score 3 contre score 6 des Rs/Rt).
+All three classes end at score 3. The tie persists — but `fvCtx` is now **in the race**, which was not the case before (score 3 vs score 6 for the Rs/Rt classes).
 
-**Requête `"bridge domain"` :**
+**Query `"bridge domain"`:**
 
-| Classe | Score brut | Pénalité | Score final |
+| Class | Raw score | Penalty | Final score |
 |---|---|---|---|
 | `fvBD` | 3 (label+comment) | 0 | **3** |
-| `fvRsSvcBDToBDAtt` | 3 (label+comment) | -3 (Rs) | **0 → exclu** |
-| `fvRtBd` | 3 (label+comment) | -3 (Rt) | **0 → exclu** |
+| `fvRsSvcBDToBDAtt` | 3 (label+comment) | -3 (Rs) | **0 → excluded** |
+| `fvRtBd` | 3 (label+comment) | -3 (Rt) | **0 → excluded** |
 
-Les classes relation sont exclues. `fvBD` reste mais affronte toujours les classes non-Rs/Rt qui partagent le label (`fvABDPol`, `eqptcapacityBDEntry`…).
+Relation classes are excluded. `fvBD` remains but still competes against non-Rs/Rt classes that share the label (`fvABDPol`, `eqptcapacityBDEntry`…).
 
-### Gains mesurés
+### Measured gains
 
-| Métrique | Baseline | + Axe 1 | Delta |
+| Metric | Baseline | + Axis 1 | Delta |
 |---|---|---|---|
 | Recall@1 | 15.4% | **28.2%** | +12.8% |
 | Recall@5 | 35.9% | **41.0%** | +5.1% |
@@ -191,23 +195,23 @@ Les classes relation sont exclues. `fvBD` reste mais affronte toujours les class
 | Tier 1 R@5 | 50% | **55%** | +5% |
 | Tier 2 R@5 | 80% | **100%** | +20% |
 | Tier 3 R@1 | 0% | 0% | 0% |
-| Temps moyen | 3.2 ms | **3.2 ms** | 0 |
+| Average time | 3.2 ms | **3.2 ms** | 0 |
 
-Le gain en tier 1 est substantiel (+25% Recall@1). Le gain en tier 2 sur Recall@5 (+20%) est moins évident mais s'explique : pour les requêtes de type nom camelCase (`"l3extout"`), des classes `l3extRt*` encombrant les premières positions sont désormais pénalisées, libérant des places pour `l3extOut`.
+The gain in tier 1 is substantial (+25% Recall@1). The gain in tier 2 on Recall@5 (+20%) is less obvious but explained: for camelCase name queries (`"l3extout"`), `l3extRt*` classes cluttering the top positions are now penalized, freeing slots for `l3extOut`.
 
-**Ce que l'axe 1 ne résout pas :** Le problème du label partagé entre classes primaires subsiste. `fvBD` et `fvABDPol` ont toutes les deux label = `"Bridge Domain"` et aucune n'est une relation Rs/Rt. Elles continuent à se partager le rank 1 au gré de l'insertion. Les tier 3 et 4 restent à 0%.
+**What axis 1 does not solve:** The shared-label problem between primary classes persists. `fvBD` and `fvABDPol` both have label = `"Bridge Domain"` and neither is an Rs/Rt relation. They continue to share rank 1 based on insertion order. Tiers 3 and 4 remain at 0%.
 
 ---
 
-## 4. Axe 2 — Enrichissement par prop_labels
+## 4. Axis 2 — prop_labels enrichment
 
-### Le diagnostic
+### The diagnosis
 
-La recherche fonctionnelle (tier 3) — `"ARP flooding"`, `"dead interval"`, `"link aggregation"`, `"data plane learning"` — échoue totalement parce que ces termes n'apparaissent **ni dans le label, ni dans le commentaire** des classes concernées.
+Functional search (tier 3) — `"ARP flooding"`, `"dead interval"`, `"link aggregation"`, `"data plane learning"` — fails completely because these terms appear **neither in the label nor in the comment** of the relevant classes.
 
-Pourtant, ces informations existent dans les fichiers jsonmeta APIC. Chaque fichier jsonmeta décrit non seulement la classe elle-même (son label, son commentaire) mais aussi **toutes ses propriétés** : chaque attribut configurable a son propre label humain fourni par Cisco.
+Yet this information exists in the APIC jsonmeta files. Each jsonmeta file describes not only the class itself (its label, its comment) but also **all its properties**: each configurable attribute has its own human label provided by Cisco.
 
-Exemple — `fvBD.json` (extrait) :
+Example — `fvBD.json` (excerpt):
 
 ```json
 {
@@ -237,13 +241,13 @@ Exemple — `fvBD.json` (extrait) :
 }
 ```
 
-Ces labels de propriétés — `"ARP Flooding"`, `"Unicast Routing"`, `"MAC Address"` — sont la terminologie officielle Cisco pour décrire les fonctionnalités d'un objet. Un agent LLM qui cherche `"ARP flooding"` cherche précisément la classe qui **possède** cette fonctionnalité. L'information existe, elle est juste absente de l'index de recherche.
+These property labels — `"ARP Flooding"`, `"Unicast Routing"`, `"MAC Address"` — are the official Cisco terminology for describing an object's capabilities. An LLM agent searching for `"ARP flooding"` is looking precisely for the class that **owns** that capability. The information exists; it is simply absent from the search index.
 
-### La solution en deux composantes
+### The two-component solution
 
-#### Composante A — schema-collector : enrichir l'index
+#### Component A — schema-collector: enrich the index
 
-La fonction `_extract_prop_labels()` dans `schema-collector/collect.py` lit les `properties` de chaque fichier jsonmeta et extrait les labels utiles :
+The `_extract_prop_labels()` function in `schema-collector/collect.py` reads the `properties` from each jsonmeta file and extracts useful labels:
 
 ```python
 def _extract_prop_labels(properties: dict) -> list[str]:
@@ -253,31 +257,32 @@ def _extract_prop_labels(properties: dict) -> list[str]:
     })
     seen, labels = set(), []
     for prop_name, pmeta in properties.items():
-        if pmeta.get("isHidden", False):           # propriétés cachées ignorées
+        if pmeta.get("isHidden", False):           # hidden properties ignored
             continue
         lbl = (pmeta.get("label") or "").strip()
-        if not lbl or len(lbl) <= 3:               # labels trop courts ignorés
+        if not lbl or len(lbl) <= 3:               # very short labels ignored
             continue
-        if lbl in _GENERIC_PROP_LABELS:            # labels génériques ignorés
+        if lbl in _GENERIC_PROP_LABELS:            # generic labels ignored
             continue
-        if lbl.lower() == prop_name.lower():       # label = nom technique → pas de valeur
+        if lbl.lower() == prop_name.lower():       # label == technical name → no value
             continue
-        if lbl in seen:                            # dédupliqué
+        if lbl in seen:                            # deduplicated
             continue
         seen.add(lbl)
         labels.append(lbl)
     return labels
 ```
 
-**Pourquoi filtrer ?**
+**Why filter?**
 
-Sans filtrage, l'index serait pollué par des labels omniprésents et inutiles pour la recherche :
-- `"Name"` : présent dans 99% des classes → une requête `"name"` retournerait toutes les 15k classes
-- `"Description"` : idem
-- `"Managed By"`, `"Monitoring policy"` : labels d'infrastructure, toujours les mêmes
-- Labels identiques au nom de propriété technique (`label = "arpFlood"` au lieu de `"ARP Flooding"`) : Cisco n'a pas documenté cette propriété — pas de valeur ajoutée
+Without filtering, the index would be polluted by ubiquitous, search-useless labels:
 
-Le résultat est écrit dans `class-descriptions.json` sous un nouveau champ `prop_labels` :
+- `"Name"`: present in 99% of classes → a `"name"` query would return all 15k classes
+- `"Description"`: same
+- `"Managed By"`, `"Monitoring policy"`: infrastructure labels, always the same
+- Labels identical to the technical property name (`label = "arpFlood"` instead of `"ARP Flooding"`): Cisco did not document this property — no added value
+
+The result is written to `class-descriptions.json` under a new `prop_labels` field:
 
 ```json
 {
@@ -298,66 +303,66 @@ Le résultat est écrit dans `class-descriptions.json` sous un nouveau champ `pr
 }
 ```
 
-**Impact sur l'index :** 12 856 classes sur 15 152 possèdent au moins un prop_label utile après filtrage. 549 classes qui n'avaient ni label ni commentaire exploitable entrent dans l'index pour la première fois grâce à leurs prop_labels.
+**Index impact:** 12 856 classes out of 15 152 have at least one useful prop_label after filtering. 549 classes that had neither a usable label nor comment enter the index for the first time thanks to their prop_labels.
 
-#### Composante B — MCP server : consulter les prop_labels en fallback
+#### Component B — MCP server: consult prop_labels as fallback
 
-La modification de `search()` dans `mcp/registry/descriptions.py` est volontairement minimale. Le scan des prop_labels ne s'effectue que si la classe n'a **pas encore marqué de points** sur les trois champs habituels :
+The modification of `search()` in `mcp/registry/descriptions.py` is intentionally minimal. The prop_labels scan is only triggered if the class has **not yet scored any points** on the three standard fields:
 
 ```python
 if score == 0:
     for pl in meta.get("prop_labels", ()):
         if kw in pl.lower():
             score = 1
-            break   # un seul match suffit — pas de cumul
+            break   # one match is enough — no accumulation
 ```
 
-**Trois décisions de conception :**
+**Three design decisions:**
 
-1. **Fallback uniquement (score == 0).** Si une classe matche déjà sur son nom ou son label, le scan des prop_labels n'est pas déclenché. Cela évite d'inflater le score d'une classe qui matcherait à la fois sur son label et sur ses propriétés — ce qui avantagerait artificiellement les classes très riches en propriétés.
+1. **Fallback only (`score == 0`).** If a class already matches on its name or label, the prop_labels scan is not triggered. This avoids inflating the score of a class that would match on both its label and its properties — which would artificially favour classes with many properties.
 
-2. **Score fixe +1, sans cumul.** Une classe trouvée via prop_labels obtient exactement 1 point, même si dix de ses propriétés contiennent le keyword. Ce plafond empêche que des classes aux nombreuses propriétés (comme `fvBD` avec 20+ prop_labels) dominent sur des classes mieux ciblées. Le `break` après le premier match est critique.
+2. **Fixed score +1, no accumulation.** A class found via prop_labels gets exactly 1 point, even if ten of its properties contain the keyword. This ceiling prevents classes with many properties (such as `fvBD` with 20+ prop_labels) from dominating more targeted classes. The `break` after the first match is critical.
 
-3. **Poids +1 = même niveau que le commentaire.** Un prop_label est une information contextuelle, non une définition centrale. Le mettre au même niveau que le commentaire (le champ le moins discriminant) est intentionnel.
+3. **Weight +1 = same level as comment.** A prop_label is contextual information, not a central definition. Placing it at the same level as the comment (the least discriminating field) is intentional.
 
-### Comportement avec les exemples concrets
+### Behaviour with concrete examples
 
-**Requête `"ARP flooding"` :**
-
-```
-fvBD :
-  - "arp flooding" dans le nom "fvbd" ? Non → 0
-  - "arp flooding" dans le label "Bridge Domain" ? Non → 0
-  - "arp flooding" dans le commentaire ? Non → score toujours 0
-  - score == 0 → scan des prop_labels :
-    - "ARP Flooding" → "arp flooding" in "arp flooding" → OUI → score = 1, break
-
-Score final fvBD = 1.
-```
+**Query `"ARP flooding"`:**
 
 ```
-uribv4Entity :
-  - "arp flooding" dans le nom ? Non → 0
-  - "arp flooding" dans le label "IPv4 Route" ? Non → 0
-  - "arp flooding" dans le commentaire ? Non → score 0
-  - scan des prop_labels : aucune prop_label ne contient "arp flooding" → score reste 0
+fvBD:
+  - "arp flooding" in name "fvbd"? No → 0
+  - "arp flooding" in label "Bridge Domain"? No → 0
+  - "arp flooding" in comment? No → score still 0
+  - score == 0 → scan prop_labels:
+    - "ARP Flooding" → "arp flooding" in "arp flooding" → YES → score = 1, break
 
-Exclu des résultats.
+Final score fvBD = 1.
 ```
 
-**Requête `"dead interval"` :**
+```
+uribv4Entity:
+  - "arp flooding" in name? No → 0
+  - "arp flooding" in label "IPv4 Route"? No → 0
+  - "arp flooding" in comment? No → score 0
+  - scan prop_labels: no prop_label contains "arp flooding" → score stays 0
 
-`ospfIfPol` (OSPF Interface Policy) possède une propriété `deadIntvl` dont le label est `"Dead Interval"`. Avant l'axe 2, cette information n'était pas dans l'index. Après :
+Excluded from results.
+```
+
+**Query `"dead interval"`:**
+
+`ospfIfPol` (OSPF Interface Policy) has a property `deadIntvl` whose label is `"Dead Interval"`. Before axis 2, this information was not in the index. After:
 
 ```
-ospfIfPol :
-  - Aucun match sur nom/label/commentaire → score 0
-  - Scan prop_labels : "Dead Interval" → "dead interval" in "dead interval" → OUI → score = 1
+ospfIfPol:
+  - No match on name/label/comment → score 0
+  - Scan prop_labels: "Dead Interval" → "dead interval" in "dead interval" → YES → score = 1
 ```
 
-### Gains mesurés
+### Measured gains
 
-| Métrique | Après axe 1 | + Axe 2 | Delta axe 2 |
+| Metric | After axis 1 | + Axis 2 | Axis 2 delta |
 |---|---|---|---|
 | Recall@1 | 28.2% | **30.8%** | +2.6% |
 | Recall@5 | 41.0% | **53.8%** | +12.8% |
@@ -366,68 +371,71 @@ ospfIfPol :
 | Tier 3 R@1 | 0% | **9%** | +9% |
 | Tier 3 R@5 | 0% | **45%** | +45% |
 | Tier 4 | 0% | **0%** | 0% |
-| Temps moyen | 3.2 ms | **11.4 ms** | +8.2 ms |
+| Average time | 3.2 ms | **11.4 ms** | +8.2 ms |
 
-### Interprétation des chiffres
+### Interpreting the numbers
 
-**Pourquoi R@1 progresse peu (+2.6%) alors que R@5 saute (+12.8%) ?**
+**Why does R@1 progress little (+2.6%) while R@5 jumps (+12.8%)?**
 
-Les classes trouvées via prop_labels reçoivent toutes le score 1. C'est le score le plus bas possible — inférieur ou égal à toute classe qui matche sur son nom, label ou commentaire. Dans la grande majorité des cas, la classe attendue finit en position 2 à 5, battue par des classes qui contiennent le mot-clé dans leur label ou commentaire avec un score plus élevé.
+Classes found via prop_labels all receive score 1 — the lowest possible score, below any class that matches on its name, label, or comment. In most cases the expected class ends up at position 2 to 5, beaten by classes that contain the keyword in their label or comment with a higher score.
 
-Exemple — requête `"ARP flooding"` :
-- `fvABD` (Attached Bridge Domain) : ses prop_labels contiennent aussi `"ARP Flooding"` (même modèle objet) → score 1
-- `fvABDPol` : idem → score 1
-- `fvBD` : score 1
-- Égalité à 3 classes, insertion order décide. `fvABD` précède `fvBD` dans le JSON → rank 3 pour `fvBD`.
+Example — query `"ARP flooding"`:
 
-Le bénéfice réel est en **Recall@5**, car l'agent LLM lit les 10 résultats retournés. Trouver la bonne classe à rank 3 ou rank 4 est une victoire opérationnelle — le LLM peut l'identifier grâce au label visible dans la réponse.
+- `fvABD` (Attached Bridge Domain): its prop_labels also contain `"ARP Flooding"` (same object model) → score 1
+- `fvABDPol`: same → score 1
+- `fvBD`: score 1
+- Three-way tie; insertion order decides. `fvABD` precedes `fvBD` in the JSON → rank 3 for `fvBD`.
 
-**Pourquoi +8.2 ms de latence ?**
+The real benefit is in **Recall@5**, because the LLM agent reads the 10 results returned. Finding the right class at rank 3 or rank 4 is an operational win — the LLM can identify it from the visible label in the response.
 
-Le fallback prop_labels est déclenché pour chaque classe qui ne matche pas sur nom/label/commentaire. Pour une requête comme `"ARP flooding"`, la quasi-totalité des 15 152 classes échoue sur les trois champs habituels — la boucle `for pl in meta.get("prop_labels", ())` s'exécute donc ~15 000 fois. Chaque itération compare une chaîne courte (le keyword) contre des chaînes courtes (les prop_labels).
+**Why +8.2 ms of latency?**
 
-11 ms reste acceptable pour un MCP tool (le LLM ne fait pas ces appels en boucle serrée), mais la dégradation est réelle. Elle pourrait être optimisée par un index inversé pré-calculé sur les prop_labels au chargement, au prix d'une plus grande empreinte mémoire.
+The prop_labels fallback is triggered for every class that does not match on name/label/comment. For a query like `"ARP flooding"`, nearly all 15 152 classes fail on the three standard fields — the `for pl in meta.get("prop_labels", ())` loop executes ~15 000 times. Each iteration compares a short string (the keyword) against short strings (the prop_labels).
+
+11 ms remains acceptable for an MCP tool (the LLM does not make these calls in a tight loop), but the degradation is real. It could be optimized with a pre-computed inverted index on prop_labels at load time, at the cost of higher memory footprint.
 
 ---
 
-## 5. Synthèse des trois états de l'algorithme
+## 5. Summary of the three algorithm states
 
-| Stratégie | R@1 | R@5 | MRR | Avg ms | Classes indexées |
+| Strategy | R@1 | R@5 | MRR | Avg ms | Indexed classes |
 |---|---|---|---|---|---|
 | Baseline — naive substring | 15.4% | 35.9% | 0.229 | 3.2 | 14 603 |
-| + Axe 1 — pénalité Rs/Rt | 28.2% | 41.0% | 0.338 | 3.2 | 14 603 |
-| + Axe 2 — prop_labels | **30.8%** | **53.8%** | **0.400** | 11.4 | **15 152** |
+| + Axis 1 — Rs/Rt penalty | 28.2% | 41.0% | 0.338 | 3.2 | 14 603 |
+| + Axis 2 — prop_labels | **30.8%** | **53.8%** | **0.400** | 11.4 | **15 152** |
 
-*Évalué sur 39 requêtes — golden set `mcp/tests/fixtures/search_golden.json`, APIC mo-apic-v6.0_9c.*
+*Evaluated on 39 queries — golden set `mcp/tests/fixtures/search_golden.json`, APIC mo-apic-v6.0_9c.*
 
 ---
 
-## 6. Limites résiduelles et pistes futures
+## 6. Remaining limitations and future directions
 
-### Ce qui reste non résolu
+### What remains unresolved
 
-**Le problème du label partagé (tier 1 partiel)**
+#### The shared-label problem (partial tier 1)
 
-Cisco assigne le même label à plusieurs dizaines de classes liées. `fvBD`, `fvABDPol`, `fvSvcBD` ont toutes label = `"Bridge Domain"`. Une pénalité Rs/Rt ne peut pas résoudre ce cas — ces classes ne sont pas des relations. Un tri secondaire par longueur du nom de classe (les classes canoniques sont systématiquement plus courtes : `fvBD` = 4 car. vs `fvABDPol` = 8 car.) résoudrait une partie des cas mais n'a pas encore été validé sur l'ensemble du corpus.
+Cisco assigns the same label to dozens of related classes. `fvBD`, `fvABDPol`, `fvSvcBD` all have label = `"Bridge Domain"`. An Rs/Rt penalty cannot resolve this case — these classes are not relations. A secondary sort by class name length (canonical classes are systematically shorter: `fvBD` = 4 chars vs `fvABDPol` = 8 chars) would solve some cases but has not yet been validated on the full corpus.
 
-**Les synonymes purs (tier 4 = 0%)**
+#### Pure synonyms (tier 4 = 0%)
 
-`"gateway"` → `fvSubnet` : aucune propriété de `fvSubnet` ne s'appelle "gateway". Le label APIC de la propriété IP est `"Subnet"`. `"security policy"` → `vzBrCP` : les propriétés du contrat parlent de "QoS Class", "Scope", "DSCP" — pas de "security". Ces associations n'ont aucun ancrage textuel dans le corpus APIC.
+`"gateway"` → `fvSubnet`: no property of `fvSubnet` is called "gateway". The APIC label for the IP property is `"Subnet"`. `"security policy"` → `vzBrCP`: the contract properties speak of "QoS Class", "Scope", "DSCP" — not "security". These associations have no textual anchor in the APIC corpus.
 
-Résoudre le tier 4 nécessiterait soit :
-- Un modèle d'embeddings sémantiques (vecteur de similarité entre "gateway" et "first-hop IP address of a subnet")
-- Un dictionnaire de synonymes ACI maintenu manuellement
-- Un fine-tuning d'un modèle sur la documentation Cisco ACI
+Resolving tier 4 would require either:
 
-**Le coût du fallback prop_labels à grande échelle**
+- A semantic embedding model (vector similarity between "gateway" and "first-hop IP address of a subnet")
+- A manually maintained ACI synonym dictionary
+- A fine-tuned model on Cisco ACI documentation
 
-+8 ms par requête est acceptable avec 15k classes. Si le corpus s'étend significativement (nouvelles versions APIC avec plus de classes), le scan linéaire deviendra un goulot d'étranglement. Un index inversé (`{prop_label_word: [class_name, ...]}`), pré-calculé au chargement du serveur, réduirait la complexité de O(n × k) à O(1) sur les prop_labels.
+#### The prop_labels fallback cost at scale
 
-### Guide pour les évolutions futures
++8 ms per query is acceptable with 15k classes. If the corpus grows significantly (new APIC versions with more classes), the linear scan will become a bottleneck. A pre-computed inverted index (`{prop_label_word: [class_name, ...]}`) built at server load time would reduce complexity from O(n × k) to O(1) on prop_labels.
 
-Toute modification du scoring doit être :
-1. **Testée sur le golden set** : `python mcp/tests/eval_search.py -v` depuis la racine du dépôt
-2. **Documentée dans le tableau** de `mcp/tests/eval_search.py` (en-tête du fichier)
-3. **Validée** sur le comportement à la limite : Rs/Rt qui survivent quand leur score dépasse 3, prop_labels qui ne cumulant pas, edge cases du vide
+### Guide for future evolutions
 
-Le golden set couvre 4 tiers mais reste un échantillon de 39 requêtes sur 15 152 classes. Une amélioration qui progresse de +5% sur le golden set peut avoir des régressions non visibles. Augmenter le golden set à 100+ requêtes avant d'introduire des heuristiques plus agressives (tri secondaire, pondération par longueur) est recommandé.
+Any scoring modification must be:
+
+1. **Tested on the golden set**: `python mcp/tests/eval_search.py -v` from the repo root
+2. **Documented in the table** in `mcp/tests/eval_search.py` (file header)
+3. **Validated** on edge-case behavior: Rs/Rt that survive when their score exceeds 3, prop_labels that do not accumulate, empty edge cases
+
+The golden set covers 4 tiers but remains a sample of 39 queries over 15 152 classes. An improvement that gains +5% on the golden set may have regressions not visible in the sample. Growing the golden set to 100+ queries before introducing more aggressive heuristics (secondary sort, length-based weighting) is recommended.
