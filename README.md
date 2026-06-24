@@ -2,8 +2,8 @@
 
 <h1>aci-mcp</h1>
 
-<!-- Replace with your banner: docs/assets/banner.png (recommended: 1200×400px) -->
-<img src="docs/assets/banner.png" alt="aci-mcp banner" width="800"/>
+<img src="docs/assets/banner.jpg" alt="aci-mcp banner" width="800"/>
+<sub>Photo by <a href="https://unsplash.com/@tvick">Taylor Vick</a> on <a href="https://unsplash.com">Unsplash</a></sub>
 
 <br/><br/>
 
@@ -15,7 +15,7 @@ give any LLM instant, schema-aware access to your APIC fabric.</p>
 <br/>
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue)](CHANGELOG.md)
-[![License: AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-blue)](LICENSE)
+[![License: PolyForm NC](https://img.shields.io/badge/license-PolyForm%20NC-blue)](LICENSE)
 [![Commercial License](https://img.shields.io/badge/license-Commercial-orange)](LICENSE-COMMERCIAL.md)
 [![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-3.1+-00C896)](https://github.com/jlowin/fastmcp)
@@ -310,9 +310,9 @@ Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started
 
 ## License
 
-[AGPL v3](LICENSE) — © 2026 Khalid El-Ouiali, MONARK AIOPS srl.
+[PolyForm Noncommercial 1.0.0](LICENSE) — © 2026 Khalid El-Ouiali, MONARK AIOPS srl.
 
-Free to use, modify, and distribute under AGPL v3 terms. A [commercial license](LICENSE-COMMERCIAL.md)
-is available for proprietary integrations that cannot comply with the AGPL copyleft requirement.
+Free for personal, research, and noncommercial use. A [commercial license](LICENSE-COMMERCIAL.md)
+is required for any commercial deployment or integration.
 
 Contact: [monark.aiops@pm.me](mailto:monark.aiops@pm.me)

@@ -74,13 +74,6 @@ be asked to add tests before merge.
 - Docstring on every public function and module
 - No commented-out code, no `print` statements
 
-**License header** — every new Python file must start with:
-
-```python
-# Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl
-# SPDX-License-Identifier: AGPL-3.0-or-later
-```
-
 ---
 
 ## Commit messages
@@ -108,10 +101,10 @@ chore: bump fastmcp to 3.2.0
 
 ## License
 
-By contributing, you agree your code is released under
-[AGPL v3](LICENSE). The copyright notice
-`Khalid El-Ouiali — MONARK AIOPS srl` is retained in all derivative
-works as required by the license.
+By contributing, you agree your code is released under the
+[PolyForm Noncommercial License 1.0.0](LICENSE). The copyright notice
+`Khalid El-Ouiali — MONARK AIOPS srl` is retained in all copies
+and derivative works as required by the license.
 
 For commercial licensing inquiries:
 [monark.aiops@pm.me](mailto:monark.aiops@pm.me)

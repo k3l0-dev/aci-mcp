@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 """Unit tests for registry.descriptions.search and load_descriptions."""
 
