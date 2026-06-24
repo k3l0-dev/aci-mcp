@@ -3,7 +3,6 @@
 <h1>aci-mcp</h1>
 
 <img src="docs/assets/banner.jpg" alt="aci-mcp banner" width="800"/>
-<sub>Photo by <a href="https://unsplash.com/@tvick">Taylor Vick</a> on <a href="https://unsplash.com">Unsplash</a></sub>
 
 <br/><br/>
 
