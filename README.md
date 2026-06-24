@@ -7,7 +7,7 @@
 
 <br/><br/>
 
-<h3>Your AI agent can now talk to your datacenter.</h3>
+<h3>Your agent can now literally talk to your datacenter.</h3>
 
 <p>The first open-source MCP server for Cisco ACI —<br/>
 give any LLM instant, schema-aware access to your APIC fabric.</p>
