@@ -1,4 +1,18 @@
-# aci-mcp
+<div align="center">
+
+<h1>aci-mcp</h1>
+
+<!-- Replace with your banner: docs/assets/banner.png (recommended: 1200×400px) -->
+<img src="docs/assets/banner.png" alt="aci-mcp banner" width="800"/>
+
+<br/><br/>
+
+<h3>Your AI agent can now talk to your datacenter.</h3>
+
+<p>The first open-source MCP server for Cisco ACI —<br/>
+give any LLM instant, schema-aware access to your APIC fabric.</p>
+
+<br/>
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue)](CHANGELOG.md)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-blue)](LICENSE)
@@ -7,8 +21,16 @@
 [![FastMCP](https://img.shields.io/badge/FastMCP-3.1+-00C896)](https://github.com/jlowin/fastmcp)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](mcp/deploy/Dockerfile)
 
-> **The first open-source MCP server for Cisco ACI.**
-> Give any LLM instant, schema-aware access to your APIC fabric — no hardcoded class knowledge, no prompt engineering required.
+<br/>
+
+![Cisco ACI](https://img.shields.io/badge/Cisco-ACI-1BA0D7?style=flat-square&logo=cisco&logoColor=white)
+![DevNet](https://img.shields.io/badge/Cisco-DevNet-6CC04A?style=flat-square&logo=cisco&logoColor=white)
+![MCP](https://img.shields.io/badge/Model%20Context%20Protocol-MCP-FF6B35?style=flat-square)
+![Network AIOps](https://img.shields.io/badge/Network-AIOps-7B2FBE?style=flat-square)
+![Network Automation](https://img.shields.io/badge/Network-Automation-0066CC?style=flat-square)
+![AI Agent](https://img.shields.io/badge/AI-Agent%20Ready-00A67E?style=flat-square)
+
+</div>
 
 ---
 
