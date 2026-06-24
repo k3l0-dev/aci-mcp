@@ -66,6 +66,7 @@ from exceptions import ConfigurationError, UnknownClassError
 from fastmcp import Context, FastMCP
 from fastmcp.server.lifespan import lifespan
 from middleware.auth import ApiKeyMiddleware, KeyStore, load_api_keys
+from middleware.health import HealthMiddleware
 from middleware.oauth import OAuthDiscoveryMiddleware
 from pydantic import BeforeValidator
 from registry.descriptions import load_descriptions
@@ -396,9 +397,11 @@ async def _serve() -> None:
 
     signal.signal(signal.SIGHUP, _handle_sighup)
 
-    # OAuthDiscoveryMiddleware must be outermost so it handles /.well-known/
-    # paths before ApiKeyMiddleware validates tokens.
+    # Middleware order: outermost first. HealthMiddleware must be first so
+    # /health is served without auth. OAuthDiscoveryMiddleware must precede
+    # ApiKeyMiddleware so /.well-known/ paths are never blocked by auth.
     middleware = [
+        Middleware(HealthMiddleware),
         Middleware(OAuthDiscoveryMiddleware),
         Middleware(ApiKeyMiddleware, key_store=key_store),
     ]

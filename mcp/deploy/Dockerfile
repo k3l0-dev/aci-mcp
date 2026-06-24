@@ -17,9 +17,10 @@ COPY mcp/pyproject.toml mcp/uv.lock ./
 RUN uv sync --frozen --no-dev
 
 # Copy application source and shared data
-COPY mcp/main.py ./
-COPY mcp/registry/ ./registry/
+COPY mcp/main.py mcp/exceptions.py ./
 COPY mcp/apic/ ./apic/
+COPY mcp/middleware/ ./middleware/
+COPY mcp/registry/ ./registry/
 COPY data/ ./data/
 
 # Run as non-root
