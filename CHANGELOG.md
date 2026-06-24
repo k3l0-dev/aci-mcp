@@ -5,12 +5,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ---
 
-## [Unreleased]
+## [1.0.0] - 2026-06-24
+
+First public open-source release.
+
+### Added
+
+- `LICENSE` — GNU Affero General Public License v3 (AGPL-3.0-or-later).
+- `LICENSE-COMMERCIAL.md` — commercial license terms for proprietary integrations.
+- `SKILL.md` — LLM skill guide at repo root for client discovery.
+- `scripts/list-configurable-classes.sh` — query configurable ACI classes from jsonmeta
+  schemas. Options: `--package`, `--exclude-rsrt`, `--count`.
+- SPDX license headers (`Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl /
+  SPDX-License-Identifier: AGPL-3.0-or-later`) on all Python source files.
+- `[project.authors]`, `[project.urls]`, `classifiers`, `keywords` in both
+  `mcp/pyproject.toml` and `schema-collector/pyproject.toml`.
 
 ### Changed
 
-- `scripts/`, `Makefile`, `.env.example` moved to the `ai-netlab` repository.
-  This repo now contains only the MCP server (`mcp/`) and the schema collector (`schema-collector/`).
+- Repository scope narrowed: lab orchestration tooling (`scripts/`, `Makefile`,
+  `.env.example`) extracted to the separate `ai-netlab` repository. This repo now
+  contains only the MCP server (`mcp/`) and the schema collector (`schema-collector/`).
+- Build system removed: Nuitka/UPX standalone binary pipeline (`schema-collector/deploy/`)
+  deleted. The schema collector is distributed as Python source only.
+- `.gitignore` extended: `.claude/`, `.opencode/`, `.vscode/`, `CLAUDE.md`,
+  `.markdownlint*`, `.lab*`.
 
 ---
 
@@ -18,12 +37,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Added
 
-- `scripts/lab.py` — lab control CLI (click + rich + pyfiglet). Commands: `up`, `down`, `logs`,
-  `test`, `collect`, `status`, `keys`. PEP 723 inline deps — `uv run scripts/lab.py` installs
-  click/rich/pyfiglet automatically. `make lab` fires `up`.
-  - `up` checks APIC TCP reachability before starting the server.
-  - `up` streams server stdout/stderr to `.lab-server.log`; `logs [-n N]` tails it live.
-  - `keys [N]` generates `secrets.token_urlsafe(32)` bearer tokens and appends to `.env`.
 - `mcp/middleware/oauth.py` — `OAuthDiscoveryMiddleware`: intercepts
   `/.well-known/oauth-protected-resource` and `/.well-known/oauth-protected-resource/mcp`,
   returning RFC 9728 Protected Resource Metadata JSON. Prevents spec-compliant MCP clients
@@ -33,8 +46,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 - `mcp/middleware/auth.py` — `RateLimiter`: fixed-window per-IP limiter (default 30 attempts /
   60 s). Returns 429 with `Retry-After: 60` after threshold. Successful requests do not
   consume budget.
-- `docs/scripts/lab.md` — full command reference with Mermaid `up` flowchart, file lifecycle
-  table, and troubleshooting section.
 - 21 new unit tests for `middleware.auth` (KeyStore, RateLimiter, WWW-Authenticate, hot-reload).
   Total: 199 tests.
 
@@ -48,9 +59,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 - `mcp/main.py` — `ApiKeyMiddleware` is always added to the middleware stack (no-op when
   `KeyStore` is empty, eliminating the conditional branch). `OAuthDiscoveryMiddleware` added
   as outermost middleware in all modes.
-- `mcp/main.py` — SIGHUP handler installed at startup: `kill -HUP $(cat .lab.pid)` reloads
+- `mcp/main.py` — SIGHUP handler installed at startup: sends `SIGHUP` to reload
   `MCP_API_KEYS` from `.env` without restarting the server.
-- `Makefile` — added `lab` target and expanded help section.
 
 ### Security
 
@@ -75,13 +85,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 - `mcp/exceptions.py` — `AuthenticationError` added to the exception hierarchy.
 - `docs/` — project wiki: architecture diagrams (Mermaid), deployment guides, tools reference,
   internals documentation, and full settings reference.
-- `.env.example` — expanded with `MCP_API_KEYS` and `MCP_DOMAIN` variables.
 - 26 new unit tests for `middleware.auth` (load, extract, validate, HTTP integration).
 
 ### Changed
 
-- `mcp/pyproject.toml` — version bumped to `0.2.0`; added `license = {text = "Proprietary"}`;
-  all dependency version constraints now have explicit upper bounds.
+- `mcp/pyproject.toml` — version bumped to `0.2.0`; all dependency version constraints
+  now have explicit upper bounds.
 - `mcp/main.py` — `_serve()` now conditionally applies `ApiKeyMiddleware` via
   `run_http_async(middleware=[...])` when `MCP_API_KEYS` is configured.
 
@@ -109,8 +118,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 - Versioned artifact layout: `cobra-sdk/{apic_version}/` and `mo-schemas/{apic_version}/`
 - APIC version auto-detected via `firmwareCtrlrRunning` after authentication
 - Shared `data/` at monorepo root — written by `schema-collector`, read by `mcp`
-- Shared `.env` at monorepo root — single credentials file for both projects
-- `LICENSE` — proprietary license, copyright Khalid El-Ouiali — MONARK AIOPS srl
 
 ### Changed
 
@@ -119,7 +126,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ---
 
-[Unreleased]: https://gitlab.com/monark-aiops-group/aci-mcp/-/compare/v0.3.0...HEAD
-[0.3.0]: https://gitlab.com/monark-aiops-group/aci-mcp/-/compare/v0.2.0...v0.3.0
-[0.2.0]: https://gitlab.com/monark-aiops-group/aci-mcp/-/compare/v0.1.0...v0.2.0
-[0.1.0]: https://gitlab.com/monark-aiops-group/aci-mcp/-/tags/v0.1.0
+[1.0.0]: https://github.com/monark-aiops/aci-mcp/compare/v0.3.0...v1.0.0
+[0.3.0]: https://github.com/monark-aiops/aci-mcp/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/monark-aiops/aci-mcp/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/monark-aiops/aci-mcp/releases/tag/v0.1.0

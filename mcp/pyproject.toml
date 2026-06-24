@@ -1,6 +1,6 @@
 [project]
 name = "aci-mcp"
-version = "0.3.0"
+version = "1.0.0"
 description = "Schema-driven FastMCP server for Cisco ACI APIC"
 readme = "README.md"
 license = {text = "AGPL-3.0-or-later"}
