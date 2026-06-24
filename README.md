@@ -210,17 +210,6 @@ Pipeline steps:
 | `schemas` | `classes.yaml` | `mo-schemas/{version}/*.json` |
 | `descriptions` | `mo-schemas/` | `data/class-descriptions.json` |
 
-### Standalone binary
-
-The collector can be compiled to a self-contained Linux x86_64 binary (no Python on the target):
-
-```bash
-cd schema-collector
-make build   # requires OrbStack on macOS (Rosetta 2), or Linux root
-```
-
-Output: `schema-collector/dist/<version>/aci-collect`
-
 ---
 
 ## Development
