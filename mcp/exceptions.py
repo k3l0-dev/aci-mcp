@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 """
 exceptions.py
 
@@ -9,7 +9,7 @@ Hierarchy
 ---------
 AciMcpError
 ├── ConfigurationError        — missing or invalid startup configuration
-├── AuthenticationError       — incoming request lacks a valid API key
+├── AuthenticationError       — incoming request carries no valid API key
 ├── RegistryError             — base for registry load failures
 │   ├── DescriptionsLoadError — class-descriptions.json absent or malformed
 │   └── SchemaLoadError       — jsonmeta schema file malformed (exists but invalid)
@@ -20,8 +20,6 @@ AciMcpError
     ├── ApicConnectionError   — APIC unreachable (network error or timeout)
     └── ApicResponseError     — APIC returned an unexpected or malformed response
 """
-
-from __future__ import annotations
 
 
 class AciMcpError(Exception):
@@ -44,9 +42,9 @@ class ConfigurationError(AciMcpError):
 class AuthenticationError(AciMcpError):
     """Incoming MCP request is missing or carrying an invalid API key.
 
-    Not raised programmatically by the middleware (which returns a 401 HTTP
-    response directly) — provided here so test code and future callers can
-    catch a typed exception instead of inspecting response status codes.
+    Raised by _authenticate() in middleware/auth.py and caught there to produce
+    the 401 HTTP response. Keeping auth logic in a pure function that raises
+    this exception makes it independently testable without an HTTP layer.
     """
 
 

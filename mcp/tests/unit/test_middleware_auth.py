@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 """Unit tests for middleware.auth — ApiKeyMiddleware, KeyStore, RateLimiter, helpers."""
 
@@ -9,10 +9,14 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
+import pytest
+
+from exceptions import AuthenticationError
 from middleware.auth import (
     ApiKeyMiddleware,
     KeyStore,
     RateLimiter,
+    _authenticate,
     _extract_token,
     _is_valid,
     load_api_keys,
@@ -197,6 +201,37 @@ def test_extract_token_bearer_prefix_only_returns_empty_string():
     client = TestClient(app, raise_server_exceptions=True)
     client.get("/", headers={"Authorization": "Bearer "})
     assert captured["token"] == ""
+
+
+# ── _authenticate ─────────────────────────────────────────────────────────────
+
+
+def test_authenticate_passes_with_valid_token():
+    """No exception raised when token matches a key."""
+    _authenticate("secret", frozenset({"secret"}))
+
+
+def test_authenticate_raises_for_wrong_token():
+    with pytest.raises(AuthenticationError):
+        _authenticate("wrong", frozenset({"secret"}))
+
+
+def test_authenticate_raises_for_none_token():
+    with pytest.raises(AuthenticationError):
+        _authenticate(None, frozenset({"secret"}))
+
+
+def test_authenticate_raises_for_empty_key_set():
+    """An empty key set should never validate anything."""
+    with pytest.raises(AuthenticationError):
+        _authenticate("any", frozenset())
+
+
+def test_authenticate_error_is_aci_mcp_error():
+    from exceptions import AciMcpError
+
+    with pytest.raises(AciMcpError):
+        _authenticate(None, frozenset({"k"}))
 
 
 # ── _is_valid ─────────────────────────────────────────────────────────────────

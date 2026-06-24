@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 """
 middleware/auth.py
 
@@ -33,6 +33,7 @@ import threading
 import time
 from collections import defaultdict
 
+from exceptions import AuthenticationError
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -167,6 +168,17 @@ def _is_valid(token: str, keys: frozenset[str]) -> bool:
     return any(hmac.compare_digest(token_bytes, k.encode()) for k in keys)
 
 
+def _authenticate(token: str | None, keys: frozenset[str]) -> None:
+    """Raise AuthenticationError if the token is absent or does not match any key.
+
+    Pure function — no HTTP concerns. Callers that embed this logic directly
+    (e.g. tests, WebSocket handlers) can catch AuthenticationError without
+    inspecting HTTP response status codes.
+    """
+    if token is None or not _is_valid(token, keys):
+        raise AuthenticationError("missing or invalid API key")
+
+
 class ApiKeyMiddleware(BaseHTTPMiddleware):
     """Starlette middleware that validates API key tokens on every request.
 
@@ -201,20 +213,19 @@ class ApiKeyMiddleware(BaseHTTPMiddleware):
         ):
             return await call_next(request)
 
-        token = _extract_token(request)
-        if token is not None and _is_valid(token, keys):
-            return await call_next(request)
+        try:
+            _authenticate(_extract_token(request), keys)
+        except AuthenticationError:
+            ip = request.client.host if request.client else "unknown"
+            if not self._limiter.is_allowed(ip):
+                logger.warning("Rate limit exceeded: %s", ip)
+                return _TOO_MANY_REQUESTS
+            logger.warning(
+                "Rejected unauthenticated request: %s %s from %s",
+                request.method,
+                request.url.path,
+                ip,
+            )
+            return _build_unauthorized(request)
 
-        ip = request.client.host if request.client else "unknown"
-
-        if not self._limiter.is_allowed(ip):
-            logger.warning("Rate limit exceeded: %s", ip)
-            return _TOO_MANY_REQUESTS
-
-        logger.warning(
-            "Rejected unauthenticated request: %s %s from %s",
-            request.method,
-            request.url.path,
-            ip,
-        )
-        return _build_unauthorized(request)
+        return await call_next(request)

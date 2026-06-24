@@ -1,5 +1,5 @@
 # Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl
-# SPDX-License-Identifier: AGPL-3.0-or-later
+# SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 """Unit tests for mcp/exceptions.py — hierarchy, messages, and attributes."""
 
@@ -10,6 +10,7 @@ from exceptions import (
     ApicConnectionError,
     ApicError,
     ApicResponseError,
+    AuthenticationError,
     ConfigurationError,
     DescriptionsLoadError,
     FilterError,
@@ -25,6 +26,7 @@ from exceptions import (
 def test_all_exceptions_inherit_from_base():
     for cls in (
         ConfigurationError,
+        AuthenticationError,
         RegistryError,
         DescriptionsLoadError,
         SchemaLoadError,
@@ -63,6 +65,19 @@ def test_configuration_error_message():
 def test_configuration_error_is_catchable_as_base():
     with pytest.raises(AciMcpError):
         raise ConfigurationError("missing env var")
+
+
+# ── AuthenticationError ───────────────────────────────────────────────────────
+
+
+def test_authentication_error_message():
+    exc = AuthenticationError("missing or invalid API key")
+    assert "API key" in str(exc)
+
+
+def test_authentication_error_is_catchable_as_base():
+    with pytest.raises(AciMcpError):
+        raise AuthenticationError("bad token")
 
 
 # ── DescriptionsLoadError ─────────────────────────────────────────────────────
