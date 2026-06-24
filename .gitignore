@@ -19,13 +19,15 @@ schema-collector/cobra-sdk/
 schema-collector/.venv/
 schema-collector/dist/
 
-# Runtime artifacts (from ai-netlab lab runner)
-.lab*.pid
-.lab*.log
+# Runtime artifacts
+.lab*
 tmp/
 
-# IDE
+# IDE and tooling
 .vscode/
+.claude/
+.opencode/
 .DS_Store
 .ruff_cache/
 .sisyphus/
+.markdownlint*
