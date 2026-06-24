@@ -311,3 +311,107 @@ async def test_query_class_sets_rsp_subtree_params_for_children():
     assert params.get("rsp-subtree") == "children"
     assert "fvSubnet" in params.get("rsp-subtree-class", "")
     assert "fvRsCtx" in params.get("rsp-subtree-class", "")
+
+
+@pytest.mark.asyncio
+async def test_query_class_uses_only_filter_expr_when_no_filters():
+    """filter_expr alone (no equality filters) sets query-target-filter directly."""
+    client = _make_client(_MockResponse(200, apic_response([])))
+    await client.query_class("fvBD", {}, filter_expr='wcard(fvBD.dn,"uni/tn-OT")')
+    params = client._client.requests[0].get("params", {})
+    assert params.get("query-target-filter") == 'wcard(fvBD.dn,"uni/tn-OT")'
+
+
+@pytest.mark.asyncio
+async def test_query_class_sets_order_by_param():
+    """order_by kwarg maps to 'order-by' query parameter."""
+    client = _make_client(_MockResponse(200, apic_response([])))
+    await client.query_class("faultInst", {}, order_by="faultInst.severity|desc")
+    params = client._client.requests[0].get("params", {})
+    assert params.get("order-by") == "faultInst.severity|desc"
+
+
+@pytest.mark.asyncio
+async def test_query_class_sets_rsp_subtree_include_param():
+    """rsp_subtree_include kwarg maps to 'rsp-subtree-include' query parameter."""
+    client = _make_client(_MockResponse(200, apic_response([])))
+    await client.query_class("fvBD", {}, rsp_subtree_include="faults,required")
+    params = client._client.requests[0].get("params", {})
+    assert params.get("rsp-subtree-include") == "faults,required"
+
+
+@pytest.mark.asyncio
+async def test_query_class_sets_time_range_param():
+    """time_range kwarg maps to 'time-range' query parameter."""
+    client = _make_client(_MockResponse(200, apic_response([])))
+    await client.query_class("faultRecord", {}, time_range="24h")
+    params = client._client.requests[0].get("params", {})
+    assert params.get("time-range") == "24h"
+
+
+@pytest.mark.asyncio
+async def test_query_class_sets_page_param():
+    """page kwarg maps to 'page' query parameter as a string."""
+    client = _make_client(_MockResponse(200, apic_response([])))
+    await client.query_class("fvBD", {}, page=2)
+    params = client._client.requests[0].get("params", {})
+    assert params.get("page") == "2"
+
+
+@pytest.mark.asyncio
+async def test_query_class_timeout_after_reauth_raises_connection_error():
+    """Timeout on the retry GET (after successful re-auth) raises ApicConnectionError."""
+    client = _make_client(
+        _MockResponse(401, apic_response([])),        # first GET → 401
+        _MockResponse(200, apic_login_response()),    # POST (re-auth) → OK
+        httpx.TimeoutException("timeout on retry"),   # retry GET → timeout
+    )
+    with pytest.raises(ApicConnectionError, match="timed out after re-auth"):
+        await client.query_class("fvBD", {})
+
+
+@pytest.mark.asyncio
+async def test_query_class_connect_error_after_reauth_raises_connection_error():
+    """ConnectError on the retry GET (after re-auth) raises ApicConnectionError."""
+    client = _make_client(
+        _MockResponse(401, apic_response([])),
+        _MockResponse(200, apic_login_response()),
+        httpx.ConnectError("connection refused on retry"),
+    )
+    with pytest.raises(ApicConnectionError):
+        await client.query_class("fvBD", {})
+
+
+@pytest.mark.asyncio
+async def test_query_class_invalid_json_raises_apic_response_error():
+    """A non-JSON response body raises ApicResponseError."""
+
+    class _BadJsonResponse:
+        status_code = 200
+        is_success = True
+
+        def json(self):
+            raise ValueError("not valid JSON")
+
+        def raise_for_status(self):
+            pass
+
+    client = _make_client(_BadJsonResponse())
+    with pytest.raises(ApicResponseError, match="not valid JSON"):
+        await client.query_class("fvBD", {})
+
+
+@pytest.mark.asyncio
+async def test_close_releases_http_client():
+    """close() delegates to the underlying httpx client aclose()."""
+    client = _make_client(_MockResponse(200, apic_response([])))
+    closed: list[bool] = []
+    original_aclose = client._client.aclose
+
+    async def _track_close():
+        closed.append(True)
+        await original_aclose()
+
+    client._client.aclose = _track_close
+    await client.close()
+    assert closed == [True]
