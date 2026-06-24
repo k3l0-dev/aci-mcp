@@ -5,11 +5,36 @@ description = "Schema-driven FastMCP server for Cisco ACI APIC"
 readme = "README.md"
 license = {text = "AGPL-3.0-or-later"}
 requires-python = ">=3.12"
+authors = [
+    {name = "Khalid El-Ouiali", email = "monark.aiops@pm.me"},
+]
+maintainers = [
+    {name = "Khalid El-Ouiali", email = "monark.aiops@pm.me"},
+]
+keywords = ["mcp", "cisco", "aci", "apic", "network-automation", "llm"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Networking",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
 dependencies = [
     "fastmcp>=3.1.1,<4.0",
     "httpx>=0.27,<1.0",
     "python-dotenv>=1.0,<2.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/monark-aiops/aci-mcp"
+Repository = "https://github.com/monark-aiops/aci-mcp"
+Documentation = "https://github.com/monark-aiops/aci-mcp/tree/main/docs"
+Changelog = "https://github.com/monark-aiops/aci-mcp/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/monark-aiops/aci-mcp/issues"
+"Commercial License" = "mailto:monark.aiops@pm.me"
 
 [project.optional-dependencies]
 dev = [
