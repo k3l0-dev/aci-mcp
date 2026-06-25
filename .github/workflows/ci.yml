@@ -19,11 +19,27 @@ jobs:
 
       - name: Lint mcp/
         working-directory: mcp
-        run: uv run --frozen ruff check .
+        run: uv sync --frozen --dev && uv run --frozen ruff check .
 
       - name: Lint schema-collector/
         working-directory: schema-collector
-        run: uv run --frozen ruff check .
+        run: uv sync --frozen --dev && uv run --frozen ruff check .
+
+  test:
+    name: Pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Run tests
+        working-directory: mcp
+        run: |
+          uv sync --frozen --dev
+          uv run --frozen pytest tests/unit/ tests/integration/ -q
 
   security:
     name: Gitleaks
@@ -38,3 +54,28 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           config-path: .gitleaks.toml
+
+  audit:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Audit mcp/
+        working-directory: mcp
+        run: uv export --frozen --no-dev | uvx pip-audit -r /dev/stdin
+
+      - name: Audit schema-collector/
+        working-directory: schema-collector
+        run: uv export --frozen --no-dev | uvx pip-audit -r /dev/stdin
+
+  build:
+    name: Docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -f mcp/deploy/Dockerfile . -t aci-mcp:ci
