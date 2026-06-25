@@ -51,37 +51,44 @@ You need:
 
 ---
 
-## Step 1 — Collect schemas
+## Step 1 — Get the schemas
 
-The schema collector fetches the full APIC object model and builds the local index used by the server. Run it once, then again after each APIC upgrade.
+The MCP server needs the ACI jsonmeta schema files to serve `get_schema()` requests.
+Choose one of two paths:
+
+### Option A — Download the prebuilt bundle (fastest)
 
 ```bash
 # Clone the repo
 git clone https://github.com/k3l0-dev/aci-mcp.git
 cd aci-mcp
 
-# Configure credentials
+# Download and extract schemas from the GitHub release (~200 MB)
+./scripts/download-schemas.sh
+```
+
+Done. The bundle ships with schemas collected from APIC **6.0(9c)**.
+
+### Option B — Collect from your own APIC
+
+Run this if you have a different APIC version, or want the freshest data:
+
+```bash
+# Configure credentials first
 cp .env.example .env
 # Edit .env: set APIC_HOST, APIC_USER, APIC_PASSWORD
 
-# Run the collection pipeline
 cd schema-collector
 uv sync
 uv run aci-collect run
 ```
 
-The pipeline downloads the APIC model, fetches 15 000+ jsonmeta schema files, and writes:
+The pipeline fetches 15 000+ jsonmeta files directly from your APIC and writes:
 
 ```text
 data/
   class-descriptions.json   ← keyword-searchable class index
   schemas/{version}/        ← full jsonmeta files, one per class
-```
-
-Check the status of your local artifacts at any time:
-
-```bash
-uv run aci-collect status
 ```
 
 ---
