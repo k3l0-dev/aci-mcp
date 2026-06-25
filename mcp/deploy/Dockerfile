@@ -21,11 +21,11 @@ COPY mcp/main.py mcp/exceptions.py ./
 COPY mcp/apic/ ./apic/
 COPY mcp/middleware/ ./middleware/
 COPY mcp/registry/ ./registry/
-COPY data/ ./data/
+COPY data/ /data/
 
 # Run as non-root
 RUN groupadd --system app && useradd --system --gid app app
-RUN chown -R app:app /app
+RUN chown -R app:app /app /data
 USER app
 
 EXPOSE 8000
