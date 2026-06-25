@@ -142,39 +142,3 @@ flowchart TD
     end
 ```
 
----
-
-## Schema-collector pipeline
-
-The `aci-collect` CLI runs four sequential steps to build the data files consumed by the MCP server.
-Artifacts are versioned by APIC release so multiple versions can coexist.
-
-```mermaid
-flowchart LR
-    ENV[".env\nAPIC credentials"]
-
-    subgraph pipeline["aci-collect run"]
-        direction TB
-        S1["cobra\nDownload acimodel wheel\nfrom APIC /cobra/_downloads"]
-        S2["classes\nExtract Mo subclasses\nfrom wheel → cobra-sdk/{version}/classes.yaml"]
-        S3["schemas\nFetch jsonmeta JSON for each class\n→ schemas/{version}/*.json"]
-        S4["descriptions\nBuild label+comment index\n→ data/class-descriptions.json"]
-        S1 --> S2 --> S3 --> S4
-    end
-
-    subgraph out["Outputs"]
-        O1["cobra-sdk/{version}/\n(gitignored)"]
-        O2["cobra-sdk/{version}/classes.yaml\n(gitignored)"]
-        O3["schemas/{version}/*.json\n(gitignored — 15k+ files)"]
-        O4["data/class-descriptions.json\n(committed)"]
-    end
-
-    ENV --> pipeline
-    S1 --> O1
-    S2 --> O2
-    S3 --> O3
-    S4 --> O4
-
-    O4 -->|"read at MCP startup"| MCP["aci-mcp server"]
-    O3 -->|"read on demand by get_schema()"| MCP
-```

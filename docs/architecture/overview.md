@@ -14,18 +14,15 @@ It exposes **three generic tools**. The LLM calls them in sequence to discover, 
 graph TD
     subgraph repo["aci-mcp (monorepo)"]
         mcp["mcp/\nFastMCP server"]
-        sc["schema-collector/\nPipeline CLI"]
         data["data/\nshared artifacts"]
         env[".env\nshared credentials"]
     end
 
-    sc -->|"writes class-descriptions.json + schemas/"| data
     mcp -->|"reads at startup"| data
     mcp -->|"reads credentials"| env
-    sc -->|"reads credentials"| env
 ```
 
-The two projects are independent Python packages under `uv`. They share `data/` and `.env` at the repo root.
+`mcp/` reads `data/` (schema bundle) and `.env` (APIC credentials) at the repo root.
 
 ---
 
@@ -169,4 +166,4 @@ kill -HUP $(pgrep -f "python main.py")
 
 ### Single credentials file
 
-Both `mcp/` and `schema-collector/` read `.env` at the monorepo root. No duplication, no sync required between projects.
+`mcp/` reads `.env` at the monorepo root — APIC credentials and server settings in one place.

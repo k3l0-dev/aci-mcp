@@ -98,4 +98,4 @@ docker run \
   aci-mcp:latest
 ```
 
-This is useful after running `aci-collect run` against a new APIC version — restart the container and the new schemas are live.
+This is useful after updating the schema bundle — restart the container and the new schemas are live.

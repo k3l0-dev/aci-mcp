@@ -245,44 +245,11 @@ These property labels — `"ARP Flooding"`, `"Unicast Routing"`, `"MAC Address"`
 
 ### The two-component solution
 
-#### Component A — schema-collector: enrich the index
+#### Component A — enrich the index with property labels
 
-The `_extract_prop_labels()` function in `schema-collector/collect.py` reads the `properties` from each jsonmeta file and extracts useful labels:
+Each entry in `class-descriptions.json` carries an optional `prop_labels` field: a deduplicated list of human-readable labels extracted from the class's configurable properties. Generic labels (`"Name"`, `"Description"`, `"Managed By"`, etc.) and labels that add no search value are excluded during index build.
 
-```python
-def _extract_prop_labels(properties: dict) -> list[str]:
-    _GENERIC_PROP_LABELS = frozenset({
-        "Name", "Description", "Annotation", "Tag", "Owner",
-        "Display Name", "Managed By", "Monitoring policy",
-    })
-    seen, labels = set(), []
-    for prop_name, pmeta in properties.items():
-        if pmeta.get("isHidden", False):           # hidden properties ignored
-            continue
-        lbl = (pmeta.get("label") or "").strip()
-        if not lbl or len(lbl) <= 3:               # very short labels ignored
-            continue
-        if lbl in _GENERIC_PROP_LABELS:            # generic labels ignored
-            continue
-        if lbl.lower() == prop_name.lower():       # label == technical name → no value
-            continue
-        if lbl in seen:                            # deduplicated
-            continue
-        seen.add(lbl)
-        labels.append(lbl)
-    return labels
-```
-
-**Why filter?**
-
-Without filtering, the index would be polluted by ubiquitous, search-useless labels:
-
-- `"Name"`: present in 99% of classes → a `"name"` query would return all 15k classes
-- `"Description"`: same
-- `"Managed By"`, `"Monitoring policy"`: infrastructure labels, always the same
-- Labels identical to the technical property name (`label = "arpFlood"` instead of `"ARP Flooding"`): Cisco did not document this property — no added value
-
-The result is written to `class-descriptions.json` under a new `prop_labels` field:
+The result is a `prop_labels` field in `class-descriptions.json`:
 
 ```json
 {

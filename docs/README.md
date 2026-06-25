@@ -39,7 +39,7 @@
 | Page | Description |
 |---|---|
 | [System overview](architecture/overview.md) | Components, monorepo layout, startup sequence, key design decisions |
-| [Data flow](architecture/data-flow.md) | LLM tool sequence, per-tool internal flows, schema-collector pipeline |
+| [Data flow](architecture/data-flow.md) | LLM tool sequence, per-tool internal flows |
 
 ### Internals
 

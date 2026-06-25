@@ -54,9 +54,6 @@ You need:
 ## Step 1 — Get the schemas
 
 The MCP server needs the ACI jsonmeta schema files to serve `get_schema()` requests.
-Choose one of two paths:
-
-### Option A — Download the prebuilt bundle (fastest)
 
 ```bash
 # Clone the repo
@@ -67,23 +64,7 @@ cd aci-mcp
 ./scripts/download-schemas.sh
 ```
 
-Done. The bundle ships with schemas collected from APIC **6.0(9c)**.
-
-### Option B — Collect from your own APIC
-
-Run this if you have a different APIC version, or want the freshest data:
-
-```bash
-# Configure credentials first
-cp .env.example .env
-# Edit .env: set APIC_HOST, APIC_USER, APIC_PASSWORD
-
-cd schema-collector
-uv sync
-uv run aci-collect run
-```
-
-The pipeline fetches 15 000+ jsonmeta files directly from your APIC and writes:
+The bundle ships with schemas from APIC **6.0(9c)**. The script extracts them into:
 
 ```text
 data/

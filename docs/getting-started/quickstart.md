@@ -35,19 +35,16 @@ APIC_PASSWORD=your_password
 
 Leave `MCP_API_KEYS` empty — auth is disabled in dev mode automatically.
 
-### 3 — Collect schemas
+### 3 — Download the schema bundle
 
-The schema collector fetches the full ACI object model from your APIC and builds the local index.
-Run it once, then again after each APIC upgrade.
+The MCP server needs the ACI jsonmeta files to serve `get_schema()` requests.
+Download the prebuilt bundle from the GitHub release:
 
 ```bash
-cd schema-collector
-uv sync
-uv run aci-collect run
-cd ..
+./scripts/download-schemas.sh
 ```
 
-This takes ~5 minutes for a typical fabric (15 000+ classes). Output:
+This extracts into:
 
 ```
 data/
@@ -166,24 +163,3 @@ uv run pytest tests/unit/test_filter.py
 uv run pytest --cov=. --cov-report=term-missing
 ```
 
----
-
-## Regenerating data/ after an APIC upgrade
-
-```bash
-cd schema-collector
-uv run aci-collect run --force
-```
-
-The `--force` flag re-runs all steps even if artifacts already exist.
-To restart from a specific step:
-
-```bash
-uv run aci-collect run --from descriptions
-```
-
-Check artifact state at any time:
-
-```bash
-uv run aci-collect status
-```

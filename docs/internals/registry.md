@@ -132,7 +132,7 @@ The server supports two layouts for `data/schemas/`:
 | Layout | Path tried | Used when |
 |---|---|---|
 | Flat | `schemas_dir/fvBD.json` | Schemas collected without versioning |
-| Versioned | `schemas_dir/{version}/fvBD.json` | Default — `aci-collect` stores schemas under `schemas/{apic_version}/` |
+| Versioned | `schemas_dir/{version}/fvBD.json` | Default — schemas are stored under `schemas/{apic_version}/` |
 
 `load_schema()` tries the flat path first, then falls back to a glob for the first versioned match.
 

@@ -124,6 +124,6 @@ for bd in results:
 
 The schema file for the class is not in the local `data/schemas/` collection. This happens when:
 
-- `data/schemas/` was never populated (run `aci-collect run --from schemas`)
-- The class was added in a newer APIC version than the one used to collect schemas
+- `data/schemas/` was never populated (run `./scripts/download-schemas.sh`)
+- The class was added in a newer APIC version than the one in the downloaded bundle
 - The class name is wrong (use `search_classes` to verify)
