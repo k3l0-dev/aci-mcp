@@ -1,0 +1,36 @@
+stages:
+  - lint
+  - security
+
+# ── Lint ────────────────────────────────────────────────────────────────────
+
+ruff:
+  stage: lint
+  image: python:3.12-slim
+  cache:
+    key: uv-$CI_COMMIT_REF_SLUG
+    paths:
+      - .uv-cache/
+  variables:
+    UV_CACHE_DIR: $CI_PROJECT_DIR/.uv-cache
+  before_script:
+    - pip install uv --quiet
+  script:
+    - cd mcp          && uv run --frozen ruff check .
+    - cd ../schema-collector && uv run --frozen ruff check .
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH
+
+# ── Security ─────────────────────────────────────────────────────────────────
+
+gitleaks:
+  stage: security
+  image:
+    name: zricethezav/gitleaks:latest
+    entrypoint: [""]
+  script:
+    - gitleaks detect --source . --config .gitleaks.toml --verbose
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH

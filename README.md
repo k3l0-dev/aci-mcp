@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>aci-mcp</h1>
+<h1>ACI MCP (Model Context Protocol)</h1>
 
 <img src="docs/assets/banner.jpg" alt="aci-mcp banner" width="800"/>
 
