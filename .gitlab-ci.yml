@@ -16,8 +16,8 @@ ruff:
   before_script:
     - pip install uv --quiet
   script:
-    - cd mcp          && uv run --frozen ruff check .
-    - cd ../schema-collector && uv run --frozen ruff check .
+    - cd mcp          && uv sync --frozen --dev && uv run --frozen ruff check .
+    - cd ../schema-collector && uv sync --frozen --dev && uv run --frozen ruff check .
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH
