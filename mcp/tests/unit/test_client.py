@@ -14,7 +14,13 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 from apic.client import ApicClient
-from exceptions import ApicAuthError, ApicConnectionError, ApicResponseError
+from exceptions import (
+    ApicAuthError,
+    ApicConnectionError,
+    ApicError,
+    ApicRequestError,
+    ApicResponseError,
+)
 from tests.conftest import apic_login_response, apic_response, make_imdata_objects
 
 
@@ -252,6 +258,62 @@ async def test_query_class_missing_imdata_key_raises_apic_response_error():
     with pytest.raises(ApicResponseError) as exc_info:
         await client.query_class("fvBD", {})
     assert "imdata" in str(exc_info.value)
+
+
+# ── query_class() — non-auth HTTP errors ──────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_query_class_400_with_apic_error_body_raises_apic_request_error():
+    """A 400 (e.g. malformed filter_expr) with an APIC error body is wrapped,
+    surfacing the APIC-supplied error text rather than a raw httpx error."""
+    body = {
+        "totalCount": "1",
+        "imdata": [
+            {
+                "error": {
+                    "attributes": {
+                        "code": "400",
+                        "text": "unable to process the query, class not found",
+                    }
+                }
+            }
+        ],
+    }
+    client = _make_client(_MockResponse(400, body))
+    with pytest.raises(ApicRequestError) as exc_info:
+        await client.query_class("fvBD", {})
+    assert exc_info.value.status == 400
+    assert "class not found" in exc_info.value.apic_text
+    assert "class not found" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_query_class_400_without_body_raises_apic_request_error():
+    """A 400 with no usable APIC error body still raises ApicRequestError,
+    just without APIC-supplied detail text."""
+    client = _make_client(_MockResponse(400, {}))
+    with pytest.raises(ApicRequestError) as exc_info:
+        await client.query_class("fvBD", {})
+    assert exc_info.value.status == 400
+    assert exc_info.value.apic_text == ""
+
+
+@pytest.mark.asyncio
+async def test_query_class_500_raises_apic_request_error():
+    """A 500 (server-side APIC failure) is wrapped in ApicRequestError."""
+    client = _make_client(_MockResponse(500, {"totalCount": "0", "imdata": []}))
+    with pytest.raises(ApicRequestError) as exc_info:
+        await client.query_class("fvBD", {})
+    assert exc_info.value.status == 500
+
+
+@pytest.mark.asyncio
+async def test_query_class_400_is_catchable_as_apic_error():
+    """ApicRequestError is a subclass of the base ApicError taxonomy."""
+    client = _make_client(_MockResponse(400, {}))
+    with pytest.raises(ApicError):
+        await client.query_class("fvBD", {})
 
 
 # ── query_class() — URL and parameter construction ────────────────────────────
