@@ -21,10 +21,6 @@ jobs:
         working-directory: mcp
         run: uv sync --frozen --dev && uv run --frozen ruff check .
 
-      - name: Lint schema-collector/
-        working-directory: schema-collector
-        run: uv sync --frozen --dev && uv run --frozen ruff check .
-
   test:
     name: Pytest
     runs-on: ubuntu-latest
@@ -35,11 +31,18 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: mcp
         run: |
           uv sync --frozen --dev
-          uv run --frozen pytest tests/unit/ tests/integration/ -q
+          uv run --frozen pytest tests/ --ignore=tests/perf \
+            --cov=. --cov-report=term-missing --cov-report=xml -q
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: mcp/coverage.xml
 
   security:
     name: Gitleaks
@@ -65,10 +68,6 @@ jobs:
 
       - name: Audit mcp/
         working-directory: mcp
-        run: uv export --frozen --no-dev | uvx pip-audit -r /dev/stdin
-
-      - name: Audit schema-collector/
-        working-directory: schema-collector
         run: uv export --frozen --no-dev | uvx pip-audit -r /dev/stdin
 
   build:
