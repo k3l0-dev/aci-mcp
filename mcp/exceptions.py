@@ -143,7 +143,10 @@ class ApicConnectionError(ApicError):
     """APIC is unreachable — network error or request timeout.
 
     Wraps httpx.ConnectError and httpx.TimeoutException so callers do not
-    need to import httpx to handle connectivity problems.
+    need to import httpx to handle connectivity problems. ApicClient retries
+    a bounded number of times (see ApicClient.__init__'s retry_attempts) with
+    a short backoff before giving up — this is raised only once that budget
+    is exhausted, never on the first connection failure alone.
     """
 
     def __init__(self, host: str, reason: str) -> None:
@@ -166,10 +169,14 @@ class ApicResponseError(ApicError):
 class ApicRequestError(ApicError):
     """APIC rejected a request with a non-2xx, non-authentication status.
 
-    Raised by ApicClient.query_class() for any status code other than
+    Raised by ApicClient.query_class(), get_by_dn(), and count_class() (all
+    three share the same request path) for any status code other than
     401/403 (which trigger the re-auth-and-retry flow instead) — typically
-    400 for a malformed filter_expr or query-target-filter, 404 for an
-    unknown DN, or 500 for a server-side APIC failure.
+    400 for a malformed filter_expr or query-target-filter, or a transient
+    404/500/502/503/504 that never recovered within the retry budget (a
+    permanent status like 400 is raised on the first attempt; a transient
+    one is retried a bounded number of times first — see
+    ApicClient.__init__'s retry_attempts).
 
     Carries the raw HTTP status and, when the response body follows APIC's
     usual error shape (`imdata[0].error.attributes.text`), the human-readable

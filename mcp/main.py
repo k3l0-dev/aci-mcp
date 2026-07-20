@@ -208,10 +208,22 @@ SHORTCUT — skip discovery when you already have an exact DN:
 COUNTING — to answer "how many X?" call count(class_name, filters, scope_dn).
     It returns a tally without transferring the objects — far cheaper than
     fetching everything just to measure the result set.
+    If count() or query() cannot run at all — an unknown class name, an
+    unreachable object, a malformed filter — that is a failure to answer,
+    not an answer of zero.  Never restate a tool error as a count or as
+    "0 objects"; state that the question could not be verified, and take
+    the corrective step the error points to (e.g. call search_classes()
+    with one of the suggested closest matches).
 
 CLEAN CONFIG — pass config_only=True to query() or get_by_dn() to drop the ~40
     operational/internal attributes and keep only the intended configuration,
     ideal for comparison, drift detection, and backup.
+
+GROUNDING — every specific fact in your final answer (a property name, a
+    configured value, a DN template, a count) must come from a tool result
+    you actually received in this conversation.  Do not complete a partial
+    answer from general ACI knowledge — only the fabric's own response is
+    authoritative for a specific deployment.
 
 Skipping discovery (steps 1-2) for an UNVERIFIED class produces wrong class
 names, wrong filters, and empty results.  The search + schema cost is two fast

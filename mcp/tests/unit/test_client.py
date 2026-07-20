@@ -80,9 +80,16 @@ class FakeHTTPClient:
         pass
 
 
-def _make_client(*responses) -> ApicClient:
-    """Build an ApicClient wired to a FakeHTTPClient."""
-    client = ApicClient("10.0.0.1", "admin", "secret")
+def _make_client(*responses, retry_attempts: int = 3) -> ApicClient:
+    """Build an ApicClient wired to a FakeHTTPClient.
+
+    retry_backoff_base=0 so retry tests never sleep for real; retry_attempts
+    defaults to the production default (3) but is overridable per test.
+    """
+    client = ApicClient(
+        "10.0.0.1", "admin", "secret",
+        retry_attempts=retry_attempts, retry_backoff_base=0.0,
+    )
     client._client = FakeHTTPClient(*responses)
     return client
 
@@ -219,7 +226,10 @@ async def test_query_class_re_auths_on_401_and_retries():
 
 @pytest.mark.asyncio
 async def test_query_class_persistent_401_after_reauth_raises_apic_auth_error():
-    """First call 401 → re-auth succeeds → second call still 401 → error."""
+    """First call 401 → re-auth succeeds → second call still 401 → error.
+
+    Raised immediately, not absorbed into the transient-status retry budget —
+    a bad credential won't fix itself on a second outer attempt."""
     client = _make_client(
         _MockResponse(401, {}),  # first query → 401
         _MockResponse(200, apic_login_response()),  # re-authenticate
@@ -228,6 +238,7 @@ async def test_query_class_persistent_401_after_reauth_raises_apic_auth_error():
     with pytest.raises(ApicAuthError) as exc_info:
         await client.query_class("fvBD", {})
     assert "re-authentication" in str(exc_info.value)
+    assert len(client._client.requests) == 3
 
 
 # ── query_class() — network errors ───────────────────────────────────────────
@@ -235,17 +246,142 @@ async def test_query_class_persistent_401_after_reauth_raises_apic_auth_error():
 
 @pytest.mark.asyncio
 async def test_query_class_timeout_raises_apic_connection_error():
-    client = _make_client(httpx.TimeoutException("timed out"))
+    """A timeout on every attempt exhausts the retry budget (3 by default)."""
+    client = _make_client(*[httpx.TimeoutException("timed out")] * 3)
     with pytest.raises(ApicConnectionError) as exc_info:
         await client.query_class("fvBD", {})
     assert "timed out" in str(exc_info.value)
+    assert len(client._client.requests) == 3
 
 
 @pytest.mark.asyncio
 async def test_query_class_connect_error_raises_apic_connection_error():
-    client = _make_client(httpx.ConnectError("no route to host"))
+    """A connect error on every attempt exhausts the retry budget."""
+    client = _make_client(*[httpx.ConnectError("no route to host")] * 3)
     with pytest.raises(ApicConnectionError):
         await client.query_class("fvBD", {})
+    assert len(client._client.requests) == 3
+
+
+# ── query_class() — transient-status retry ────────────────────────────────────
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [404, 500, 502, 503, 504])
+async def test_query_class_retries_transient_status_then_succeeds(status):
+    """A single transient failure is retried and the second attempt succeeds."""
+    client = _make_client(
+        _MockResponse(status, {}),
+        _MockResponse(200, apic_response([])),
+    )
+    results = await client.query_class("fvBD", {})
+    assert results == []
+    assert len(client._client.requests) == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [404, 500, 502, 503, 504])
+async def test_query_class_exhausts_retries_on_persistent_transient_status(status):
+    """A transient status that never recovers is raised after the full budget."""
+    client = _make_client(*[_MockResponse(status, {})] * 3)
+    with pytest.raises(ApicRequestError) as exc_info:
+        await client.query_class("fvBD", {})
+    assert exc_info.value.status == status
+    assert len(client._client.requests) == 3
+
+
+@pytest.mark.asyncio
+async def test_query_class_retries_on_connect_error_then_succeeds():
+    client = _make_client(
+        httpx.ConnectError("connection refused"),
+        _MockResponse(200, apic_response([])),
+    )
+    results = await client.query_class("fvBD", {})
+    assert results == []
+    assert len(client._client.requests) == 2
+
+
+@pytest.mark.asyncio
+async def test_query_class_retries_on_timeout_then_succeeds():
+    client = _make_client(
+        httpx.TimeoutException("timed out"),
+        _MockResponse(200, apic_response([])),
+    )
+    results = await client.query_class("fvBD", {})
+    assert results == []
+    assert len(client._client.requests) == 2
+
+
+@pytest.mark.asyncio
+async def test_query_class_400_is_never_retried():
+    """A permanent error (400) must not consume the retry budget — proven by
+    queuing exactly one response: if the implementation retried, the fake
+    transport's queue would be empty on the second GET and raise IndexError."""
+    client = _make_client(_MockResponse(400, {}))
+    with pytest.raises(ApicRequestError):
+        await client.query_class("fvBD", {})
+    assert len(client._client.requests) == 1
+
+
+@pytest.mark.asyncio
+async def test_query_class_recovers_after_transient_connection_error_post_reauth():
+    """401 -> re-auth -> connection error on the retry GET -> next outer
+    attempt succeeds without re-authenticating again."""
+    objects = make_imdata_objects(
+        "fvBD", [{"dn": "uni/tn-OT/BD-servers", "name": "servers"}]
+    )
+    client = _make_client(
+        _MockResponse(401, {}),
+        _MockResponse(200, apic_login_response()),
+        httpx.TimeoutException("timeout on retry"),
+        _MockResponse(200, apic_response(objects)),
+    )
+    results = await client.query_class("fvBD", {})
+    assert len(results) == 1
+    assert len(client._client.requests) == 4
+
+
+@pytest.mark.asyncio
+async def test_query_class_exhausts_retry_budget_after_reauth_connection_errors():
+    """401 -> re-auth -> connection error, then two more failed outer
+    attempts — exhausts the retry budget and raises ApicConnectionError."""
+    client = _make_client(
+        _MockResponse(401, {}),
+        _MockResponse(200, apic_login_response()),
+        httpx.TimeoutException("timeout 1"),
+        httpx.TimeoutException("timeout 2"),
+        httpx.TimeoutException("timeout 3"),
+    )
+    with pytest.raises(ApicConnectionError):
+        await client.query_class("fvBD", {})
+    assert len(client._client.requests) == 5
+
+
+@pytest.mark.asyncio
+async def test_query_class_401_then_transient_status_then_recovers():
+    """A transient failure after a successful re-auth still gets its own
+    retry, rather than being conflated with the auth path."""
+    client = _make_client(
+        _MockResponse(401, {}),
+        _MockResponse(200, apic_login_response()),
+        _MockResponse(500, {}),
+        _MockResponse(200, apic_response([])),
+    )
+    results = await client.query_class("fvBD", {})
+    assert results == []
+    assert len(client._client.requests) == 4
+
+
+@pytest.mark.asyncio
+async def test_backoff_delay_is_bounded_and_increasing():
+    client = ApicClient("10.0.0.1", "admin", "secret", retry_backoff_base=0.2)
+    d1 = client._backoff_delay(1)
+    d2 = client._backoff_delay(2)
+    d3 = client._backoff_delay(3)
+    assert d1 == 0.2
+    assert d2 == 0.4
+    assert d1 < d2 < d3
+    assert client._backoff_delay(20) == 2.0  # capped
 
 
 # ── query_class() — malformed APIC responses ─────────────────────────────────
@@ -286,6 +422,7 @@ async def test_query_class_400_with_apic_error_body_raises_apic_request_error():
     assert exc_info.value.status == 400
     assert "class not found" in exc_info.value.apic_text
     assert "class not found" in str(exc_info.value)
+    assert len(client._client.requests) == 1  # 400 is permanent — never retried
 
 
 @pytest.mark.asyncio
@@ -297,15 +434,7 @@ async def test_query_class_400_without_body_raises_apic_request_error():
         await client.query_class("fvBD", {})
     assert exc_info.value.status == 400
     assert exc_info.value.apic_text == ""
-
-
-@pytest.mark.asyncio
-async def test_query_class_500_raises_apic_request_error():
-    """A 500 (server-side APIC failure) is wrapped in ApicRequestError."""
-    client = _make_client(_MockResponse(500, {"totalCount": "0", "imdata": []}))
-    with pytest.raises(ApicRequestError) as exc_info:
-        await client.query_class("fvBD", {})
-    assert exc_info.value.status == 500
+    assert len(client._client.requests) == 1
 
 
 @pytest.mark.asyncio
@@ -421,27 +550,38 @@ async def test_query_class_sets_page_param():
 
 
 @pytest.mark.asyncio
-async def test_query_class_timeout_after_reauth_raises_connection_error():
-    """Timeout on the retry GET (after successful re-auth) raises ApicConnectionError."""
+async def test_query_class_timeout_after_reauth_recovers_on_next_attempt():
+    """A timeout on the retry GET (right after a successful re-auth) is now
+    caught by the outer retry budget instead of failing immediately — the
+    next outer attempt succeeds without re-authenticating again."""
+    objects = make_imdata_objects(
+        "fvBD", [{"dn": "uni/tn-OT/BD-servers", "name": "servers"}]
+    )
     client = _make_client(
         _MockResponse(401, apic_response([])),        # first GET → 401
         _MockResponse(200, apic_login_response()),    # POST (re-auth) → OK
         httpx.TimeoutException("timeout on retry"),   # retry GET → timeout
+        _MockResponse(200, apic_response(objects)),   # next outer attempt → success
     )
-    with pytest.raises(ApicConnectionError, match="timed out after re-auth"):
-        await client.query_class("fvBD", {})
+    results = await client.query_class("fvBD", {})
+    assert len(results) == 1
+    assert len(client._client.requests) == 4
 
 
 @pytest.mark.asyncio
-async def test_query_class_connect_error_after_reauth_raises_connection_error():
-    """ConnectError on the retry GET (after re-auth) raises ApicConnectionError."""
+async def test_query_class_connect_error_after_reauth_exhausts_retry_budget():
+    """A ConnectError on the retry GET after re-auth, persisting across the
+    full retry budget, raises ApicConnectionError."""
     client = _make_client(
         _MockResponse(401, apic_response([])),
         _MockResponse(200, apic_login_response()),
         httpx.ConnectError("connection refused on retry"),
+        httpx.ConnectError("connection refused 2"),
+        httpx.ConnectError("connection refused 3"),
     )
     with pytest.raises(ApicConnectionError):
         await client.query_class("fvBD", {})
+    assert len(client._client.requests) == 5
 
 
 @pytest.mark.asyncio
@@ -497,8 +637,32 @@ async def test_get_by_dn_found_returns_attributes():
 
 @pytest.mark.asyncio
 async def test_get_by_dn_missing_returns_none():
+    """A real 'not found' is HTTP 200 with an empty imdata list — never a
+    404 — so it must not be retried or raised, just returned as None."""
     client = _make_client(_MockResponse(200, apic_response([])))
     assert await client.get_by_dn("uni/tn-OT/BD-doesNotExist") is None
+    assert len(client._client.requests) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_retries_on_404_then_succeeds():
+    objects = make_imdata_objects("fvBD", [{"name": "servers", "dn": "uni/tn-OT/BD-servers"}])
+    client = _make_client(
+        _MockResponse(404, {}),
+        _MockResponse(200, apic_response(objects)),
+    )
+    obj = await client.get_by_dn("uni/tn-OT/BD-servers")
+    assert obj["name"] == "servers"
+    assert len(client._client.requests) == 2
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_retries_exhausted_raises_apic_request_error():
+    client = _make_client(*[_MockResponse(404, {})] * 3)
+    with pytest.raises(ApicRequestError) as exc_info:
+        await client.get_by_dn("uni/tn-OT/BD-servers")
+    assert exc_info.value.status == 404
+    assert len(client._client.requests) == 3
 
 
 @pytest.mark.asyncio
@@ -513,6 +677,7 @@ async def test_get_by_dn_400_raises_apic_request_error():
         await client.get_by_dn("not-a-real-dn")
     assert exc_info.value.status == 400
     assert "malformed DN" in exc_info.value.apic_text
+    assert len(client._client.requests) == 1
 
 
 @pytest.mark.asyncio
@@ -536,7 +701,16 @@ async def test_count_class_extracts_mo_count():
 
 @pytest.mark.asyncio
 async def test_count_class_500_raises_apic_request_error():
-    client = _make_client(_MockResponse(500, {}))
+    client = _make_client(*[_MockResponse(500, {})] * 3)
     with pytest.raises(ApicRequestError) as exc_info:
         await client.count_class("fvBD", {})
     assert exc_info.value.status == 500
+    assert len(client._client.requests) == 3
+
+
+@pytest.mark.asyncio
+async def test_count_class_retries_on_500_then_succeeds():
+    body = {"imdata": [{"moCount": {"attributes": {"childCount": "7"}}}]}
+    client = _make_client(_MockResponse(500, {}), _MockResponse(200, body))
+    assert await client.count_class("fvBD", {}) == 7
+    assert len(client._client.requests) == 2
