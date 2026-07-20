@@ -220,10 +220,16 @@ CLEAN CONFIG — pass config_only=True to query() or get_by_dn() to drop the ~40
     ideal for comparison, drift detection, and backup.
 
 GROUNDING — every specific fact in your final answer (a property name, a
-    configured value, a DN template, a count) must come from a tool result
-    you actually received in this conversation.  Do not complete a partial
-    answer from general ACI knowledge — only the fabric's own response is
-    authoritative for a specific deployment.
+    configured value, a DN template, a relation target, a count) must come
+    from a tool result you actually received in this conversation.  Do not
+    complete a partial answer from general ACI knowledge — only the
+    fabric's own response is authoritative for a specific deployment.
+    Two default get_schema() fields are easy to over-read: contains lists
+    child CLASS NAMES only, never what each one targets or means; and
+    properties lists NAMES only, never types/defaults/allowed values,
+    unless you asked for property_details.  Naming a relation's target or a
+    property's type/value without having actually requested that detail is
+    exactly the kind of unsupported completion this rule forbids.
 
 Skipping discovery (steps 1-2) for an UNVERIFIED class produces wrong class
 names, wrong filters, and empty results.  The search + schema cost is two fast

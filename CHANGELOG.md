@@ -33,6 +33,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   `{"error": ..., "closest_matches": [...]}` return shape `query` has never
   actually used — `UnknownClassError` is raised, not returned, matching the
   file's own `count` section a few paragraphs earlier.
+- `mcp/client/SKILL.md` and `main.py` sharpen the grounding rule above with
+  the two cases it's most often stretched past its evidence: `contains`
+  lists child class names only, never what each one targets or means (that
+  is `relationTo`'s job, and only for the Rs classes it lists); `properties`
+  lists names only, never a property's type, default, or allowed values
+  (that requires `property_details`). Naming a relation's target or a
+  property's type/value without having actually requested that detail is
+  the unsupported completion the rule forbids.
 - `apic/client.py` — `query_class()` now shares its transport/retry logic
   with `get_by_dn()`/`count_class()` via `_request_json()`, instead of
   duplicating the request-and-error-handling block. The 401/403
