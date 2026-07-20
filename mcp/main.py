@@ -71,7 +71,7 @@ from middleware.oauth import OAuthDiscoveryMiddleware
 from pydantic import BeforeValidator
 from registry.descriptions import load_descriptions
 from registry.descriptions import search as desc_search
-from registry.schema import load_schema
+from registry.schema import load_schema, resolve_schemas_dir
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -123,12 +123,16 @@ async def app_lifespan(server: FastMCP):
     Yields a context dict available to all tools via ctx.lifespan_context:
       descriptions  — in-memory class descriptions index
       backend       — ApicClient instance
-      schemas_dir   — Path to the jsonmeta schema directory
+      schemas_dir   — Path to the *resolved* jsonmeta schema directory
+                      (see registry.schema.resolve_schemas_dir)
     """
     load_dotenv(ENV_FILE)
 
     descriptions = load_descriptions(DESCRIPTIONS_FILE)
     logger.info("Registry loaded — %d class descriptions", len(descriptions))
+
+    schemas_dir = resolve_schemas_dir(SCHEMAS_DIR)
+    logger.info("Schema directory resolved — %s", schemas_dir)
 
     host = (
         os.environ.get("APIC_HOST", "")
@@ -157,7 +161,7 @@ async def app_lifespan(server: FastMCP):
         yield {
             "descriptions": descriptions,
             "backend": backend,
-            "schemas_dir": SCHEMAS_DIR,
+            "schemas_dir": schemas_dir,
         }
     finally:
         await backend.close()
@@ -215,7 +219,11 @@ async def search_classes(
     Args:
         keyword: Plain English term or partial ACI class name to search for.
         ctx:     Injected FastMCP context (not a user-facing parameter).
-        limit:   Maximum results to return (default 10, capped at 50).
+        limit:   Maximum results to return (default 10). Clamped to the
+                 range [1, 50] — values below 1 (including 0 and negatives)
+                 are raised to 1 rather than passed through, since a
+                 non-positive limit would otherwise silently mis-slice the
+                 results list instead of returning a sane minimal result set.
 
     Returns:
         List of dicts, each with:
@@ -224,7 +232,8 @@ async def search_classes(
           comment    — one-sentence description from the APIC schema
     """
     descriptions: dict = ctx.lifespan_context["descriptions"]
-    results = desc_search(keyword, descriptions, min(limit, 50))
+    clamped_limit = max(1, min(limit, 50))
+    results = desc_search(keyword, descriptions, clamped_limit)
     await ctx.info(f"search_classes({keyword!r}) → {len(results)} results")
     return results
 
@@ -309,7 +318,10 @@ async def query(
         scope_dn:   DN of a parent object to scope the subtree query.
                     Example: "uni/tn-OT" restricts results to tenant OT.
                     Use the "dn" field from a previous query result.
-        limit:            Maximum objects to return (default 20, capped at 200).
+        limit:            Maximum objects to return (default 20). Clamped to
+                          the range [1, 200] — values below 1 (including 0
+                          and negatives) are raised to 1 rather than passed
+                          through to the APIC as an invalid page-size.
         order_by:         APIC ordering expression, e.g. "faultInst.severity|desc".
         include_children: Child class names to embed in each result in one call,
                           e.g. ["fvSubnet", "fvRsCtx"].  Each returned object
@@ -325,29 +337,53 @@ async def query(
         a list of child attribute dicts, each with their own "_class" key.
 
     Raises:
-        UnknownClassError: class_name is not in the registry — includes closest
-                           matches so the LLM can self-correct.
+        UnknownClassError: class_name is neither in the descriptions registry
+                           nor resolvable to a schema file — includes closest
+                           matches so the LLM can self-correct. A class that
+                           has a schema file but no descriptions entry (a
+                           small gap between the two collections) is allowed
+                           through with a logged warning instead of raising.
+        FilterError:       An entry in `filters` has a class/attribute name or
+                           value that cannot be safely embedded in an APIC
+                           filter string (see registry.filter.build_filter).
+        ApicRequestError:  APIC returned a non-2xx, non-auth response — e.g.
+                           400 for a malformed filter_expr, or 500. Carries
+                           the HTTP status and, when present, the APIC error
+                           text.
     """
     descriptions: dict = ctx.lifespan_context["descriptions"]
     backend: ApicClient = ctx.lifespan_context["backend"]
+    schemas_dir: Path = ctx.lifespan_context["schemas_dir"]
 
     # Validate class_name against the registry — catch typos and wrong names
-    # before hitting the backend (which would silently return []).
+    # before hitting the backend (which would silently return []). The
+    # schemas/ collection is ~300 classes larger than class-descriptions.json
+    # (schema-collector builds them from separate passes over /doc/jsonmeta/),
+    # so a class absent from `descriptions` may still be a perfectly valid,
+    # queryable ACI class — fall back to a schema-file check before rejecting.
     if class_name not in descriptions:
-        suggestions = desc_search(class_name, descriptions, limit=5)
-        suggestion_names = [s["class_name"] for s in suggestions]
-        await ctx.warning(f"query called with unknown class {class_name!r}")
-        raise UnknownClassError(class_name, suggestion_names, len(descriptions))
+        if load_schema(class_name, schemas_dir):
+            await ctx.warning(
+                f"query({class_name!r}) — no class-descriptions entry, but a "
+                "schema file resolved for this class; allowing the query"
+            )
+        else:
+            suggestions = desc_search(class_name, descriptions, limit=5)
+            suggestion_names = [s["class_name"] for s in suggestions]
+            await ctx.warning(f"query called with unknown class {class_name!r}")
+            raise UnknownClassError(class_name, suggestion_names, len(descriptions))
 
+    clamped_limit = max(1, min(limit, 200))
     await ctx.info(
-        f"query({class_name!r}, filters={filters!r}, scope={scope_dn!r}, limit={limit})"
+        f"query({class_name!r}, filters={filters!r}, scope={scope_dn!r}, "
+        f"limit={clamped_limit})"
     )
 
     results = await backend.query_class(
         class_name=class_name,
         filters=filters or {},
         scope_dn=scope_dn or "",
-        limit=min(limit, 200),
+        limit=clamped_limit,
         order_by=order_by or "",
         include_children=include_children,
         filter_expr=filter_expr,

@@ -8,6 +8,7 @@ Uses StubBackend and MINIMAL_DESCRIPTIONS from conftest so tests always run
 without a live APIC or the full data/ schema collection.
 """
 
+import json
 from pathlib import Path
 
 import pytest
@@ -68,6 +69,51 @@ async def test_search_classes_limit_respected(tool_ctx):
 
     results = await search_classes("a", tool_ctx, limit=2)
     assert len(results) <= 2
+
+
+# ── search_classes — limit boundary values (0, -1, 1, cap, cap+1) ────────────
+
+
+@pytest.mark.asyncio
+async def test_search_classes_limit_zero_clamped_to_one(tool_ctx):
+    """A limit of 0 is clamped to 1, not passed through to a [:0] slice."""
+    from main import search_classes
+
+    results = await search_classes("a", tool_ctx, limit=0)
+    assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_search_classes_limit_negative_clamped_to_one(tool_ctx):
+    """A negative limit is clamped to 1 rather than mis-slicing results."""
+    from main import search_classes
+
+    results = await search_classes("a", tool_ctx, limit=-1)
+    assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_search_classes_limit_one_returns_exactly_one(tool_ctx):
+    from main import search_classes
+
+    results = await search_classes("a", tool_ctx, limit=1)
+    assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_search_classes_limit_at_cap_50_respected(tool_ctx):
+    from main import search_classes
+
+    results = await search_classes("a", tool_ctx, limit=50)
+    assert len(results) <= 50
+
+
+@pytest.mark.asyncio
+async def test_search_classes_limit_cap_plus_one_still_capped_at_50(tool_ctx):
+    from main import search_classes
+
+    results = await search_classes("a", tool_ctx, limit=51)
+    assert len(results) <= 50
 
 
 @pytest.mark.asyncio
@@ -175,6 +221,65 @@ async def test_query_limit_applied(tool_ctx):
     assert len(results) == 1
 
 
+# ── query — limit boundary values (0, -1, 1, cap, cap+1) ─────────────────────
+
+
+@pytest.mark.asyncio
+async def test_query_limit_zero_clamped_to_one(tool_ctx):
+    """A limit of 0 is clamped to 1, not forwarded to APIC as page-size=0."""
+    from main import query
+
+    results = await query("fvBD", tool_ctx, limit=0)
+    assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_query_limit_negative_clamped_to_one(tool_ctx):
+    """A negative limit is clamped to 1, not forwarded to APIC as page-size=-1."""
+    from main import query
+
+    results = await query("fvBD", tool_ctx, limit=-1)
+    assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_query_limit_negative_reaches_backend_as_clamped_value(
+    sample_imdata, schemas_dir
+):
+    """The clamped value — not the raw negative input — is what the backend
+    actually receives, so a negative limit never reaches the real APIC."""
+    from main import query
+
+    ctx = _stub_ctx(sample_imdata, schemas_dir)
+    await query("fvBD", ctx, limit=-5)
+    backend = ctx.lifespan_context["backend"]
+    assert backend.calls[-1]["limit"] == 1
+
+
+@pytest.mark.asyncio
+async def test_query_limit_one_returns_exactly_one(tool_ctx):
+    from main import query
+
+    results = await query("fvBD", tool_ctx, limit=1)
+    assert len(results) == 1
+
+
+@pytest.mark.asyncio
+async def test_query_limit_at_cap_200_respected(tool_ctx):
+    from main import query
+
+    results = await query("fvBD", tool_ctx, limit=200)
+    assert len(results) <= 200
+
+
+@pytest.mark.asyncio
+async def test_query_limit_cap_plus_one_still_capped_at_200(tool_ctx):
+    from main import query
+
+    results = await query("fvBD", tool_ctx, limit=201)
+    assert len(results) <= 200
+
+
 @pytest.mark.asyncio
 async def test_query_order_by_asc(tool_ctx):
     from main import query
@@ -258,5 +363,77 @@ async def test_query_unknown_class_error_carries_registry_size(tool_ctx):
     assert exc_info.value.registry_size == len(
         tool_ctx.lifespan_context["descriptions"]
     )
+
+
+# ── query — registry/schema asymmetry fallback ────────────────────────────────
+#
+# The schemas/ collection and class-descriptions.json are built by separate
+# schema-collector passes and can drift apart (~300 classes in production
+# have a jsonmeta schema but no descriptions entry). A class absent from
+# `descriptions` should only be rejected as UnknownClassError when it *also*
+# has no resolvable schema file — otherwise a legitimate, queryable class
+# would be needlessly blocked.
+
+_EXTRA_ONLY_SCHEMA = {
+    "aaaExtraOnlyClass": {
+        "identifiedBy": ["name"],
+        "rnFormat": "extra-{name}",
+        "label": "Extra Only Class",
+        "isAbstract": False,
+        "isConfigurable": True,
+        "className": "ExtraOnlyClass",
+        "classPkg": "aaa",
+    }
+}
+
+
+@pytest.mark.asyncio
+async def test_query_allows_class_absent_from_descriptions_but_with_schema(
+    sample_imdata, tmp_path
+):
+    """A class with a schema file but no class-descriptions entry is allowed
+    through instead of raising UnknownClassError."""
+    from main import query
+
+    (tmp_path / "aaaExtraOnlyClass.json").write_text(
+        json.dumps(_EXTRA_ONLY_SCHEMA), encoding="utf-8"
+    )
+    ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
+
+    results = await query("aaaExtraOnlyClass", ctx)
+    assert isinstance(results, list)
+
+
+@pytest.mark.asyncio
+async def test_query_allows_class_with_schema_logs_warning_not_error(
+    sample_imdata, tmp_path
+):
+    """The schema-fallback path logs a warning (for observability) rather
+    than silently allowing the query with no trace."""
+    from main import query
+
+    (tmp_path / "aaaExtraOnlyClass.json").write_text(
+        json.dumps(_EXTRA_ONLY_SCHEMA), encoding="utf-8"
+    )
+    ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
+
+    await query("aaaExtraOnlyClass", ctx)
+    ctx.warning.assert_called_once()
+    assert "schema file resolved" in ctx.warning.call_args[0][0]
+
+
+@pytest.mark.asyncio
+async def test_query_rejects_class_with_neither_description_nor_schema(
+    sample_imdata, tmp_path
+):
+    """A class with no descriptions entry AND no resolvable schema file is
+    still rejected — the fallback only rescues genuinely known classes."""
+    from main import query
+
+    # tmp_path is empty — no schema file for any class.
+    ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
+
+    with pytest.raises(UnknownClassError):
+        await query("totallyMadeUpClassNotAnywhere", ctx)
 
 

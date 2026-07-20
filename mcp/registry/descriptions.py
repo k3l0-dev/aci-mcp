@@ -106,7 +106,12 @@ def search(
     Args:
         keyword:      Case-insensitive search term (plain English or partial class name).
         descriptions: In-memory descriptions dict from load_descriptions().
-        limit:        Maximum number of results to return.
+        limit:        Maximum number of results to return. Values below 1
+                      (zero or negative) are treated as 1 rather than passed
+                      through to the final `results[:limit]` slice, where a
+                      negative value would otherwise silently drop entries
+                      from the end instead of the intended "return fewer
+                      results" behaviour.
 
     Returns:
         List of dicts, each containing:
@@ -117,6 +122,7 @@ def search(
     kw = keyword.lower()
     if not kw:
         return []
+    limit = max(1, limit)
     results: list[tuple[int, dict[str, str]]] = []
 
     for cls, meta in descriptions.items():

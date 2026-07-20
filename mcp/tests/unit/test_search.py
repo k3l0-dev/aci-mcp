@@ -149,9 +149,22 @@ def test_metadata_with_none_values_does_not_crash():
         search("fvBD", descriptions_with_none)
 
 
-def test_limit_zero_returns_empty():
+def test_limit_zero_clamped_to_one():
+    # A non-positive limit is clamped to 1 rather than passed through to the
+    # results[:limit] slice, where 0 would (correctly, if coincidentally)
+    # yield [] but a negative value would silently drop entries from the end.
     results = search("bridge", _DESCRIPTIONS, limit=0)
-    assert results == []
+    assert len(results) == 1
+
+
+def test_limit_negative_clamped_to_one():
+    results = search("bridge", _DESCRIPTIONS, limit=-1)
+    assert len(results) == 1
+
+
+def test_limit_one_returns_exactly_one():
+    results = search("fv", _DESCRIPTIONS, limit=1)
+    assert len(results) == 1
 
 
 def test_very_large_limit_returns_all_non_excluded_matches():
