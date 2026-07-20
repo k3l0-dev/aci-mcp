@@ -3,7 +3,7 @@
 """
 main.py
 
-Schema-driven FastMCP server for Cisco ACI APIC — v0.2.
+Schema-driven FastMCP server for Cisco ACI APIC — v1.1.0.
 
 Architecture
 ------------
