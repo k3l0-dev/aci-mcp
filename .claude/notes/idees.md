@@ -43,3 +43,42 @@ simple. À creuser une fois le rapport de l'agent revenu : est-ce que
 `search_classes` gagnerait à s'inspirer de ce pattern, ou est-ce que notre
 approche (recherche lexicale + priors structurels) reste suffisante vu les
 bons chiffres de recall déjà mesurés (78,4%) ?
+
+## RAG sur la documentation technique Cisco ACI, adossé au MCP actuel
+
+Proposée le 20/07. S'intègre naturellement dans la philosophie existante :
+comme `search_classes`/`get_schema` miment les primitives de l'objet-modèle
+vivant, un `search_docs`/`get_doc` générique pourrait miner la même logique
+sur un second corpus — la doc statique (TSG, CVD, référence des codes de
+fault) — plutôt qu'une violation du principe "peu d'outils génériques", une
+extension cohérente à une deuxième source de vérité.
+
+**Ce que ça résoudrait** : les questions que la fabric vivante ne peut
+structurellement pas répondre ("que recommande Cisco pour X", "que signifie
+ce code de fault") — actuellement le modèle s'appuie sur sa mémoire
+d'entraînement pour ça (jamais vérifié : ni Claude ni le modèle local n'ont
+confronté la signification des codes de fault vus aujourd'hui — F0104,
+F1318 etc. — à une vraie doc).
+
+**À anticiper avant de se lancer** :
+
+- Système à part entière avec ses propres risques (qualité de retrieval,
+  fraîcheur de la doc versionnée par release ACI).
+- Droits sur du contenu Cisco copyrighted — usage interne pour son propre
+  agent ≠ redistribution/republication.
+- Risque contre-intuitif réel : un mauvais retrieval peut produire une
+  hallucination *plus convaincante* ("d'après la doc Cisco section 4.2...")
+  qu'une hallucination nue. Nécessite la même discipline de garde-fou que le
+  MCP live — le SKILL devrait distinguer clairement "ce que dit la doc" vs
+  "ce qui est réellement configuré," ne jamais confondre les deux.
+
+**Idée écartée en parallèle, à ne pas reproposer sans nouvelle info** :
+fine-tuning d'un modèle sur la connaissance ACI complète (CVD, guides de
+troubleshooting). Jugé probablement contre-productif pour l'objectif visé
+(réduire l'hallucination) : le fine-tuning bake la connaissance dans les
+poids, ce qui élimine la traçabilité qui a permis de diagnostiquer tous les
+échecs du test croisé du 20/07 — un modèle fine-tuné a plus de trivia ACI
+plausible dans lequel puiser au lieu d'appeler un outil, ce qui va dans le
+sens inverse de ce que le test a montré nécessaire (vérifier plus, pas se
+fier plus à la mémoire). Coût opérationnel plus élevé et perte de
+portabilité cross-modèle en prime.
