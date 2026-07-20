@@ -77,6 +77,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 - 25 tests: 12 unit tests for the schema `contains`/`property_details`
   projections and 13 integration tests for `get_by_dn`, `count`, and
   `config_only`.
+- `.github/workflows/ci.yml` — `test` job now generates a coverage report
+  (`pytest-cov`, `term-missing` + `xml`) uploaded as a build artifact, and the
+  run now includes `mcp/tests/eval/` (the search-quality floor added in the
+  search-v2 work), which was never actually exercised by CI before this
+  change even though it was designed for exactly that purpose.
 
 ### Changed
 
@@ -120,6 +125,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   it previously expected `vzBrCP` (a contract has a QoS-class property, but so
   does `fvAEPg`), when the unambiguous, directly-named answer is `qosClass`
   itself — a real, configurable class literally called "QoS Class Policy".
+- `.github/workflows/ci.yml` — `test` job no longer runs a hardcoded
+  `tests/unit/ tests/integration/` path list; it now runs `mcp/tests/`
+  wholesale (excluding `tests/perf/`, which stays out of CI on purpose for
+  speed), so any test directory added later is picked up automatically
+  instead of needing a CI edit to stop being silently skipped.
+- Rewrote the internal GitLab CI pipeline (untracked, not part of the public
+  repository) to mirror the above: an eval-gate-inclusive `pytest` stage with
+  coverage reporting, a dedicated `audit` stage split out from `security`,
+  and a manual-trigger, no-credentials-wired placeholder job scaffolding the
+  eventual `tests/live/` APIC-simulator suite once that lands.
 
 ### Fixed
 
@@ -134,6 +149,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   case-insensitive filesystem resolves the wrong file to the same path. Fixed
   by comparing the schema's own `classPkg`/`className` content instead of
   trusting the filesystem lookup alone.
+- `.github/workflows/ci.yml` — the `lint` job's "Lint schema-collector/" step
+  and the `audit` job's "Audit schema-collector/" step both referenced a
+  directory that commit 4351bf8 removed from the public repository's tracked
+  tree, so both have failed on every push and pull request since that
+  commit. Removed the dead steps; `schema-collector/` is only linted and
+  audited by the internal GitLab pipeline now, which still has it.
 
 ---
 
