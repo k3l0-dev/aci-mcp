@@ -7,6 +7,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+### Added
+
+- `.github/dependabot.yml` schedules weekly version-update checks for the
+  `mcp/` uv-managed dependencies and for GitHub Actions dependencies, on top
+  of the security-only Dependabot alerts already active — so a vulnerable
+  or outdated dependency surfaces on a schedule instead of only at the next
+  manual audit.
+
 ## [1.2.0] - 2026-07-20
 
 ### Added
