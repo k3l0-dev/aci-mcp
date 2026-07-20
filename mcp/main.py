@@ -71,7 +71,7 @@ from middleware.oauth import OAuthDiscoveryMiddleware
 from pydantic import BeforeValidator
 from registry.descriptions import load_descriptions
 from registry.descriptions import search as desc_search
-from registry.schema import load_schema, resolve_schemas_dir
+from registry.schema import class_exists, load_schema, resolve_schemas_dir
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
@@ -361,8 +361,10 @@ async def query(
     # (schema-collector builds them from separate passes over /doc/jsonmeta/),
     # so a class absent from `descriptions` may still be a perfectly valid,
     # queryable ACI class — fall back to a schema-file check before rejecting.
+    # class_exists() (not load_schema() directly) guards against
+    # case-insensitive filesystems silently resolving a typo to a real file.
     if class_name not in descriptions:
-        if load_schema(class_name, schemas_dir):
+        if class_exists(class_name, schemas_dir):
             await ctx.warning(
                 f"query({class_name!r}) — no class-descriptions entry, but a "
                 "schema file resolved for this class; allowing the query"

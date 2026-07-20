@@ -301,8 +301,20 @@ def sample_imdata() -> list[dict]:
 
 @pytest.fixture
 def schemas_dir() -> Path:
-    """Path to the aci-mcp/data/schemas/ jsonmeta collection."""
-    return SCHEMAS_DIR
+    """Path to the resolved aci-mcp/data/schemas/ jsonmeta collection.
+
+    Mirrors what `main.app_lifespan` actually passes to tool contexts in
+    production: the real collection lives one level down in a versioned
+    subdirectory (e.g. `data/schemas/mo-apic-v6.0_9c/`), and `load_schema()`
+    only ever does a direct, non-wildcard file access — resolution happens
+    once via `resolve_schemas_dir()`. A fixture that returned the unresolved
+    top-level directory would silently mismatch the real code path whenever
+    the full data/ collection happens to be present (e.g. in this repo's own
+    checkout, as opposed to a bare worktree without it).
+    """
+    from registry.schema import resolve_schemas_dir
+
+    return resolve_schemas_dir(SCHEMAS_DIR)
 
 
 @pytest.fixture

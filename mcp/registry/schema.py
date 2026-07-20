@@ -187,3 +187,33 @@ def load_schema(class_name: str, schemas_dir: Path) -> dict[str, Any]:
         result["properties"] = sorted(raw_props.keys())
 
     return result
+
+
+def class_exists(class_name: str, schemas_dir: Path) -> bool:
+    """Check whether a schema file resolves for class_name with an exact match.
+
+    `load_schema()` alone is not a safe existence check on case-insensitive
+    filesystems — the default on macOS (APFS) and Windows (NTFS). There,
+    `schemas_dir / f"{name}.json"` resolves through a filesystem stat call
+    that some filesystems match case-insensitively, so a typo such as "fvBd"
+    would silently resolve to the real "fvBD.json" file and be treated as a
+    valid class. This defeats the purpose of using schema resolution as a
+    fallback existence check (see `main.query()`), which exists precisely to
+    catch typos before they reach the APIC.
+
+    jsonmeta's `className`/`classPkg` root fields, in contrast, come from the
+    JSON content itself, not the filesystem path — comparing them here in
+    Python is always case-sensitive and behaves identically on every OS.
+
+    Args:
+        class_name:  Flat ACI class name to verify, e.g. "fvBD".
+        schemas_dir: Resolved schema directory (see `resolve_schemas_dir()`).
+
+    Returns:
+        True only when a schema file resolves AND its className/classPkg
+        reconstruct to exactly `class_name`.
+    """
+    schema = load_schema(class_name, schemas_dir)
+    if not schema:
+        return False
+    return schema.get("classPkg", "") + schema.get("className", "") == class_name

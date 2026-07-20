@@ -13,7 +13,7 @@ import json
 
 import pytest
 from exceptions import SchemaLoadError
-from registry.schema import load_schema, resolve_schemas_dir
+from registry.schema import class_exists, load_schema, resolve_schemas_dir
 
 # ── Synthetic schema fixtures ─────────────────────────────────────────────────
 
@@ -285,3 +285,42 @@ def test_os_error_on_read_raises_schema_load_error(tmp_path):
             load_schema("fvBD", tmp_path)
     finally:
         schema_file.chmod(0o644)
+
+
+# ── class_exists() ────────────────────────────────────────────────────────────
+#
+# class_exists() exists specifically to guard against case-insensitive
+# filesystems (the macOS/Windows default) silently resolving a typo like
+# "fvBd" to the real "fvBD.json" file via a case-insensitive stat call. It
+# must reject that case even though load_schema() alone would happily return
+# the fvBD schema for it — the comparison is against className/classPkg from
+# the JSON content, not the filesystem path, so it is exercised directly here
+# rather than depending on a specific filesystem's case sensitivity.
+
+
+def test_class_exists_true_for_exact_match(schema_dir):
+    assert class_exists("fvBD", schema_dir) is True
+
+
+def test_class_exists_false_for_unknown_class(schema_dir):
+    assert class_exists("nonExistentClassXYZ", schema_dir) is False
+
+
+def test_class_exists_false_for_case_mismatch_even_if_load_schema_resolves(
+    schema_dir, monkeypatch
+):
+    # Simulates what happens on a case-insensitive filesystem: the file lookup
+    # for "fvBd" (typo) resolves to the real fvBD.json content, exactly as it
+    # would via a case-insensitive stat on macOS/Windows. class_exists() must
+    # still say no, because classPkg+className ("fv" + "BD") does not equal
+    # the requested "fvBd".
+    real_load_schema = load_schema
+    monkeypatch.setattr(
+        "registry.schema.load_schema",
+        lambda class_name, schemas_dir: real_load_schema("fvBD", schemas_dir),
+    )
+    assert class_exists("fvBd", schema_dir) is False
+
+
+def test_class_exists_false_for_empty_schema(tmp_path):
+    assert class_exists("nonExistentClassXYZ", tmp_path) is False
