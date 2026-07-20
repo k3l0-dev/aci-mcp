@@ -7,6 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-07-20
+
 ### Added
 
 - `mcp/client/SKILL.md` documents `dnFormats` — the full DN template chained
@@ -30,6 +32,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Changed
 
+- `apic/client.py` — `query_class()` now shares its transport/retry logic
+  with `get_by_dn()`/`count_class()` via `_request_json()`, instead of
+  duplicating the request-and-error-handling block. The 401/403
+  re-authenticate-and-retry flow is unchanged, now isolated in a new
+  `_send()` helper that the retry loop wraps.
+- **Breaking:** `query()` now returns an envelope — `{results, returned,
+  total_available, truncated, next_page, complete, note}` — instead of a
+  bare list, so a partial page is never silently indistinguishable from a
+  complete one. `total_available` is the APIC-reported true match count
+  (previously parsed and discarded by `query_class()`); `truncated`/
+  `complete` and an explicit `note` tell the caller when a max/min/total/
+  all-of conclusion from the current response would be wrong.
+  `mcp/client/SKILL.md`'s canonical response shape, pagination, and
+  counting sections updated accordingly. Version bumped 1.1.0 → 1.2.0.
+
+### Fixed
+
 - `mcp/client/SKILL.md` and `main.py`'s server instructions now state
   explicitly that a tool error (unknown class, unreachable object, malformed
   filter) is a failed lookup, not an answer of zero or an empty result — and
@@ -48,20 +67,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   (that requires `property_details`). Naming a relation's target or a
   property's type/value without having actually requested that detail is
   the unsupported completion the rule forbids.
-- `apic/client.py` — `query_class()` now shares its transport/retry logic
-  with `get_by_dn()`/`count_class()` via `_request_json()`, instead of
-  duplicating the request-and-error-handling block. The 401/403
-  re-authenticate-and-retry flow is unchanged, now isolated in a new
-  `_send()` helper that the retry loop wraps.
-- **Breaking:** `query()` now returns an envelope — `{results, returned,
-  total_available, truncated, next_page, complete, note}` — instead of a
-  bare list, so a partial page is never silently indistinguishable from a
-  complete one. `total_available` is the APIC-reported true match count
-  (previously parsed and discarded by `query_class()`); `truncated`/
-  `complete` and an explicit `note` tell the caller when a max/min/total/
-  all-of conclusion from the current response would be wrong.
-  `mcp/client/SKILL.md`'s canonical response shape, pagination, and
-  counting sections updated accordingly. Version bumped 1.1.0 → 1.2.0.
 
 ### Security
 
@@ -309,7 +314,8 @@ First public open-source release.
 
 ---
 
-[Unreleased]: https://github.com/k3l0-dev/aci-mcp/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.2.0...v0.3.0
