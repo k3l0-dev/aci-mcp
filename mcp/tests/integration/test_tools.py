@@ -437,3 +437,176 @@ async def test_query_rejects_class_with_neither_description_nor_schema(
         await query("totallyMadeUpClassNotAnywhere", ctx)
 
 
+# ── query — config_only (Task 5) ──────────────────────────────────────────────
+
+# imdata carrying an operational attribute (modTs) the stub strips under
+# config_only, mirroring the APIC rsp-prop-include=config-only behaviour.
+_CONFIG_IMDATA = [
+    {
+        "fvBD": {
+            "attributes": {
+                "name": "servers",
+                "dn": "uni/tn-OT/BD-servers",
+                "arpFlood": "no",
+                "modTs": "2026-07-20T10:00:00.000+00:00",
+                "lcOwn": "local",
+            }
+        }
+    },
+]
+
+
+@pytest.mark.asyncio
+async def test_query_config_only_passed_through(sample_imdata, schemas_dir):
+    from main import query
+
+    ctx = _stub_ctx(sample_imdata, schemas_dir)
+    await query("fvBD", ctx, config_only=True)
+    call = ctx.lifespan_context["backend"].calls[-1]
+    assert call["config_only"] is True
+
+
+@pytest.mark.asyncio
+async def test_query_config_only_strips_operational_attrs(schemas_dir):
+    from main import query
+
+    ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
+    results = await query("fvBD", ctx, config_only=True)
+    assert results[0]["name"] == "servers"
+    assert "modTs" not in results[0]
+    assert "lcOwn" not in results[0]
+
+
+@pytest.mark.asyncio
+async def test_query_without_config_only_keeps_all_attrs(schemas_dir):
+    from main import query
+
+    ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
+    results = await query("fvBD", ctx)
+    assert "modTs" in results[0]
+
+
+# ── get_by_dn (Task 3) ────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_found_returns_object(tool_ctx):
+    from main import get_by_dn
+
+    obj = await get_by_dn("uni/tn-OT/BD-servers", tool_ctx)
+    assert obj["_class"] == "fvBD"
+    assert obj["name"] == "servers"
+    assert obj["dn"] == "uni/tn-OT/BD-servers"
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_not_found_returns_structured_error(tool_ctx):
+    from main import get_by_dn
+
+    result = await get_by_dn("uni/tn-OT/BD-doesNotExist", tool_ctx)
+    assert result["found"] is False
+    assert result["dn"] == "uni/tn-OT/BD-doesNotExist"
+    assert "No object exists" in result["message"]
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_not_found_logs_warning(tool_ctx):
+    from main import get_by_dn
+
+    await get_by_dn("uni/tn-OT/BD-doesNotExist", tool_ctx)
+    tool_ctx.warning.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_config_only_strips_operational_attrs(schemas_dir):
+    from main import get_by_dn
+
+    ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
+    obj = await get_by_dn("uni/tn-OT/BD-servers", ctx, config_only=True)
+    assert obj["name"] == "servers"
+    assert "modTs" not in obj
+    call = ctx.lifespan_context["backend"].calls[-1]
+    assert call["config_only"] is True
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_include_children_embeds_children(tool_ctx):
+    from main import get_by_dn
+
+    # fvBD "mgmt" in sample_imdata carries a fvSubnet child
+    obj = await get_by_dn("uni/tn-OT/BD-mgmt", tool_ctx, include_children=["fvSubnet"])
+    assert obj["_class"] == "fvBD"
+    assert "_children" in obj
+    assert obj["_children"][0]["_class"] == "fvSubnet"
+
+
+# ── count (Task 4) ────────────────────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_count_plain_returns_total(tool_ctx):
+    from main import count
+
+    result = await count("fvBD", tool_ctx)
+    # sample_imdata carries three fvBD objects
+    assert result["class_name"] == "fvBD"
+    assert result["count"] == 3
+    assert result["scope_dn"] is None
+    assert result["filters"] == {}
+
+
+@pytest.mark.asyncio
+async def test_count_filtered(tool_ctx):
+    from main import count
+
+    # two of the three BDs have arpFlood=no (servers, mgmt)
+    result = await count("fvBD", tool_ctx, filters={"arpFlood": "no"})
+    assert result["count"] == 2
+    assert result["filters"] == {"arpFlood": "no"}
+
+
+@pytest.mark.asyncio
+async def test_count_scoped(tool_ctx):
+    from main import count
+
+    result = await count("fvBD", tool_ctx, scope_dn="uni/tn-OT")
+    assert result["count"] == 3
+    assert result["scope_dn"] == "uni/tn-OT"
+
+
+@pytest.mark.asyncio
+async def test_count_unknown_class_raises_unknown_class_error(tool_ctx):
+    from main import count
+
+    with pytest.raises(UnknownClassError) as exc_info:
+        await count("xyzTotallyFakeClass99", tool_ctx)
+    assert exc_info.value.class_name == "xyzTotallyFakeClass99"
+
+
+@pytest.mark.asyncio
+async def test_count_unknown_class_logs_warning(tool_ctx):
+    from main import count
+
+    with pytest.raises(UnknownClassError):
+        await count("xyzFakeClass", tool_ctx)
+    tool_ctx.warning.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_count_allows_class_absent_from_descriptions_but_with_schema(
+    sample_imdata, tmp_path
+):
+    """count() must agree with query() on the registry/schema fallback — a
+    class with a schema file but no class-descriptions entry is allowed
+    through instead of raising UnknownClassError."""
+    from main import count
+
+    (tmp_path / "aaaExtraOnlyClass.json").write_text(
+        json.dumps(_EXTRA_ONLY_SCHEMA), encoding="utf-8"
+    )
+    ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
+
+    result = await count("aaaExtraOnlyClass", ctx)
+    assert result["class_name"] == "aaaExtraOnlyClass"
+
+

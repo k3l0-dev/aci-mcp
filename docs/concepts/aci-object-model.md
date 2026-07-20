@@ -1,6 +1,6 @@
 # ACI Object Model — Concepts for Non-Network Engineers
 
-This page explains the Cisco ACI data model just enough to understand what `aci-mcp` does and why the three tools are designed the way they are. No prior network or ACI experience required.
+This page explains the Cisco ACI data model just enough to understand what `aci-mcp` does and why its tools are designed the way they are. No prior network or ACI experience required.
 
 ---
 
@@ -127,7 +127,7 @@ Of the 15 000+ classes, only a few hundred correspond to objects a network engin
 
 ---
 
-## How this maps to the three MCP tools
+## How this maps to the MCP tools
 
 | Tool | What it solves |
 |---|---|

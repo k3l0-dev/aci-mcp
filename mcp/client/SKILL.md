@@ -3,9 +3,21 @@ name: aci-mcp-query
 description: Query the ACI APIC controller via MCP tools. Use when the user asks about ACI infrastructure — faults, tenants, bridge domains, EPGs, VRFs, contracts, fabric nodes, routing, endpoints, audit logs.
 ---
 
-You have three MCP tools: `search_classes`, `get_schema`, `query`.
+You have five MCP tools:
+
+- `search_classes` — find a class name from a keyword
+- `get_schema` — inspect a class: identifiers, containment, children, per-property constraints
+- `query` — fetch objects of a class (filtered, scoped)
+- `get_by_dn` — fetch one object directly by its DN (shortcut, skips discovery)
+- `count` — count objects of a class without transferring them
+
 This skill explains the ACI object model, the data structures the tools
 return, how to read a schema, and how to navigate the object tree.
+
+**Discovery vs. shortcut.** The `search_classes → get_schema → query` sequence
+below is mandatory only when you do *not* already hold a verified class name and
+DN. When you already have an exact DN (from a previous result or a design), call
+`get_by_dn(dn)` directly — no search/schema detour. See section 5.5.
 
 ---
 
@@ -131,6 +143,61 @@ Convert `pkg:Class` → `pkgClass` (remove the colon) to get the queryable
 class name: `fv:Tenant` → `fvTenant`.
 To query objects of this class under a specific parent, first query the parent
 to get its `dn`, then pass it as `scope_dn`.
+
+### `contains` — the child classes this object may hold
+
+```json
+"contains": ["fvSubnet", "fvRsCtx", "fvRsBDToOut", "tagTag", "faultInst"]
+```
+
+Already in flat notation — feed a name straight to `get_schema`, `query`, or
+`include_children`. This is how you discover what lives *under* an object:
+answering "what can a bridge domain contain?" no longer requires guessing.
+Combine with `include_children` to pull the relevant children inline.
+
+### `property_details` — per-property constraints (opt-in)
+
+`properties` gives only names. To learn a property's **type, allowed values,
+default, and whether it is writable** *before* you set or filter on it, ask for
+details — but only for the properties you care about, to stay token-efficient:
+
+```python
+get_schema("fvSubnet", properties_filter=["scope", "preferred"])
+```
+
+```json
+"property_details": {
+  "scope": {
+    "type": "fv:RouteScp",
+    "access": "read-write",
+    "default": "private",
+    "options": ["private", "public", "shared"],
+    "comment": "The network visibility of the subnet."
+  },
+  "preferred": {
+    "type": "scalar:Bool",
+    "access": "read-write",
+    "default": "false",
+    "options": ["no", "yes"]
+  }
+}
+```
+
+Per-property fields (only `type` and `access` are always present):
+
+| Field | Meaning |
+|---|---|
+| `type` | ACI model type, e.g. `scalar:Bool`, `fv:RouteScp` |
+| `access` | `read-write` · `create-only` (immutable after create) · `read-only` (never settable) |
+| `naming` | present when the property is part of the DN (an identifier) |
+| `mandatory` | present when the property is required on create |
+| `default` | the default value, when declared |
+| `options` | allowed values — the **exact strings** the APIC accepts in `filters` and config |
+| `comment` | one-line description |
+
+`options` removes the guesswork behind section 8: never guess an enum's casing —
+read it here. Use `include_property_details=True` to dump every property only
+when you genuinely need the full picture.
 
 ### `properties` — all queryable attribute names
 
@@ -268,6 +335,70 @@ query("faultInst", limit=20, order_by="faultInst.severity|desc", page=0)
 # Next 20 (page 1)
 query("faultInst", limit=20, order_by="faultInst.severity|desc", page=1)
 ```
+
+### Configuration only — `config_only`
+
+A raw object carries ~40 attributes, most of them operational noise (runtime
+state, timestamps, monitoring counters). Pass `config_only=True` to `query` or
+`get_by_dn` to keep only user-configurable attributes — ideal for comparison,
+drift detection, and backup.
+
+```python
+# Just the intended config of a BD, no operational churn
+query("fvBD", filters={"name": "servers"}, config_only=True)
+```
+
+---
+
+## 5.5 Shortcut: `get_by_dn` — fetch one object by DN
+
+When you **already hold an exact DN** (from a previous result, or a design you
+are verifying), skip `search_classes` and `get_schema` entirely and read the
+object directly. The DN encodes the class, so you do not need to know it up front.
+
+```python
+get_by_dn("uni/tn-OT/BD-servers")
+# → {"_class": "fvBD", "dn": "uni/tn-OT/BD-servers", "name": "servers", ...}
+
+# config only, with children embedded
+get_by_dn("uni/tn-OT/BD-servers",
+          config_only=True,
+          include_children=["fvSubnet", "fvRsCtx"])
+```
+
+Return shape is a single object dict (same element shape as a `query` result),
+**not** a list. If the DN does not exist, you get an explicit not-found instead
+of a silent empty result:
+
+```json
+{"found": false, "dn": "uni/tn-OT/BD-typo",
+ "message": "No object exists at DN '...'. The DN may be mistyped..."}
+```
+
+A not-found usually means a stale or mistyped DN — re-derive it from a fresh
+`query` result rather than reconstructing it from memory.
+
+## 5.6 Counting: `count` — how many, cheaply
+
+"How many BDs / EPGs / subnets?" needs a tally, not the objects. `count` answers
+in one small request; filtering and scoping work exactly as in `query`.
+
+```python
+count("fvBD")                                  # all BDs in the fabric
+count("fvAEPg", scope_dn="uni/tn-OT")           # EPGs in tenant OT
+count("fvSubnet", filters={"scope": "public"})  # public subnets only
+# → {"class_name": "fvSubnet", "count": 12, "scope_dn": null, "filters": {"scope": "public"}}
+```
+
+Verify the class name with `search_classes` first — `count` raises the same
+`UnknownClassError` (with suggestions) as `query` for an unknown class.
+
+> **Eventual consistency.** A read taken right after a large config push reflects
+> the fabric state *at that instant*. Counts and object sets can keep moving for
+> a few seconds while the fabric materialises the change (BDs, EPGs, and
+> subnets appear incrementally). If a `count` or `query` right after a write does
+> not match what you expect, wait for stabilisation and re-read before drawing a
+> conclusion — do not treat the first post-write read as final.
 
 ---
 
@@ -414,5 +545,7 @@ a sample object without filters to observe the actual values in context.
 | `search_classes` returns no results | Keyword too specific | Try acronym, English label, or first 3 chars of the expected class name |
 | `get_schema` returns `{}` | Class not in local schema collection | Query without filters, inspect `properties` of a sample result |
 | `_children` is empty despite `include_children` | Children don't exist under that parent, or wrong child class name | Query child class directly with scope_dn to verify |
+| `get_by_dn` returns `{"found": false, ...}` | DN is stale, mistyped, or the object was deleted | Re-derive the DN from a fresh `query` result — never reconstruct it from memory |
+| `count` disagrees with a follow-up `query` | Read taken mid-materialisation after a config push | Wait for stabilisation and re-read (eventual consistency, section 5.6) |
 
 ---

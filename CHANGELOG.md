@@ -9,6 +9,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Added
 
+- `get_by_dn(dn, config_only, include_children)` — new MCP tool that fetches a
+  single object directly by its Distinguished Name (`GET /api/mo/{dn}.json`),
+  the shortcut path when the exact DN is already known. Returns a structured
+  `{"found": false, ...}` message for a missing DN instead of a bare `[]`.
+- `count(class_name, filters, scope_dn, filter_expr)` — new MCP tool that counts
+  objects of a class via APIC `rsp-subtree-include=count` without transferring
+  them. Validates the class name against the registry like `query` (raises
+  `UnknownClassError` with suggestions).
+- `get_schema` now returns `contains` — a sorted list of the child class names an
+  object may hold, in flat notation ready to feed to `get_schema`/`query`/
+  `include_children` (the jsonmeta `contains` field was previously dropped).
+- `get_schema` gains `include_property_details` and `properties_filter`
+  parameters exposing a compact per-property constraint dict (`type`, `access`,
+  `naming`, `mandatory`, `default`, `options`, `comment`). Opt-in for token
+  economy — request details only for the properties you intend to set.
+- `query` and `get_by_dn` gain `config_only` — adds `rsp-prop-include=config-only`
+  so only user-configurable attributes are returned, dropping operational noise
+  for comparison, drift detection, and backup.
+- `ApicClient.get_by_dn()`, `ApicClient.count_class()`, and a shared
+  `_request_json()` helper backing the new tools.
 - `mcp/exceptions.py` — `ApicRequestError`: wraps non-2xx, non-authentication APIC
   responses (400 for a malformed `filter_expr`, 404, 500, ...), carrying the HTTP
   status and, when present, the APIC-supplied error text from
@@ -17,14 +37,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 - `mcp/registry/schema.py` — `resolve_schemas_dir()`: resolves the actual jsonmeta
   schema directory (flat vs. versioned subdir, e.g. `mo-apic-v6.0_9c/`) once at
   server startup, so `load_schema()` never has to scan for it per call.
+- `mcp/registry/schema.py` — `class_exists()`: verifies a schema-file match
+  against the class's own `classPkg`/`className` fields (sourced from the JSON
+  content, not the filesystem path), so the `query()` registry/schema fallback
+  below cannot be fooled by a case-insensitive filesystem (the macOS/Windows
+  default) silently resolving a typo to the real file.
 - Boundary tests (0, -1, 1, cap, cap+1) for the `limit` parameter of both
   `search_classes` and `query`.
 - Tests covering the `query()` registry/schema fallback (class present in the
-  schema collection but absent from `class-descriptions.json`) and the new
-  `ApicRequestError` paths (400 with/without an APIC error body, 500).
+  schema collection but absent from `class-descriptions.json`), the new
+  `ApicRequestError` paths (400 with/without an APIC error body, 500), and
+  `class_exists()`'s case-sensitivity guard.
+- 25 tests: 12 unit tests for the schema `contains`/`property_details`
+  projections and 13 integration tests for `get_by_dn`, `count`, and
+  `config_only`.
 
 ### Changed
 
+- FastMCP `instructions` and `mcp/client/SKILL.md`: the mandatory
+  `search_classes → get_schema → query` sequence is now scoped to *discovery*,
+  with documented shortcuts for the known-DN path (`get_by_dn`), counting, and
+  config-only reads, plus guidance on `contains` and property details.
+- `mcp/client/SKILL.md`: added an eventual-consistency warning — reads taken
+  right after a large config push reflect the fabric state at that instant;
+  counts can move for a few seconds while the fabric materialises the change.
 - `mcp/registry/schema.py` — `load_schema()` no longer performs a
   `schemas_dir.glob(f"*/{class}.json")` scan when the flat top-level path misses.
   It now does a single direct file stat on the *resolved* directory handed to it,
@@ -32,10 +68,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   call. Callers must resolve `schemas_dir` once via `resolve_schemas_dir()` (done
   in `main.app_lifespan` at startup) before passing it in.
 - `mcp/main.py` — `query()` no longer rejects a class outright just because it is
-  absent from `class-descriptions.json`: it now falls back to checking whether a
-  schema file resolves for that class before raising `UnknownClassError`, closing
-  a ~300-class gap between the two collections built by separate schema-collector
-  passes. The fallback path logs a warning instead of failing silently either way.
+  absent from `class-descriptions.json`: it now falls back to `class_exists()`
+  before raising `UnknownClassError`, closing a ~300-class gap between the two
+  collections built by separate schema-collector passes. The fallback path logs
+  a warning instead of failing silently either way.
 - `mcp/main.py` — `search_classes` and `query` now clamp `limit` to `max(1, min(limit, cap))`
   instead of `min(limit, cap)`, so a zero or negative `limit` can no longer reach
   the APIC as an invalid `page-size` parameter.
@@ -60,6 +96,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 - A negative or zero `limit` on `search_classes`/`query` no longer reaches the
   APIC as `page-size=-1`/`0`, nor silently mis-slices `registry.descriptions.search()`'s
   result list.
+- The `query()` registry/schema fallback could be tricked by a typo (e.g.
+  `fvBd` for `fvBD`) into passing a bogus class through as valid, because a
+  case-insensitive filesystem resolves the wrong file to the same path. Fixed
+  by comparing the schema's own `classPkg`/`className` content instead of
+  trusting the filesystem lookup alone.
 
 ---
 

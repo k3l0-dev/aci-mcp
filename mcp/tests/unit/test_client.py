@@ -477,3 +477,66 @@ async def test_close_releases_http_client():
     client._client.aclose = _track_close
     await client.close()
     assert closed == [True]
+
+
+# ── get_by_dn() / count_class() — _request_json() error handling ────────────
+#
+# get_by_dn() and count_class() share _request_json() rather than
+# query_class()'s code path, so its error handling (401/403 re-auth,
+# non-auth HTTP errors, malformed JSON) is exercised independently here.
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_found_returns_attributes():
+    objects = make_imdata_objects("fvBD", [{"name": "servers", "dn": "uni/tn-OT/BD-servers"}])
+    client = _make_client(_MockResponse(200, apic_response(objects)))
+    obj = await client.get_by_dn("uni/tn-OT/BD-servers")
+    assert obj["_class"] == "fvBD"
+    assert obj["name"] == "servers"
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_missing_returns_none():
+    client = _make_client(_MockResponse(200, apic_response([])))
+    assert await client.get_by_dn("uni/tn-OT/BD-doesNotExist") is None
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_400_raises_apic_request_error():
+    body = {
+        "imdata": [
+            {"error": {"attributes": {"code": "400", "text": "malformed DN"}}}
+        ]
+    }
+    client = _make_client(_MockResponse(400, body))
+    with pytest.raises(ApicRequestError) as exc_info:
+        await client.get_by_dn("not-a-real-dn")
+    assert exc_info.value.status == 400
+    assert "malformed DN" in exc_info.value.apic_text
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_re_authenticates_on_401():
+    objects = make_imdata_objects("fvBD", [{"name": "servers", "dn": "uni/tn-OT/BD-servers"}])
+    client = _make_client(
+        _MockResponse(401, {}),
+        _MockResponse(200, apic_login_response()),
+        _MockResponse(200, apic_response(objects)),
+    )
+    obj = await client.get_by_dn("uni/tn-OT/BD-servers")
+    assert obj["name"] == "servers"
+
+
+@pytest.mark.asyncio
+async def test_count_class_extracts_mo_count():
+    body = {"imdata": [{"moCount": {"attributes": {"childCount": "42"}}}]}
+    client = _make_client(_MockResponse(200, body))
+    assert await client.count_class("fvBD", {}) == 42
+
+
+@pytest.mark.asyncio
+async def test_count_class_500_raises_apic_request_error():
+    client = _make_client(_MockResponse(500, {}))
+    with pytest.raises(ApicRequestError) as exc_info:
+        await client.count_class("fvBD", {})
+    assert exc_info.value.status == 500

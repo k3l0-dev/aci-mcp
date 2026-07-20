@@ -198,7 +198,7 @@ Use the same URL and bearer token in your client's MCP server settings. All MCP 
 
 The ACI object model has 15 000+ classes. Without context, any LLM will guess class names — and guessing silently returns empty results.
 
-The file [`mcp/client/SKILL.md`](mcp/client/SKILL.md) teaches your agent the full ACI object model, how to read schemas, how to build DN paths, and when to use each of the three tools. **Load it once and your agent stops guessing.**
+The file [`mcp/client/SKILL.md`](mcp/client/SKILL.md) teaches your agent the full ACI object model, how to read schemas, how to build DN paths, and when to use each tool. **Load it once and your agent stops guessing.**
 
 #### Claude Desktop / Claude Projects
 
@@ -266,13 +266,15 @@ See [SECURITY.md](SECURITY.md) for the vulnerability disclosure policy.
 
 ## Tools
 
-The server exposes three tools. Documentation and usage examples are in [`SKILL.md`](SKILL.md) and [`docs/tools/`](docs/tools/).
+The server exposes a small set of generic tools. Documentation and usage examples are in [`SKILL.md`](SKILL.md) and [`docs/tools/`](docs/tools/).
 
 | Tool | Description |
 |---|---|
 | `search_classes(keyword)` | Weighted keyword search across 15 000+ ACI classes |
-| `get_schema(class_name)` | Returns DN format, properties, and containment hierarchy |
+| `get_schema(class_name, ...)` | Returns DN format, containment, child classes, and (on demand) per-property constraints |
 | `query(class_name, ...)` | Executes a scoped, filtered query against the APIC |
+| `get_by_dn(dn, ...)` | Fetches a single object directly by DN — the known-DN shortcut |
+| `count(class_name, ...)` | Counts objects of a class without transferring them |
 
 ---
 

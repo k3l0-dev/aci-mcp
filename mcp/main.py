@@ -7,12 +7,15 @@ Schema-driven FastMCP server for Cisco ACI APIC — v0.2.
 
 Architecture
 ------------
-The server exposes three generic tools that let an LLM navigate the entire
-ACI object model without any hardcoded class knowledge:
+The server exposes a small set of generic tools that let an LLM navigate the
+entire ACI object model without any hardcoded class knowledge:
 
   search_classes  — discover ACI classes by keyword (label + description)
-  get_schema      — inspect identifiers, containment, and relations for a class
+  get_schema      — inspect identifiers, containment, children, relations, and
+                    (on demand) per-property constraints for a class
   query           — execute a filtered class query against the APIC
+  get_by_dn       — fetch a single object directly by its DN (shortcut path)
+  count           — count objects of a class without transferring them
 
 All ACI domain knowledge lives in:
   ../data/schemas/                 15 k+ jsonmeta files from the APIC /doc/jsonmeta/ endpoint
@@ -176,7 +179,8 @@ mcp = FastMCP(
     instructions="""
 You are an assistant for querying a Cisco ACI fabric through its APIC REST API.
 
-MANDATORY WORKFLOW — never deviate from this sequence:
+MANDATORY DISCOVERY WORKFLOW — follow this sequence whenever you do NOT already
+hold a verified class name and DN:
 
   Step 1 — ALWAYS call search_classes(keyword) first.
     Your training knowledge of ACI class names is unreliable: names vary
@@ -185,16 +189,33 @@ MANDATORY WORKFLOW — never deviate from this sequence:
 
   Step 2 — ALWAYS call get_schema(class_name) before query().
     The schema tells you which attributes exist on the class (properties),
-    which attributes uniquely identify instances (identifiedBy), and what
-    the parent DN looks like (containedBy → use as scope_dn).
+    which attributes uniquely identify instances (identifiedBy), what the
+    parent DN looks like (containedBy → use as scope_dn), and which child
+    classes it can hold (contains).  To learn valid values, types, defaults,
+    and which properties are read-only before setting or filtering on them,
+    call get_schema with properties_filter=[...] (or include_property_details).
     Querying with an attribute that does not exist silently returns nothing.
 
   Step 3 — Only then call query(class_name, filters, scope_dn).
     Use the "dn" from any result as scope_dn to fetch child objects.
 
-Skipping steps 1 or 2 produces wrong class names, wrong filters, and
-empty results.  The search + schema cost is two fast local lookups —
-always worth it.
+SHORTCUT — skip discovery when you already have an exact DN:
+    When you already hold an exact class name AND DN from a previous result or
+    from a design, call get_by_dn(dn) directly — no search/schema detour needed.
+    Add config_only=True to get just the configurable attributes, or
+    include_children=[...] to embed child objects in the same call.
+
+COUNTING — to answer "how many X?" call count(class_name, filters, scope_dn).
+    It returns a tally without transferring the objects — far cheaper than
+    fetching everything just to measure the result set.
+
+CLEAN CONFIG — pass config_only=True to query() or get_by_dn() to drop the ~40
+    operational/internal attributes and keep only the intended configuration,
+    ideal for comparison, drift detection, and backup.
+
+Skipping discovery (steps 1-2) for an UNVERIFIED class produces wrong class
+names, wrong filters, and empty results.  The search + schema cost is two fast
+local lookups — always worth it when you are not already certain.
 """,
 )
 
@@ -242,6 +263,8 @@ async def search_classes(
 async def get_schema(
     class_name: str,
     ctx: Context,
+    include_property_details: bool = False,
+    properties_filter: _JsonList | None = None,
 ) -> dict[str, Any]:
     """Return the structural schema for an ACI class.
 
@@ -253,26 +276,53 @@ async def get_schema(
       rnFormat       — relative-name template showing identifier placeholders
       containedBy    — parent class name(s) in "pkg:Class" notation;
                         fetch the parent object and use its dn as scope_dn
+      contains       — sorted list of child class names this object may hold,
+                        in flat notation (e.g. "fvSubnet", "tagTag") ready to
+                        pass to get_schema(), query(), or include_children
       dnFormats      — complete DN pattern examples for this class
       relationTo     — outgoing Rs relations: {relClass: {targetClass, cardinality}}
       relationFrom   — incoming Rt relations: {relClass: {sourceClass}}
       properties     — sorted list of all available attribute names
+      property_details — compact per-property constraints; present ONLY when
+                        include_property_details=True or properties_filter is set
       isAbstract     — True when the class cannot be directly instantiated
       isConfigurable — True when objects can be created/modified via APIC
       className      — short name without package prefix, e.g. "BD"
       classPkg       — package prefix, e.g. "fv"
       label          — human-readable label
 
+    Property details are opt-in to protect the token budget — many classes carry
+    100+ properties.  Request them only for the properties you intend to set or
+    filter on.  Each entry in property_details has the shape:
+
+      {"type": <ACI model type>,          # e.g. "scalar:Bool", "fv:RouteScp"
+       "access": "read-write"|"create-only"|"read-only",
+       "naming": true,                    # only when the property is part of the DN
+       "mandatory": true,                 # only when required on create
+       "default": <value>,                # only when the schema declares one
+       "options": [<allowed value>, ...], # only for enumerated properties
+       "comment": <one-line description>}
+
     Args:
         class_name: Exact ACI class name, e.g. "fvBD", "fvAEPg", "faultInst".
         ctx:        Injected FastMCP context (not a user-facing parameter).
+        include_property_details: When True, include property_details for EVERY
+                    property.  Prefer properties_filter unless you truly need all.
+        properties_filter: Names of the properties to include in property_details.
+                    This is the token-efficient path — ask only for the properties
+                    you care about.  Unknown names are silently skipped.
 
     Returns:
         Schema dict as described above, or an empty dict when the class file
         is not found in the local schema collection.
     """
     schemas_dir: Path = ctx.lifespan_context["schemas_dir"]
-    schema = load_schema(class_name, schemas_dir)
+    schema = load_schema(
+        class_name,
+        schemas_dir,
+        include_property_details=include_property_details,
+        properties_filter=properties_filter,
+    )
     if schema:
         await ctx.info(f"get_schema({class_name!r}) → OK")
     else:
@@ -293,6 +343,7 @@ async def query(
     rsp_subtree_include: str | None = None,
     time_range: str | None = None,
     page: int | None = None,
+    config_only: bool = False,
 ) -> list[dict[str, Any]]:
     """Query ACI objects of a given class from the APIC.
 
@@ -328,6 +379,11 @@ async def query(
                           will contain a "_children" list of child attribute dicts.
                           Equivalent to moquery -x rsp-subtree=children
                           -x rsp-subtree-class=X,Y.
+        config_only:      When True, return only user-configurable attributes
+                          (APIC rsp-prop-include=config-only) instead of the full
+                          ~40-attribute set.  Use it when comparing, backing up,
+                          or diffing intended configuration without operational
+                          noise (runtime state, timestamps, monitoring counters).
 
     Returns:
         List of attribute dicts.  Each dict contains all APIC attributes for
@@ -392,9 +448,158 @@ async def query(
         rsp_subtree_include=rsp_subtree_include,
         time_range=time_range,
         page=page,
+        config_only=config_only,
     )
     await ctx.info(f"query → {len(results)} objects returned")
     return results
+
+
+@mcp.tool
+async def get_by_dn(
+    dn: str,
+    ctx: Context,
+    config_only: bool = False,
+    include_children: _JsonList | None = None,
+) -> dict[str, Any]:
+    """Fetch a single ACI object directly by its Distinguished Name.
+
+    SHORTCUT — this is the fast path that skips the search_classes → get_schema →
+    query discovery sequence.  Use it whenever you ALREADY hold an exact DN from
+    a previous result or from a design; there is no need to know the class name
+    up front, since the DN encodes it.  For an UNKNOWN object, use the discovery
+    workflow (search_classes → get_schema → query) instead.
+
+    Issues GET /api/mo/{dn}.json against the APIC.
+
+    Args:
+        dn:               Full Distinguished Name, e.g. "uni/tn-OT/BD-servers".
+        ctx:              Injected FastMCP context (not a user-facing parameter).
+        config_only:      When True, return only user-configurable attributes
+                          (APIC rsp-prop-include=config-only) — ideal for backup
+                          and comparison without operational noise.
+        include_children: Child class names to embed, e.g. ["fvSubnet", "fvRsCtx"].
+                          The returned object gains a "_children" list.
+
+    Returns:
+        On success, the object's attribute dict — same shape as a query() result
+        element: all APIC attributes plus a "_class" key (and "_children" when
+        include_children is set).
+
+        When no object exists at that DN, a structured not-found dict:
+          {"found": False, "dn": <dn>, "message": <explanation>}
+        The APIC returns an empty result for a missing DN; this makes that
+        explicit so you do not mistake it for a silent failure.  A typical cause
+        is a stale or mistyped DN — re-verify it via search_classes → query.
+
+    Raises:
+        ApicRequestError: APIC returned a non-2xx, non-auth response — e.g. 400
+                          for a malformed DN string. Carries the HTTP status
+                          and, when present, the APIC error text.
+    """
+    backend: ApicClient = ctx.lifespan_context["backend"]
+
+    await ctx.info(f"get_by_dn({dn!r}, config_only={config_only})")
+    obj = await backend.get_by_dn(
+        dn=dn,
+        config_only=config_only,
+        include_children=include_children,
+    )
+    if obj is None:
+        await ctx.warning(f"get_by_dn({dn!r}) → not found")
+        return {
+            "found": False,
+            "dn": dn,
+            "message": (
+                f"No object exists at DN '{dn}'. The DN may be mistyped, or the "
+                "object may have been deleted. Verify it with search_classes() "
+                "and query(), or re-derive the DN from a fresh query result."
+            ),
+        }
+    await ctx.info(f"get_by_dn({dn!r}) → {obj.get('_class')}")
+    return obj
+
+
+@mcp.tool
+async def count(
+    class_name: str,
+    ctx: Context,
+    filters: _JsonDict | None = None,
+    scope_dn: str | None = None,
+    filter_expr: str | None = None,
+) -> dict[str, Any]:
+    """Count ACI objects of a class without transferring them.
+
+    ⚠ PREREQUISITE — like query(), verify the class name with search_classes()
+    (and its filter attributes with get_schema()) before calling this tool.
+
+    The most frequent verification need — "how many BDs / EPGs / subnets?" —
+    answered in a single cheap request via the APIC rsp-subtree-include=count
+    mechanism, instead of fetching every object just to measure the set.
+    Filtering and scoping behave exactly as in query().
+
+    Args:
+        class_name:  Exact ACI class name verified via search_classes().
+        ctx:         Injected FastMCP context (not a user-facing parameter).
+        filters:     Attribute equality filters {attribute: value}, same as query().
+        scope_dn:    DN of a parent object to scope the count to a subtree.
+        filter_expr: Raw APIC filter string for predicates beyond equality;
+                     combined with `filters` via and() when both are provided.
+
+    Returns:
+        A dict:
+          {"class_name": <class_name>,
+           "count": <int>,
+           "scope_dn": <scope_dn or None>,
+           "filters": <filters or {}>}
+
+    Raises:
+        UnknownClassError: class_name is neither in the descriptions registry
+                           nor resolvable to a schema file — includes closest
+                           matches so the LLM can self-correct. A class that
+                           has a schema file but no descriptions entry (the
+                           same small gap query() tolerates) is allowed
+                           through with a logged warning instead of raising.
+        ApicRequestError:  APIC returned a non-2xx, non-auth response — e.g.
+                           400 for a malformed filter_expr, or 500. Carries
+                           the HTTP status and, when present, the APIC error
+                           text.
+    """
+    descriptions: dict = ctx.lifespan_context["descriptions"]
+    backend: ApicClient = ctx.lifespan_context["backend"]
+    schemas_dir: Path = ctx.lifespan_context["schemas_dir"]
+
+    # Validate class_name against the registry — identical guard to query(),
+    # including the same schema-file fallback for the ~300-class gap between
+    # class-descriptions.json and the schemas/ collection, so count() and
+    # query() never disagree on whether a class is "known".
+    if class_name not in descriptions:
+        if class_exists(class_name, schemas_dir):
+            await ctx.warning(
+                f"count({class_name!r}) — no class-descriptions entry, but a "
+                "schema file resolved for this class; allowing the count"
+            )
+        else:
+            suggestions = desc_search(class_name, descriptions, limit=5)
+            suggestion_names = [s["class_name"] for s in suggestions]
+            await ctx.warning(f"count called with unknown class {class_name!r}")
+            raise UnknownClassError(class_name, suggestion_names, len(descriptions))
+
+    await ctx.info(
+        f"count({class_name!r}, filters={filters!r}, scope={scope_dn!r})"
+    )
+    total = await backend.count_class(
+        class_name=class_name,
+        filters=filters or {},
+        scope_dn=scope_dn or "",
+        filter_expr=filter_expr,
+    )
+    await ctx.info(f"count → {total}")
+    return {
+        "class_name": class_name,
+        "count": total,
+        "scope_dn": scope_dn,
+        "filters": filters or {},
+    }
 
 
 # ── Entry point ───────────────────────────────────────────────────────────────

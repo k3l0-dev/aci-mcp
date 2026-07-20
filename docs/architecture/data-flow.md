@@ -2,7 +2,7 @@
 
 ## LLM mandatory tool sequence
 
-The three tools **must** be called in this order. Skipping `search_classes` or `get_schema` causes silent empty results because the APIC returns `[]` for unknown class names or wrong attribute names without any error.
+For **discovery**, the three core tools **must** be called in this order. Skipping `search_classes` or `get_schema` causes silent empty results because the APIC returns `[]` for unknown class names or wrong attribute names without any error. When you already hold an exact DN, `get_by_dn` reads it directly and `count` tallies a class — both bypass the discovery sequence.
 
 ```mermaid
 flowchart TD
