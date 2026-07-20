@@ -110,8 +110,13 @@ reliability gaps in schema loading, error handling, and class validation.
   of ACI classes share an identical Cisco-assigned label. A small curated
   ACI jargon/synonym table covers the handful of terms with no textual
   anchor anywhere in the schema. Measured on a 74-query golden set:
-  Recall@1 30.8% → 78.4%, Recall@5 53.8% → 94.6%. See
-  `docs/internals/search-algorithm.md` for the full mechanics.
+
+  | Metric   | Before | After |
+  | -------- | ------ | ----- |
+  | Recall@1 | 30.8%  | 78.4% |
+  | Recall@5 | 53.8%  | 94.6% |
+
+  See `docs/internals/search-algorithm.md` for the full mechanics.
 - `data/class-descriptions.json` regenerated with `isConfigurable`/
   `isAbstract` flags per class, feeding the search priors above.
 - `ApicRequestError`: wraps non-2xx, non-authentication APIC responses
