@@ -119,6 +119,57 @@ ailleurs) :
 Sources complètes (avec URLs) conservées dans le rapport de l'agent —
 à ressortir au moment de rédiger la bibliographie.
 
+### Mécanisme exact de recherche langage-naturel→API (recherche de suivi, 20/07)
+
+Le paysage se scinde en 3 familles, pas 2 :
+
+- **Embeddings denses en fallback seulement** : AWS `suggest_aws_commands`
+  utilise `BAAI/bge-base-en-v1.5` (SentenceTransformer téléchargé au
+  démarrage), mais uniquement pour les commandes hors du cutoff
+  d'entraînement — le chemin principal est une traduction/validation
+  déterministe de la syntaxe CLI.
+- **Aucune recherche NL du tout** : Postgres MCP Pro et les MCP Kubernetes
+  font de la pure introspection structurée (l'agent énumère/filtre des
+  objets de catalogue déjà connus) — ils ne résolvent pas le problème
+  "espace immense et mal nommé," leur espace de noms est petit et
+  auto-descriptif. Important à noter : pas des comparables directs.
+- **ServiceNow** : outils curés + synthèse de requête par le LLM appelant,
+  pas de retriever à embeddings documenté.
+- **Académique** : RAG-MCP = retriever basé LLM (Qwen) ; Tulip Agent =
+  ChromaDB+HNSW avec embeddings OpenAI (ada-002/text-embedding-3) ;
+  **AnyTool n'est PAS à base d'embeddings** — agent hiérarchique GPT-4
+  parcourant une taxonomie catégorie→outil→API ; les embeddings sont les
+  *baselines qu'il bat*, pas sa méthode.
+- **BM25 d'Anthropic (Tool Search Tool)** : confirmé vanilla — terme-
+  fréquence pure sur nom+description+arguments, **aucune pondération de
+  champ, aucun prior structurel**, explicitement absent (des tiers
+  proposent ça comme amélioration, pas encore implémenté officiellement).
+
+**Où `aci-mcp` se situe** : le plus proche philosophiquement du choix
+d'Anthropic — pas d'embeddings, pas de modèle dans la boucle de recherche
+(déterministe, bon marché). Mais pas le même point : leur BM25 est
+agnostique aux champs, `search_classes` superpose des **priors structurels
+du domaine** (boost configurable/instantiable, pénalité classes
+abstraites/relations internes, table de synonymes) — exactement le signal
+que le BM25 d'Anthropic n'implémente pas. Positionnement honnête : un
+**hybride lexical + priors structurels**, entre recherche lexicale pure et
+les retrievers denses/LLM des autres.
+
+**Point d'honnêteté méthodologique important** : quasiment personne d'autre
+ne publie de recall@k isolé sur l'étape de retrieval elle-même — RAG-MCP et
+AnyTool ne donnent que du pass-rate de tâche finale, Tulip du
+précision/recall bout-en-bout. Notre **Recall@1 78,4% / Recall@5 94,6% sur
+74 requêtes golden** est l'un des rares chiffres de retrieval isolé publiés
+dans ce domaine — mais ça veut dire qu'aucune comparaison tête-à-tête sur
+une métrique partagée n'est possible, seulement une comparaison
+méthodologique (lexical+structurel vs dense vs LLM-en-boucle).
+
+Sources : github.com/awslabs/mcp (issue #918) ; github.com/crystaldba/
+postgres-mcp ; github.com/containers/kubernetes-mcp-server ;
+arxiv.org/abs/2505.03275 (RAG-MCP) ; arxiv.org/abs/2407.21778 (Tulip Agent,
+github.com/HRI-EU/tulip_agent) ; arxiv.org/abs/2402.04253 (AnyTool) ;
+platform.claude.com/docs/en/agents-and-tools/tool-use/tool-search-tool
+
 ## À faire avant d'écrire quoi que ce soit
 
 - [ ] Décider du canal (arXiv, blog technique, ou les deux — pas exclusif).
