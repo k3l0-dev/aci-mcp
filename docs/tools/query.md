@@ -18,6 +18,7 @@ query(
     rsp_subtree_include: str | None = None,
     time_range: str | None = None,
     page: int | None = None,
+    config_only: bool = False,
 ) -> list[dict[str, Any]]
 ```
 
@@ -58,6 +59,12 @@ query(
 |---|---|---|---|
 | `include_children` | `list[str]` | — | Child class names to embed inline. Each result dict gains a `_children` key. |
 | `rsp_subtree_include` | `str` | — | Subtree categories: `"faults"`, `"health"`, `"audit-logs"`, `"faults,no-scoped"`, `"faults,required"`. |
+
+### Attribute projection
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `config_only` | `bool` | `False` | When `True`, return only user-configurable attributes (APIC `rsp-prop-include=config-only`) instead of the full ~40-attribute set. Ideal for comparison, drift detection, and backup — drops runtime state, timestamps, and monitoring counters. |
 
 ### Time-based queries
 
@@ -208,6 +215,13 @@ faults = await query("faultInst", scope_dn=dn, rsp_subtree_include="faults,no-sc
 nodes = await query("fabricNode",
     filter_expr='ne(fabricNode.role,"controller")',
     order_by="fabricNode.id|asc")
+```
+
+### Configuration snapshot for backup / diff
+
+```python
+# Only the intended config, no operational churn
+bds = await query("fvBD", scope_dn="uni/tn-OT", config_only=True)
 ```
 
 ---

@@ -4,7 +4,7 @@
 
 `aci-mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server that gives any MCP-compatible LLM client read access to a Cisco ACI fabric — without any hardcoded class knowledge in the model or the server.
 
-It exposes **three generic tools**. The LLM calls them in sequence to discover, inspect, and query any ACI object class — including classes added after the model was trained.
+It exposes a **small set of generic tools**. For discovery, the LLM calls the three core tools (`search_classes` → `get_schema` → `query`) in sequence to discover, inspect, and query any ACI object class — including classes added after the model was trained. Two shortcuts round out the surface: `get_by_dn` reads a known DN directly, and `count` tallies a class without transferring objects.
 
 ---
 

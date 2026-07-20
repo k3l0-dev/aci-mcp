@@ -5,6 +5,46 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- `get_by_dn(dn, config_only, include_children)` — new MCP tool that fetches a
+  single object directly by its Distinguished Name (`GET /api/mo/{dn}.json`),
+  the shortcut path when the exact DN is already known. Returns a structured
+  `{"found": false, ...}` message for a missing DN instead of a bare `[]`.
+- `count(class_name, filters, scope_dn, filter_expr)` — new MCP tool that counts
+  objects of a class via APIC `rsp-subtree-include=count` without transferring
+  them. Validates the class name against the registry like `query` (raises
+  `UnknownClassError` with suggestions).
+- `get_schema` now returns `contains` — a sorted list of the child class names an
+  object may hold, in flat notation ready to feed to `get_schema`/`query`/
+  `include_children` (the jsonmeta `contains` field was previously dropped).
+- `get_schema` gains `include_property_details` and `properties_filter`
+  parameters exposing a compact per-property constraint dict (`type`, `access`,
+  `naming`, `mandatory`, `default`, `options`, `comment`). Opt-in for token
+  economy — request details only for the properties you intend to set.
+- `query` and `get_by_dn` gain `config_only` — adds `rsp-prop-include=config-only`
+  so only user-configurable attributes are returned, dropping operational noise
+  for comparison, drift detection, and backup.
+- `ApicClient.get_by_dn()`, `ApicClient.count_class()`, and a shared
+  `_request_json()` helper backing the new tools.
+- 25 tests: 12 unit tests for the schema `contains`/`property_details`
+  projections and 13 integration tests for `get_by_dn`, `count`, and
+  `config_only`.
+
+### Changed
+
+- FastMCP `instructions` and `mcp/client/SKILL.md`: the mandatory
+  `search_classes → get_schema → query` sequence is now scoped to *discovery*,
+  with documented shortcuts for the known-DN path (`get_by_dn`), counting, and
+  config-only reads, plus guidance on `contains` and property details.
+- `mcp/client/SKILL.md`: added an eventual-consistency warning — reads taken
+  right after a large config push reflect the fabric state at that instant;
+  counts can move for a few seconds while the fabric materialises the change.
+
+---
+
 ## [1.0.0] - 2026-06-24
 
 First public open-source release.

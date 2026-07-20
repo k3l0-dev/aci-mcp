@@ -7,12 +7,18 @@ Inspect the structural schema of an ACI class — identifiers, containment, rela
 ## Signature
 
 ```python
-get_schema(class_name: str) -> dict[str, Any]
+get_schema(
+    class_name: str,
+    include_property_details: bool = False,
+    properties_filter: list[str] | None = None,
+) -> dict[str, Any]
 ```
 
-| Parameter | Type | Description |
-|---|---|---|
-| `class_name` | `str` | Exact ACI class name from `search_classes()` |
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `class_name` | `str` | — | Exact ACI class name from `search_classes()` |
+| `include_property_details` | `bool` | `False` | Include `property_details` for **every** property. Prefer `properties_filter` unless you truly need all. |
+| `properties_filter` | `list[str]` | — | Include `property_details` only for these property names. The token-efficient path — unknown names are silently skipped. |
 
 ---
 
@@ -25,10 +31,12 @@ A dict with the following fields (all optional — only present when the schema 
 | `identifiedBy` | `list[str]` | Attributes that uniquely identify an instance — use these as `filters` keys in `query()` |
 | `rnFormat` | `str` | Relative-name template, e.g. `"BD-{name}"` |
 | `containedBy` | `list[str]` | Parent class names in `pkg:Class` notation — use a parent object's `dn` as `scope_dn` |
+| `contains` | `list[str]` | Sorted child class names this object may hold, in **flat** notation (e.g. `"fvSubnet"`, `"tagTag"`) — ready to pass to `get_schema`, `query`, or `include_children` |
 | `dnFormats` | `list[str]` | Full DN pattern examples |
 | `relationTo` | `dict` | Outgoing Rs relations: `{relClass: {targetClass, cardinality}}` |
 | `relationFrom` | `dict` | Incoming Rt relations: `{relClass: {sourceClass}}` |
 | `properties` | `list[str]` | Sorted list of all attribute names available on the class |
+| `property_details` | `dict` | Compact per-property constraints — **present only** when `include_property_details=True` or `properties_filter` is set |
 | `isAbstract` | `bool` | `true` when the class cannot be directly instantiated |
 | `isConfigurable` | `bool` | `true` when objects can be created/modified via APIC |
 | `className` | `str` | Short name without package prefix, e.g. `"BD"` |
@@ -39,6 +47,48 @@ Returns `{}` when the class file is not found in the local schema collection.
 
 ---
 
+## Property details
+
+`properties` gives only names. To learn a property's **type, allowed values, default, and write access** before setting or filtering on it, request details — for token economy, ask only for the properties you care about (many classes carry 100+):
+
+```python
+get_schema("fvSubnet", properties_filter=["scope", "preferred"])
+```
+
+```json
+"property_details": {
+  "scope": {
+    "type": "fv:RouteScp",
+    "access": "read-write",
+    "default": "private",
+    "options": ["private", "public", "shared"],
+    "comment": "The network visibility of the subnet."
+  },
+  "preferred": {
+    "type": "scalar:Bool",
+    "access": "read-write",
+    "default": "false",
+    "options": ["no", "yes"]
+  }
+}
+```
+
+Each entry carries only the fields the schema declares (`type` and `access` are always present):
+
+| Field | Meaning |
+|---|---|
+| `type` | ACI model type, e.g. `scalar:Bool`, `fv:RouteScp` |
+| `access` | `read-write` · `create-only` (immutable after create) · `read-only` (never settable) |
+| `naming` | present when the property is part of the DN (an identifier) |
+| `mandatory` | present when the property is required on create |
+| `default` | the default value, when declared |
+| `options` | allowed values — the exact strings the APIC accepts in `filters` and config |
+| `comment` | one-line description |
+
+Use `include_property_details=True` to dump every property at once — only when you genuinely need the full picture.
+
+---
+
 ## Example output
 
 ```json
@@ -46,6 +96,7 @@ Returns `{}` when the class file is not found in the local schema collection.
   "identifiedBy": ["name"],
   "rnFormat": "BD-{name}",
   "containedBy": ["fv:Tenant"],
+  "contains": ["fvRsBDToOut", "fvRsCtx", "fvSubnet", "tagTag"],
   "dnFormats": ["uni/tn-{name}/BD-{name}"],
   "relationTo": {
     "fvRsCtx": {
