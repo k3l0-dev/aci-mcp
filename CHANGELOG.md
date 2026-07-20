@@ -9,6 +9,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Added
 
+- `registry/descriptions.py` — `search_classes` rewritten from raw substring
+  matching to tokenized, camelCase-aware scoring: exact label/class-name
+  matches dominate, token coverage rewards queries that name most of a
+  concept, and property-label phrase matches surface functional queries
+  (e.g. "ARP flooding" → fvBD). Structural priors (`isConfigurable` boost,
+  `isAbstract`/stats-suffix/Rs-Rt penalties) replace v1's flat -3 Rs/Rt
+  penalty, using the same detection plus two flags now carried into
+  `class-descriptions.json`. A small curated ACI jargon/synonym table closes
+  gaps that have no textual anchor in the schema (e.g. `bgpPeerP`'s real
+  label is "Peer Connectivity Profile" — nowhere does it say "BGP peer").
+  Measured: Recall@1 30.8% → 78.4%, Recall@5 53.8% → 94.6% (golden set also
+  grew 39 → 74 queries alongside the rewrite; see
+  `docs/internals/search-algorithm.md` section 6 for the full mechanics).
+- `data/class-descriptions.json` — regenerated with `isConfigurable`/
+  `isAbstract` flags per class (omitted when `False`, matching the file's
+  existing sparse-field convention), feeding the new search priors above.
+  Zero classes lost, zero regressions on existing `label`/`comment`/
+  `prop_labels` fields (verified by diff against the prior file); 87
+  additional bare classes surfaced that previously had none of those three
+  fields but do carry one of the new flags.
+- `mcp/tests/eval/test_search_quality.py` — runs the golden-set evaluation as
+  a pytest test with a floor on Recall@1 (60%) and Recall@5 (85%), so a
+  search-quality regression fails CI instead of only showing up if someone
+  remembers to run `tests/eval_search.py` by hand.
+- `mcp/tests/fixtures/search_golden.json` — grown from 39 to 74 queries
+  across all four tiers, for breadth rather than to flatter the new scoring.
 - `get_by_dn(dn, config_only, include_children)` — new MCP tool that fetches a
   single object directly by its Distinguished Name (`GET /api/mo/{dn}.json`),
   the shortcut path when the exact DN is already known. Returns a structured
@@ -87,6 +113,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   previously only installed via `uv sync --extra dev`; the documented `uv sync`
   workflow (and CI's `uv sync --frozen --dev`) silently skipped them, so every
   async test failed with "async def functions are not natively supported."
+- `schema-collector`'s `_step_descriptions` now also extracts `isConfigurable`/
+  `isAbstract` from each class's jsonmeta root into `class-descriptions.json`
+  (see Added, above).
+- `tests/fixtures/search_golden.json` — corrected the "QoS class" tier-3 entry:
+  it previously expected `vzBrCP` (a contract has a QoS-class property, but so
+  does `fvAEPg`), when the unambiguous, directly-named answer is `qosClass`
+  itself — a real, configurable class literally called "QoS Class Policy".
 
 ### Fixed
 

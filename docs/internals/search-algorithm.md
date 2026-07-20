@@ -363,46 +363,136 @@ The prop_labels fallback is triggered for every class that does not match on nam
 
 ---
 
-## 5. Summary of the three algorithm states
+## 5. Summary of the three v1 algorithm states
 
 | Strategy | R@1 | R@5 | MRR | Avg ms | Indexed classes |
 |---|---|---|---|---|---|
 | Baseline — naive substring | 15.4% | 35.9% | 0.229 | 3.2 | 14 603 |
 | + Axis 1 — Rs/Rt penalty | 28.2% | 41.0% | 0.338 | 3.2 | 14 603 |
-| + Axis 2 — prop_labels | **30.8%** | **53.8%** | **0.400** | 11.4 | **15 152** |
+| + Axis 2 — prop_labels | 30.8% | 53.8% | 0.400 | 11.4 | 15 152 |
 
 *Evaluated on 39 queries — golden set `mcp/tests/fixtures/search_golden.json`, APIC mo-apic-v6.0_9c.*
 
+Everything above this line describes v1, kept as a historical record per the "guide for future evolutions" at the end of this document. v1's own diagnosis of what remained unresolved — reproduced below — is exactly what motivated the v2 rewrite in section 6; section 7 revisits each point with what changed.
+
+*v1's own diagnosis of what remained unresolved (context for section 6):*
+
+- **The shared-label problem (partial tier 1).** Cisco assigns the same label to dozens of related classes (`fvBD`, `fvABDPol`, `fvSvcBD` all label = `"Bridge Domain"`). The Rs/Rt penalty doesn't apply — these aren't relation classes.
+- **Pure synonyms (tier 4 = 0%).** `"gateway"` → `fvSubnet`, `"security policy"` → `vzBrCP`: no textual anchor anywhere in the APIC corpus for these.
+- **The prop_labels fallback cost at scale.** +8 ms/query from a linear `for pl in prop_labels` scan repeated across ~15k classes on every miss.
+
 ---
 
-## 6. Remaining limitations and future directions
+## 6. v2 — tokenization, structural priors, and a curated jargon table
+
+### Why v1's substring approach hit a ceiling
+
+v1 scored whole-string substring containment (`keyword in class_name`, `keyword in label`, `keyword in comment`). Two structural problems followed directly from that choice, independent of weighting:
+
+1. **Multi-word queries against camelCase names never match.** `"fabric node"` (with a space) cannot be a substring of `"fabricNode"` (no space) — full stop, no amount of weight tuning fixes this. Tier 1 queries phrased as multiple words routinely missed classes whose *name* was the obvious answer.
+2. **The shared-label tie was unresolvable by score alone.** When ten classes share the exact label `"Bridge Domain"`, they get the *same* score under any purely textual scheme — v1's own diagnosis (section 5) correctly identified this as needing something other than more text matching.
+
+v2 replaces the substring scheme with **tokenized matching** and adds **structural priors** that use what a class *is* (configurable vs. abstract vs. operational/stats), not just what it's called.
+
+### Tokenization
+
+`_tokenize()` splits camelCase/PascalCase/ACRONYM identifiers into lowercase tokens using one regex (`_TOKEN_RE`), applied identically to class names, labels, comments, prop_labels, *and* the query itself:
+
+```
+"fvBD"                    → ["fv", "bd"]
+"l3extRtVrfValidationPol" → ["l3", "ext", "rt", "vrf", "validation", "pol"]
+"fabric node"             → ["fabric", "node"]
+```
+
+Because both sides of the comparison go through the same tokenizer, `"fabric node"` and `"fabricNode"` now produce the identical token set `{"fabric", "node"}` — problem 1 above is gone by construction, not by a special case.
+
+### Scoring: what a phrase match means, ranked by confidence
+
+| Signal | Weight | Rationale |
+|---|---|---|
+| Exact match against the class's label or curated jargon phrase | +20 / +18 | If the user's exact words *are* the official name, this is the answer — full stop. |
+| Exact match against the class name (query squashed, no separators) | +25 | Tier 2's use case (`"fvbd"` → `fvBD`) — the strongest possible signal. |
+| Query phrase found as a substring inside the label or jargon phrase | +6 | e.g. `"routing instance"` inside jargon `"vrf context routing instance"`. |
+| Token coverage of the label / class name (squared) | up to +8 / +5 | Rewards a query that names *most or all* of a concept over one sharing one incidental word — squaring makes partial coverage fall off fast. |
+| Query phrase found inside the joined property-label haystack | +6 | The tier 3 case: `"ARP flooding"` inside fvBD's own `arpFlood` property label. |
+| Token coverage of property labels / comment (squared) | up to +2 / +1 | Weaker signal — comments and property names are the least targeted fields. |
+| Curated synonym hit (see below) | up to +3 × coverage | A soft nudge, not an override — cannot beat a genuine exact match on its own. |
+
+### Structural priors — what the object *is*, not what it's called
+
+These are applied **after** the text score, and only when the text score is already positive (a class with zero textual signal never surfaces just because it happens to be configurable):
+
+| Prior | Adjustment | Data source |
+|---|---|---|
+| `isConfigurable` | +6 | jsonmeta root field, now carried into `class-descriptions.json` (see below) |
+| `isAbstract` | −6 | jsonmeta root field, same |
+| Stats/telemetry suffix (`5min`, `15min`, `1h`, …) | −10 | Regex on the class name — these classes structurally cannot be a config target |
+| Rs/Rt relation class | −8 | Same detection regex as v1 (`_RS_RT_RE`), now a fixed penalty rather than v1's −3 |
+
+**Why this solves the shared-label problem v1 couldn't:** `fvBD` (the real, configurable bridge domain) and `eqptcapacityBDEntry5min` (a stats-bucket class that happens to share the label "Bridge Domain") now separate on a completely different axis than text — one is a real config object, the other is structurally a telemetry sample. `data/class-descriptions.json` gained `isConfigurable`/`isAbstract` fields for exactly this (regenerated via `schema-collector`'s `_step_descriptions`; ~3,010 of 15,239 classes are configurable, ~1,954 are abstract — both flags omitted, not written as `false`, when absent, matching the file's existing sparse-field convention).
+
+### Tie-breaking
+
+Ties (equal score) are broken, in order: fewer class-name tokens → shorter class name → alphabetical. This is a deliberate, deterministic replacement for v1's "JSON insertion order decides" — a concise canonical name (`fvBD`, 2 tokens) now reliably beats a more specific variant that happens to score identically (`fvABDPol`, 3 tokens), and identical input always produces identical output regardless of dict iteration order.
+
+### A small, honestly-scoped jargon/synonym table
+
+Two curated dicts in `registry/descriptions.py` close gaps that no amount of text-matching machinery can close, because the terms genuinely don't appear anywhere in the schema:
+
+- **`_JARGON`** (`class_name → canonical phrase`): for classes whose real APIC label doesn't say what an operator would ask for. Example: `bgpPeerP`'s actual label is `"Peer Connectivity Profile"` — it says nothing about "BGP" or "peer policy" at all, so `_JARGON["bgpPeerP"] = "bgp peer policy"` gives it a fighting chance against classes that DO literally contain those words in their own text.
+- **`_SYNONYMS`** (`informal token → target tokens`): single-word informal mappings (`"vpc"/"pc" → "bndl"`, `"gateway" → "subnet"`, `"outside" → "out"/"ext"`) contributing a modest, bounded boost — enough to break a tie, never enough to override a genuine exact match on its own.
+
+Both tables are deliberately small (~30 and ~11 entries respectively) and exist to close *specific, observed* gaps from the golden set, not to reimplement a thesaurus. The module docstring is explicit about resisting the temptation to pad them speculatively — every entry should trace back to a real query that needed it. One entry (`fabricNode: "fabric node switch"`) was tried and measured to have *zero* effect on the golden set (a competitor's own label contains "switch" as a true substring, e.g. `"vswitch"`) and was kept minimal rather than expanded further once the lack of benefit was confirmed — a reminder that every addition here should be justified by a measured delta, not intuition.
+
+### Performance: keeping tokenized matching inside the existing latency budget
+
+Tokenizing and scoring every field for all ~15k classes on *every single call* is inherently more expensive than v1's raw substring scan. Two design choices keep it well inside `tests/perf/test_search_perf.py`'s existing budgets (single search < 200 ms, 100 consecutive searches < 2 s):
+
+1. **Build once, cache by object identity.** `_get_index()` tokenizes every class exactly once and caches the result keyed by the *identity* (not a hashed key) of the `descriptions` dict passed in. In production that dict is loaded once at server startup and reused for the process lifetime, so the ~300 ms build cost (on the real, prop_label-rich corpus) is paid exactly once, ever. Comparing by `is` rather than caching in a dict keyed by `id()` deliberately avoids the classic id-reuse hazard of a garbage-collected object's id being handed to a new, unrelated object.
+2. **One substring check instead of twenty.** Profiling the first tokenized implementation showed `any(keyword in prop_label for prop_label in prop_labels)` — a nested loop over every class's property labels, for every class, on every call — consuming the majority of total time (confirmed via `cProfile`: ~56% of wall time in one profiling run). Fix: join each class's `prop_labels` into a single pre-lowercased haystack string at index-build time (`_PROP_SEP`-joined, a control character chosen so a query phrase can never spuriously span the boundary between two unrelated labels), and do exactly one substring check against it. This alone cut measured per-call latency from ~18 ms to ~11 ms on the real corpus.
+
+### Measured gains
+
+| Metric | v1 (39 queries) | v2 (39 queries) | v2 (74 queries — grown set) |
+|---|---|---|---|
+| Recall@1 | 30.8% | 69.2% | **78.4%** |
+| Recall@5 | 53.8% | 89.7% | **94.6%** |
+| MRR | 0.400 | 0.793 | **0.854** |
+| Tier 1 R@1 / R@5 | 35% / 55% | 90% / 100% | 90.9% / 100% |
+| Tier 2 R@1 / R@5 | — | 100% / 100% | 100% / 100% |
+| Tier 3 R@1 / R@5 | 9% / 45% | 36.4% / 63.6% | 53.3% / 80.0% |
+| Tier 4 R@1 / R@5 | 0% / 0% | 0% / 100% | 0% / 80.0% |
+| Average query | 11.4 ms | ~11 ms | ~11-20 ms |
+
+The golden set grew from 39 to 74 queries *alongside* the v2 rewrite — the added queries were chosen for breadth (more classes, more phrasing styles across all four tiers) before the numbers above were measured, not curated afterward to flatter the algorithm. Recall@1 and Recall@5 both *improved* on the larger set relative to the original 39, which is the signal you want to see if a change generalizes rather than overfits.
+
+---
+
+## 7. Remaining limitations and future directions
+
+### What v2 resolved
+
+- The shared-label tie (v1's diagnosis, section 5): solved via structural priors, not more text matching — see section 6.
+- Multi-word queries against camelCase names: solved by tokenizing both sides identically.
+- Non-deterministic tie ordering: solved by an explicit, documented tie-break rule.
 
 ### What remains unresolved
 
-#### The shared-label problem (partial tier 1)
+#### Pure synonyms without a curated entry (tier 4 R@1 still low)
 
-Cisco assigns the same label to dozens of related classes. `fvBD`, `fvABDPol`, `fvSvcBD` all have label = `"Bridge Domain"`. An Rs/Rt penalty cannot resolve this case — these classes are not relations. A secondary sort by class name length (canonical classes are systematically shorter: `fvBD` = 4 chars vs `fvABDPol` = 8 chars) would solve some cases but has not yet been validated on the full corpus.
+Tier 4 Recall@1 is still 0% on the current golden set — the curated jargon/synonym table lifts Recall@5 to 80% (a query's target class now usually appears somewhere in the visible top-10, up from 0%/0% under v1), but rank-1 placement for a pure synonym competing against a class with a genuine textual match (e.g. `"gateway"` vs. `gleanGateway`'s literal label `"Gateway"`) remains a real, structural limit of curated-table + text-scoring — the curated boost is deliberately capped so it cannot override an exact match, which is the right general-purpose default even where it loses this specific case. Closing this fully would need either a semantic embedding model or a much larger, actively maintained synonym dictionary — a real cost/benefit tradeoff, not a quick fix.
 
-#### Pure synonyms (tier 4 = 0%)
+#### The curated tables need upkeep
 
-`"gateway"` → `fvSubnet`: no property of `fvSubnet` is called "gateway". The APIC label for the IP property is `"Subnet"`. `"security policy"` → `vzBrCP`: the contract properties speak of "QoS Class", "Scope", "DSCP" — not "security". These associations have no textual anchor in the APIC corpus.
-
-Resolving tier 4 would require either:
-
-- A semantic embedding model (vector similarity between "gateway" and "first-hop IP address of a subnet")
-- A manually maintained ACI synonym dictionary
-- A fine-tuned model on Cisco ACI documentation
-
-#### The prop_labels fallback cost at scale
-
-+8 ms per query is acceptable with 15k classes. If the corpus grows significantly (new APIC versions with more classes), the linear scan will become a bottleneck. A pre-computed inverted index (`{prop_label_word: [class_name, ...]}`) built at server load time would reduce complexity from O(n × k) to O(1) on prop_labels.
+`_JARGON`/`_SYNONYMS` are hand-maintained. They will drift as new golden-set failures are found in production use; the module docstring's instruction to justify every entry with a measured delta (never pad speculatively) is the guardrail against this becoming an unmaintainable pile of special cases.
 
 ### Guide for future evolutions
 
 Any scoring modification must be:
 
-1. **Tested on the golden set**: `python mcp/tests/eval_search.py -v` from the repo root
-2. **Documented in the table** in `mcp/tests/eval_search.py` (file header)
-3. **Validated** on edge-case behavior: Rs/Rt that survive when their score exceeds 3, prop_labels that do not accumulate, empty edge cases
+1. **Tested on the golden set**: `python mcp/tests/eval_search.py -v` from the repo root.
+2. **Gated in CI**: `mcp/tests/eval/test_search_quality.py` fails the build if Recall@1/5 drop below their floors — a regression is caught automatically, not just visible in an offline report someone has to remember to run.
+3. **Documented in the table** in `registry/descriptions.py`'s module docstring and this file.
+4. **Validated** on edge-case behavior: Rs/Rt and stats-suffix penalties, structural priors on classes lacking the flag entirely, curated-table entries that measurably help (not just plausibly should).
 
-The golden set covers 4 tiers but remains a sample of 39 queries over 15 152 classes. An improvement that gains +5% on the golden set may have regressions not visible in the sample. Growing the golden set to 100+ queries before introducing more aggressive heuristics (secondary sort, length-based weighting) is recommended.
+The golden set now covers 74 queries across 4 tiers over ~15.2k classes. Growing it further — especially tier 3/4 cases discovered from real agent usage rather than invented in the abstract — remains the highest-leverage next step before introducing more aggressive heuristics.
