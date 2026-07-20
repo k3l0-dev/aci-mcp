@@ -13,7 +13,7 @@ search_classes(keyword: str, limit: int = 10) -> list[dict[str, str]]
 | Parameter | Type | Default | Description |
 |---|---|---|---|
 | `keyword` | `str` | — | Plain English term or partial ACI class name |
-| `limit` | `int` | `10` | Maximum results to return. **Capped at 50.** |
+| `limit` | `int` | `10` | Maximum results to return. **Clamped to [1, 50].** |
 
 ---
 
@@ -41,40 +41,38 @@ An empty list means no class matched the keyword. Refine or broaden the search t
 
 ---
 
-## Scoring
+## Scoring (v2)
 
-```mermaid
-flowchart TD
-    KW["keyword (lowercased)"]
+The query is tokenized the same way as class names (camelCase-aware), so a
+multi-word query like `"fabric node"` matches `fabricNode` even though it's
+never a literal substring of it. Each class is scored on several signals,
+strongest first:
 
-    KW -->|"in class name"| W3["+3"]
-    KW -->|"in label"| W2["+2"]
-    KW -->|"in comment"| W1["+1"]
-    W3 & W2 & W1 --> CHECK{score > 0?}
+| Signal | Contribution |
+|---|---|
+| Query is an exact match for the class's label (or a curated ACI jargon phrase) | Dominant — this almost certainly is the answer |
+| Query squashed (no spaces/dashes) exactly equals the class name | Dominant — the `"fvbd"` → `fvBD` case |
+| Query phrase found inside the label, jargon phrase, or a property label | Strong |
+| Token coverage of the label / class name / property labels / comment | Proportional to how much of the query is covered — the more of the query a field explains, the higher this scores |
+| A small curated synonym table (e.g. `"vpc"`↔`bndl`, `"gateway"`↔`subnet`) | Modest boost, never enough to beat a genuine exact match |
 
-    CHECK -->|"no — fallback"| PL["scan prop_labels\n+1 on first hit, then break"]
-    CHECK -->|"yes"| RSRT
+After the text score, **structural priors** adjust the ranking based on what
+the object actually *is*, not just what it's called:
 
-    PL --> RSRT{Rs/Rt class?}
-    RSRT -->|"yes"| PEN["-3 penalty"]
-    RSRT -->|"no"| SORT
-
-    PEN --> ZERO{score > 0?}
-    ZERO -->|"yes"| SORT["sort desc → return top N"]
-    ZERO -->|"no → excluded"| DROP["(not in results)"]
-```
-
-**Scoring summary:**
-
-| Match location | Score added | Notes |
+| Prior | Effect | Why |
 |---|---|---|
-| Class name | +3 | Strongest signal |
-| Label | +2 | Official human name |
-| Comment | +1 | Contextual description |
-| Prop label (fallback) | +1 | Only when score = 0 on above; no cumul |
-| Rs/Rt class name pattern | −3 | Applied after above; may exclude class |
+| `isConfigurable` | Boost | You almost always want the object you can actually create/edit, not a same-labeled stats/telemetry class |
+| `isAbstract` | Penalty | Can never be the class you query directly |
+| Stats/telemetry suffix (`5min`, `1h`, `1d`, …) | Penalty | Structurally a counter bucket, never the config object |
+| Rs/Rt relation class name (`fvRsCtx`, `l3extRtVrfValidationPol`, …) | Penalty | Internal plumbing — never the primary target of a query |
 
-For the algorithm rationale, observed gains, and known limits, see [internals/search-algorithm.md](../internals/search-algorithm.md).
+Ties are broken deterministically: fewer class-name tokens, then a shorter
+class name, then alphabetical — so `fvBD` reliably beats a more specific
+variant like `fvABDPol` when both would otherwise tie.
+
+For the full mechanics, worked examples, and measured gains (current:
+Recall@1 78.4% / Recall@5 94.6% on a 74-query golden set — up from a 15.4%
+Recall@1 naive baseline), see [internals/search-algorithm.md](../internals/search-algorithm.md).
 
 ---
 
@@ -98,6 +96,10 @@ search_classes("audit log")
 # Network topology
 search_classes("node")
 search_classes("path endpoint")
+
+# Functional / property-level query — matches via the class's own property labels
+search_classes("ARP flooding")   # → fvBD (arpFlood property)
+search_classes("dead interval")  # → ospfIfPol (deadIntvl property)
 ```
 
 ---
@@ -121,8 +123,9 @@ search_classes("path endpoint")
 
 ## Edge cases
 
-- **Empty keyword** → returns `[]` immediately (no scan)
+- **Empty or whitespace-only keyword** → returns `[]` immediately (no scan)
 - **No match** → returns `[]`
-- **`limit=0`** → returns `[]`
+- **`limit <= 0`** → clamped to `1` rather than passed through — a search always returns at least one result if any class matches at all
 - **`limit > 50`** → silently capped at 50
 - Search is **case-insensitive** — `"BRIDGE"` and `"bridge"` produce the same results
+- Results are deterministic — identical input always produces identical output, regardless of registry load order
