@@ -208,11 +208,66 @@ class StubBackend:
     Simulates the same filtering, scoping, ordering, and child-embedding logic
     as the real ApicClient without any network calls.  Exposes `calls` for
     asserting what was actually requested.
+
+    Supports the full tool surface: query_class (with config_only), get_by_dn,
+    and count_class.  Every call is recorded in `calls` with its parameters so
+    tests can assert exactly what reached the backend.
     """
+
+    # Operational / meta attributes an APIC config-only response strips.  Used to
+    # faithfully simulate rsp-prop-include=config-only in query_class/get_by_dn.
+    _OPERATIONAL_ATTRS = frozenset(
+        {"modTs", "lcOwn", "monPolDn", "childAction", "extMngdBy", "uid", "rn"}
+    )
 
     def __init__(self, imdata: list[dict]):
         self._data = imdata
         self.calls: list[dict] = []
+
+    def _emit(
+        self,
+        class_name: str,
+        obj: dict[str, Any],
+        include_children: list[str] | None,
+        config_only: bool,
+    ) -> dict[str, Any]:
+        """Build a result dict for one raw imdata object, mirroring ApicClient."""
+        attrs = dict(obj.get("attributes", {}))
+        if config_only:
+            attrs = {
+                k: v for k, v in attrs.items() if k not in self._OPERATIONAL_ATTRS
+            }
+        attrs["_class"] = class_name
+        if include_children and "children" in obj:
+            children: list[dict[str, Any]] = []
+            for child_item in obj["children"]:
+                for child_cls, child_obj in child_item.items():
+                    child_attrs = dict(child_obj.get("attributes", {}))
+                    child_attrs["_class"] = child_cls
+                    children.append(child_attrs)
+            attrs["_children"] = children
+        return attrs
+
+    def _select(
+        self, class_name: str, filters: dict[str, str], scope_dn: str
+    ) -> list[dict[str, Any]]:
+        """Return the raw attribute dicts matching class, scope, and filters."""
+        results = []
+        for item in self._data:
+            obj = item.get(class_name)
+            if obj is None:
+                continue
+            results.append(dict(obj.get("attributes", {})))
+
+        if scope_dn:
+            results = [
+                o
+                for o in results
+                if o.get("dn") == scope_dn or o.get("dn", "").startswith(scope_dn + "/")
+            ]
+        for attr, val in filters.items():
+            results = [o for o in results if o.get(attr) == val]
+        return results
 
     async def query_class(
         self,
@@ -226,9 +281,11 @@ class StubBackend:
         rsp_subtree_include: str | None = None,
         time_range: str | None = None,
         page: int | None = None,
+        config_only: bool = False,
     ) -> list[dict[str, Any]]:
         self.calls.append(
             {
+                "method": "query_class",
                 "class_name": class_name,
                 "filters": filters,
                 "scope_dn": scope_dn,
@@ -236,6 +293,7 @@ class StubBackend:
                 "order_by": order_by,
                 "include_children": include_children,
                 "filter_expr": filter_expr,
+                "config_only": config_only,
             }
         )
 
@@ -244,17 +302,9 @@ class StubBackend:
             obj = item.get(class_name)
             if obj is None:
                 continue
-            attrs = dict(obj.get("attributes", {}))
-            attrs["_class"] = class_name
-            if include_children and "children" in obj:
-                children: list[dict[str, Any]] = []
-                for child_item in obj["children"]:
-                    for child_cls, child_obj in child_item.items():
-                        child_attrs = dict(child_obj.get("attributes", {}))
-                        child_attrs["_class"] = child_cls
-                        children.append(child_attrs)
-                attrs["_children"] = children
-            results.append(attrs)
+            results.append(
+                self._emit(class_name, obj, include_children, config_only)
+            )
 
         if scope_dn:
             results = [
@@ -273,6 +323,46 @@ class StubBackend:
             results.sort(key=lambda o: o.get(attr_key, ""), reverse=reverse)
 
         return results[:limit]
+
+    async def get_by_dn(
+        self,
+        dn: str,
+        config_only: bool = False,
+        include_children: list[str] | None = None,
+    ) -> dict[str, Any] | None:
+        """Return the single object whose dn matches, or None when absent."""
+        self.calls.append(
+            {
+                "method": "get_by_dn",
+                "dn": dn,
+                "config_only": config_only,
+                "include_children": include_children,
+            }
+        )
+        for item in self._data:
+            for cls, obj in item.items():
+                if obj.get("attributes", {}).get("dn") == dn:
+                    return self._emit(cls, obj, include_children, config_only)
+        return None
+
+    async def count_class(
+        self,
+        class_name: str,
+        filters: dict[str, str],
+        scope_dn: str = "",
+        filter_expr: str | None = None,
+    ) -> int:
+        """Return the number of objects matching class, scope, and filters."""
+        self.calls.append(
+            {
+                "method": "count_class",
+                "class_name": class_name,
+                "filters": filters,
+                "scope_dn": scope_dn,
+                "filter_expr": filter_expr,
+            }
+        )
+        return len(self._select(class_name, filters, scope_dn))
 
     async def close(self) -> None:
         pass
