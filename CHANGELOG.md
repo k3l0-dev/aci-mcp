@@ -9,6 +9,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Added
 
+- `mcp/tests/integration/test_tool_client_wiring.py` — tool-layer wiring tests
+  that call `query()`/`get_by_dn()`/`count()` against a *real* `ApicClient`
+  (wired to the `FakeHTTPClient` recorder pattern from
+  `tests/unit/test_client.py`) instead of `StubBackend`, and assert on the
+  actual URL/params `ApicClient` builds. Closes a real gap: `StubBackend`
+  reimplements filtering/scoping in plain Python and never calls
+  `registry.filter.build_filter()`, so nothing previously proved that
+  `page`, `rsp_subtree_include`, or `time_range` reach the real APIC request,
+  or that an invalid filter attribute name raises `FilterError` through the
+  tool layer. 14 new tests.
+- `mcp/tests/live/` — end-to-end tests against a real Cisco APIC (the
+  internal lab simulator), driven through the real `ApicClient` with no
+  stubs or fakes at all: `query_class` for `fvTenant`/`fvBD`, `get_by_dn`
+  (found and not-found cases), `count_class`, `query_class(config_only=True)`
+  attribute-set reduction, and a bad `filter_expr` asserting
+  `ApicRequestError` carries the APIC's own non-empty error text. The
+  session-scoped `live_client` fixture (`tests/live/conftest.py`)
+  authenticates from the repo-root `.env` exactly like `main.py`'s
+  `app_lifespan`, and auto-skips (never fails) the whole session when the
+  simulator is unreachable. Marked `@pytest.mark.live` and excluded from the
+  default `uv run pytest` run; run explicitly with
+  `uv run pytest tests/live/ -m live`. 7 new tests, verified passing against
+  the real simulator.
+- `mcp/pyproject.toml` — registers the `live` pytest marker and defaults
+  `addopts` to `-m "not live"`, so a plain `uv run pytest` in any
+  environment (including a public CI runner with no route to the internal
+  lab) never attempts to reach the simulator.
+- `mcp/tests/__init__.py` — module docstring documenting the five test
+  categories now in place (`unit/`, `integration/`, `live/`, `perf/`,
+  `eval/`) and why `live/` is intentionally excluded from default CI.
 - `registry/descriptions.py` — `search_classes` rewritten from raw substring
   matching to tokenized, camelCase-aware scoring: exact label/class-name
   matches dominate, token coverage rewards queries that name most of a
