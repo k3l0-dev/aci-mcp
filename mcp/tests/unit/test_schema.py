@@ -13,7 +13,7 @@ import json
 
 import pytest
 from exceptions import SchemaLoadError
-from registry.schema import load_schema
+from registry.schema import load_schema, resolve_schemas_dir
 
 # ── Synthetic schema fixtures ─────────────────────────────────────────────────
 
@@ -189,13 +189,74 @@ def test_relation_from_plain_string_normalised(schema_dir):
     assert rel["sourceClass"] == "fvNdPolicy"
 
 
-# ── Versioned subdir (glob fallback) ─────────────────────────────────────────
+# ── resolve_schemas_dir() ─────────────────────────────────────────────────────
+#
+# load_schema() itself performs NO subdirectory search — it does a single
+# direct `schemas_dir / f"{class}.json"` stat with no wildcard glob. Discovery
+# of the actual (possibly versioned) schema directory is resolve_schemas_dir's
+# job, done once at server startup. These tests cover that resolution, and
+# then verify load_schema() succeeds once handed the *resolved* directory.
 
 
-def test_schema_found_in_versioned_subdir(versioned_schema_dir):
-    schema = load_schema("fvBD", versioned_schema_dir)
+def test_resolve_schemas_dir_flat_layout_returns_unchanged(schema_dir):
+    """A directory with *.json files directly inside it is returned as-is."""
+    assert resolve_schemas_dir(schema_dir) == schema_dir
+
+
+def test_resolve_schemas_dir_finds_single_versioned_subdir(versioned_schema_dir):
+    """Exactly one subdirectory holding schema files — that subdir is returned."""
+    resolved = resolve_schemas_dir(versioned_schema_dir)
+    assert resolved == versioned_schema_dir / "mo-apic-6.0"
+
+
+def test_resolve_schemas_dir_picks_lexicographically_last_of_several(tmp_path):
+    """Multiple versioned subdirs — the one that sorts last (newest) wins."""
+    older = tmp_path / "mo-apic-v5.2_x"
+    newer = tmp_path / "mo-apic-v6.0_9c"
+    older.mkdir()
+    newer.mkdir()
+    (older / "fvBD.json").write_text(json.dumps(_FVBD_SCHEMA), encoding="utf-8")
+    (newer / "fvBD.json").write_text(json.dumps(_FVBD_SCHEMA), encoding="utf-8")
+
+    resolved = resolve_schemas_dir(tmp_path)
+    assert resolved == newer
+
+
+def test_resolve_schemas_dir_ignores_subdirs_without_json_files(tmp_path):
+    """A subdirectory with no *.json files is not a candidate."""
+    empty_subdir = tmp_path / "not-a-schema-dir"
+    empty_subdir.mkdir()
+    real_subdir = tmp_path / "mo-apic-v6.0_9c"
+    real_subdir.mkdir()
+    (real_subdir / "fvBD.json").write_text(json.dumps(_FVBD_SCHEMA), encoding="utf-8")
+
+    assert resolve_schemas_dir(tmp_path) == real_subdir
+
+
+def test_resolve_schemas_dir_empty_directory_returns_unchanged(tmp_path):
+    """No subdirectories and no top-level *.json files — returned unchanged."""
+    assert resolve_schemas_dir(tmp_path) == tmp_path
+
+
+def test_resolve_schemas_dir_nonexistent_directory_returns_unchanged(tmp_path):
+    """A schemas_dir that does not exist at all is returned unchanged."""
+    missing = tmp_path / "does-not-exist"
+    assert resolve_schemas_dir(missing) == missing
+
+
+def test_schema_found_in_versioned_subdir_after_resolve(versioned_schema_dir):
+    resolved = resolve_schemas_dir(versioned_schema_dir)
+    schema = load_schema("fvBD", resolved)
     assert schema != {}
     assert schema["label"] == "Bridge Domain"
+
+
+def test_load_schema_does_not_find_versioned_file_without_resolve(
+    versioned_schema_dir,
+):
+    """load_schema() no longer searches subdirectories — direct access only."""
+    schema = load_schema("fvBD", versioned_schema_dir)
+    assert schema == {}
 
 
 # ── Error cases ───────────────────────────────────────────────────────────────
