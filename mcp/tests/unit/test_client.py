@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 
 import httpx
 import pytest
-from apic.client import ApicClient
+from apic.client import _MAX_OBJECTS, _MAX_PAGES, ApicClient
 from exceptions import (
     ApicAuthError,
     ApicConnectionError,
@@ -165,17 +165,20 @@ async def test_query_class_returns_parsed_objects():
         ],
     )
     client = _make_client(_MockResponse(200, apic_response(objects)))
-    results = await client.query_class("fvBD", {})
-    assert len(results) == 2
-    assert all(r["_class"] == "fvBD" for r in results)
-    assert {r["name"] for r in results} == {"servers", "clients"}
+    result = await client.query_class("fvBD", {})
+    assert len(result.objects) == 2
+    assert all(r["_class"] == "fvBD" for r in result.objects)
+    assert {r["name"] for r in result.objects} == {"servers", "clients"}
+    assert result.total_available == 2
+    assert result.complete is True
 
 
 @pytest.mark.asyncio
 async def test_query_class_empty_imdata_returns_empty_list():
     client = _make_client(_MockResponse(200, apic_response([])))
-    results = await client.query_class("fvBD", {})
-    assert results == []
+    result = await client.query_class("fvBD", {})
+    assert result.objects == []
+    assert result.total_available == 0
 
 
 @pytest.mark.asyncio
@@ -197,12 +200,44 @@ async def test_query_class_embeds_children_when_requested():
         },
     )
     client = _make_client(_MockResponse(200, apic_response(objects)))
-    results = await client.query_class("fvBD", {}, include_children=["fvSubnet"])
-    assert len(results) == 1
-    children = results[0].get("_children", [])
+    result = await client.query_class("fvBD", {}, include_children=["fvSubnet"])
+    assert len(result.objects) == 1
+    children = result.objects[0].get("_children", [])
     assert len(children) == 1
     assert children[0]["_class"] == "fvSubnet"
     assert children[0]["ip"] == "10.0.0.1/24"
+
+
+# ── query_class() — QueryResult / totalCount parsing ──────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_query_class_total_available_parses_total_count():
+    """total_available reflects the APIC-reported totalCount, which can be
+    larger than the number of objects actually returned on this page."""
+    objects = make_imdata_objects(
+        "fvBD", [{"dn": "uni/tn-OT/BD-servers", "name": "servers"}]
+    )
+    body = {"totalCount": "250", "imdata": objects}
+    client = _make_client(_MockResponse(200, body))
+    result = await client.query_class("fvBD", {})
+    assert len(result.objects) == 1
+    assert result.total_available == 250
+    assert result.complete is True
+
+
+@pytest.mark.asyncio
+async def test_query_class_total_available_falls_back_to_object_count():
+    """A missing/non-numeric totalCount falls back to the number of objects
+    actually parsed, rather than raising — same defensive pattern as
+    _extract_count()."""
+    objects = make_imdata_objects(
+        "fvBD", [{"dn": "uni/tn-OT/BD-servers", "name": "servers"}]
+    )
+    body = {"imdata": objects}
+    client = _make_client(_MockResponse(200, body))
+    result = await client.query_class("fvBD", {})
+    assert result.total_available == 1
 
 
 # ── query_class() — re-authentication ─────────────────────────────────────────
@@ -219,9 +254,9 @@ async def test_query_class_re_auths_on_401_and_retries():
         _MockResponse(200, apic_login_response()),  # re-authenticate
         _MockResponse(200, apic_response(objects)),  # retry query → success
     )
-    results = await client.query_class("fvBD", {})
-    assert len(results) == 1
-    assert results[0]["name"] == "servers"
+    result = await client.query_class("fvBD", {})
+    assert len(result.objects) == 1
+    assert result.objects[0]["name"] == "servers"
 
 
 @pytest.mark.asyncio
@@ -274,8 +309,8 @@ async def test_query_class_retries_transient_status_then_succeeds(status):
         _MockResponse(status, {}),
         _MockResponse(200, apic_response([])),
     )
-    results = await client.query_class("fvBD", {})
-    assert results == []
+    result = await client.query_class("fvBD", {})
+    assert result.objects == []
     assert len(client._client.requests) == 2
 
 
@@ -296,8 +331,8 @@ async def test_query_class_retries_on_connect_error_then_succeeds():
         httpx.ConnectError("connection refused"),
         _MockResponse(200, apic_response([])),
     )
-    results = await client.query_class("fvBD", {})
-    assert results == []
+    result = await client.query_class("fvBD", {})
+    assert result.objects == []
     assert len(client._client.requests) == 2
 
 
@@ -307,8 +342,8 @@ async def test_query_class_retries_on_timeout_then_succeeds():
         httpx.TimeoutException("timed out"),
         _MockResponse(200, apic_response([])),
     )
-    results = await client.query_class("fvBD", {})
-    assert results == []
+    result = await client.query_class("fvBD", {})
+    assert result.objects == []
     assert len(client._client.requests) == 2
 
 
@@ -336,8 +371,8 @@ async def test_query_class_recovers_after_transient_connection_error_post_reauth
         httpx.TimeoutException("timeout on retry"),
         _MockResponse(200, apic_response(objects)),
     )
-    results = await client.query_class("fvBD", {})
-    assert len(results) == 1
+    result = await client.query_class("fvBD", {})
+    assert len(result.objects) == 1
     assert len(client._client.requests) == 4
 
 
@@ -367,8 +402,8 @@ async def test_query_class_401_then_transient_status_then_recovers():
         _MockResponse(500, {}),
         _MockResponse(200, apic_response([])),
     )
-    results = await client.query_class("fvBD", {})
-    assert results == []
+    result = await client.query_class("fvBD", {})
+    assert result.objects == []
     assert len(client._client.requests) == 4
 
 
@@ -549,6 +584,98 @@ async def test_query_class_sets_page_param():
     assert params.get("page") == "2"
 
 
+# ── query_class() — fetch_all pagination ──────────────────────────────────────
+
+
+def _bd_page(names: list[str], total_count: int) -> _MockResponse:
+    """Build one fvBD page response carrying `total_count` as totalCount."""
+    objects = make_imdata_objects(
+        "fvBD", [{"dn": f"uni/tn-OT/BD-{n}", "name": n} for n in names]
+    )
+    return _MockResponse(200, {"totalCount": str(total_count), "imdata": objects})
+
+
+@pytest.mark.asyncio
+async def test_query_class_fetch_all_walks_pages_and_concatenates():
+    """Three queued pages of page-size 3, the last one short (1 object) —
+    fetch_all stops there instead of requesting a fourth page."""
+    client = _make_client(
+        _bd_page(["a", "b", "c"], 7),
+        _bd_page(["d", "e", "f"], 7),
+        _bd_page(["g"], 7),
+    )
+    result = await client.query_class("fvBD", {}, limit=3, fetch_all=True)
+    assert {o["name"] for o in result.objects} == {"a", "b", "c", "d", "e", "f", "g"}
+    assert len(result.objects) == 7
+    assert result.total_available == 7
+    assert result.complete is True
+    assert len(client._client.requests) == 3
+
+
+@pytest.mark.asyncio
+async def test_query_class_fetch_all_sets_page_and_page_size_per_request():
+    """Each page request in a fetch_all loop carries the same page-size
+    (=limit) and an incrementing 0-based page number."""
+    client = _make_client(
+        _bd_page(["a", "b"], 5),
+        _bd_page(["c", "d"], 5),
+        _bd_page(["e"], 5),
+    )
+    await client.query_class("fvBD", {}, limit=2, fetch_all=True)
+    params_per_page = [r.get("params", {}) for r in client._client.requests]
+    assert [p.get("page") for p in params_per_page] == ["0", "1", "2"]
+    assert all(p.get("page-size") == "2" for p in params_per_page)
+
+
+@pytest.mark.asyncio
+async def test_query_class_fetch_all_single_short_page_no_truncation():
+    """A single page shorter than `limit` is the whole matching set — no
+    truncation or cap involved."""
+    client = _make_client(_bd_page(["only"], 1))
+    result = await client.query_class("fvBD", {}, limit=20, fetch_all=True)
+    assert len(result.objects) == 1
+    assert result.total_available == 1
+    assert result.complete is True
+    assert len(client._client.requests) == 1
+
+
+@pytest.mark.asyncio
+async def test_query_class_fetch_all_stops_at_max_pages_cap():
+    """_MAX_PAGES full pages, none short — the loop stops at the page-count
+    cap (not the object-count cap, since page_size * _MAX_PAGES stays well
+    under _MAX_OBJECTS) and reports complete=False, while total_available
+    still carries the true (far larger) totalCount."""
+    page_size = 3
+    pages = [
+        _bd_page([f"p{p}-{i}" for i in range(page_size)], 999999)
+        for p in range(_MAX_PAGES + 2)  # more supply than the cap will consume
+    ]
+    client = _make_client(*pages)
+    result = await client.query_class("fvBD", {}, limit=page_size, fetch_all=True)
+    assert len(result.objects) == _MAX_PAGES * page_size
+    assert result.total_available == 999999
+    assert result.complete is False
+    assert len(client._client.requests) == _MAX_PAGES
+
+
+@pytest.mark.asyncio
+async def test_query_class_fetch_all_stops_at_max_objects_cap():
+    """Two full pages of _MAX_OBJECTS/2 objects each exactly reach the
+    object-count cap in far fewer than _MAX_PAGES requests — proving the
+    object cap (not just the page cap) independently stops the loop."""
+    page_size = _MAX_OBJECTS // 2
+    client = _make_client(
+        _bd_page([f"p0-{i}" for i in range(page_size)], 999999),
+        _bd_page([f"p1-{i}" for i in range(page_size)], 999999),
+        _bd_page([f"p2-{i}" for i in range(page_size)], 999999),  # unused — proves early stop
+    )
+    result = await client.query_class("fvBD", {}, limit=page_size, fetch_all=True)
+    assert len(result.objects) == _MAX_OBJECTS
+    assert result.total_available == 999999
+    assert result.complete is False
+    assert len(client._client.requests) == 2
+
+
 @pytest.mark.asyncio
 async def test_query_class_timeout_after_reauth_recovers_on_next_attempt():
     """A timeout on the retry GET (right after a successful re-auth) is now
@@ -563,8 +690,8 @@ async def test_query_class_timeout_after_reauth_recovers_on_next_attempt():
         httpx.TimeoutException("timeout on retry"),   # retry GET → timeout
         _MockResponse(200, apic_response(objects)),   # next outer attempt → success
     )
-    results = await client.query_class("fvBD", {})
-    assert len(results) == 1
+    result = await client.query_class("fvBD", {})
+    assert len(result.objects) == 1
     assert len(client._client.requests) == 4
 
 

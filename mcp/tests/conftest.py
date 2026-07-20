@@ -24,6 +24,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+from apic.client import QueryResult
 
 SCHEMAS_DIR = Path(__file__).parent.parent.parent / "data" / "schemas"
 
@@ -282,7 +283,12 @@ class StubBackend:
         time_range: str | None = None,
         page: int | None = None,
         config_only: bool = False,
-    ) -> list[dict[str, Any]]:
+        fetch_all: bool = False,
+    ) -> QueryResult:
+        """Mirror ApicClient.query_class(): same filtering/scoping/ordering,
+        plus limit-as-page-size pagination and a QueryResult return, so
+        truncation and fetch_all can be exercised without a live APIC.
+        """
         self.calls.append(
             {
                 "method": "query_class",
@@ -294,6 +300,8 @@ class StubBackend:
                 "include_children": include_children,
                 "filter_expr": filter_expr,
                 "config_only": config_only,
+                "page": page,
+                "fetch_all": fetch_all,
             }
         )
 
@@ -322,7 +330,18 @@ class StubBackend:
             reverse = len(parts) > 1 and parts[1].lower() == "desc"
             results.sort(key=lambda o: o.get(attr_key, ""), reverse=reverse)
 
-        return results[:limit]
+        total_available = len(results)
+
+        if fetch_all:
+            return QueryResult(
+                objects=results, total_available=total_available, complete=True
+            )
+
+        start = (page or 0) * limit
+        page_objects = results[start : start + limit]
+        return QueryResult(
+            objects=page_objects, total_available=total_available, complete=True
+        )
 
     async def get_by_dn(
         self,

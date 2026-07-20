@@ -171,18 +171,25 @@ async def test_get_schema_known_class_returns_required_fields(tool_ctx):
 
 
 @pytest.mark.asyncio
-async def test_query_returns_list(tool_ctx):
+async def test_query_returns_envelope(tool_ctx):
     from main import query
 
-    results = await query("fvTenant", tool_ctx)
-    assert isinstance(results, list)
+    envelope = await query("fvTenant", tool_ctx)
+    assert isinstance(envelope, dict)
+    assert isinstance(envelope["results"], list)
+    for key in (
+        "results", "returned", "total_available", "truncated",
+        "next_page", "complete", "note",
+    ):
+        assert key in envelope
 
 
 @pytest.mark.asyncio
 async def test_query_result_has_class_key(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx)
+    envelope = await query("fvBD", tool_ctx)
+    results = envelope["results"]
     assert all("_class" in r for r in results)
     assert all(r["_class"] == "fvBD" for r in results)
 
@@ -191,7 +198,8 @@ async def test_query_result_has_class_key(tool_ctx):
 async def test_query_with_equality_filter(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx, filters={"name": "servers"})
+    envelope = await query("fvBD", tool_ctx, filters={"name": "servers"})
+    results = envelope["results"]
     assert len(results) == 1
     assert results[0]["name"] == "servers"
 
@@ -200,7 +208,8 @@ async def test_query_with_equality_filter(tool_ctx):
 async def test_query_with_scope_dn_restricts_results(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx, scope_dn="uni/tn-OT")
+    envelope = await query("fvBD", tool_ctx, scope_dn="uni/tn-OT")
+    results = envelope["results"]
     assert len(results) >= 2
     assert all(r["dn"].startswith("uni/tn-OT/") for r in results)
 
@@ -209,16 +218,16 @@ async def test_query_with_scope_dn_restricts_results(tool_ctx):
 async def test_query_limit_capped_at_200(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx, limit=9999)
-    assert len(results) <= 200
+    envelope = await query("fvBD", tool_ctx, limit=9999)
+    assert len(envelope["results"]) <= 200
 
 
 @pytest.mark.asyncio
 async def test_query_limit_applied(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx, limit=1)
-    assert len(results) == 1
+    envelope = await query("fvBD", tool_ctx, limit=1)
+    assert len(envelope["results"]) == 1
 
 
 # ── query — limit boundary values (0, -1, 1, cap, cap+1) ─────────────────────
@@ -229,8 +238,8 @@ async def test_query_limit_zero_clamped_to_one(tool_ctx):
     """A limit of 0 is clamped to 1, not forwarded to APIC as page-size=0."""
     from main import query
 
-    results = await query("fvBD", tool_ctx, limit=0)
-    assert len(results) == 1
+    envelope = await query("fvBD", tool_ctx, limit=0)
+    assert len(envelope["results"]) == 1
 
 
 @pytest.mark.asyncio
@@ -238,8 +247,8 @@ async def test_query_limit_negative_clamped_to_one(tool_ctx):
     """A negative limit is clamped to 1, not forwarded to APIC as page-size=-1."""
     from main import query
 
-    results = await query("fvBD", tool_ctx, limit=-1)
-    assert len(results) == 1
+    envelope = await query("fvBD", tool_ctx, limit=-1)
+    assert len(envelope["results"]) == 1
 
 
 @pytest.mark.asyncio
@@ -260,32 +269,32 @@ async def test_query_limit_negative_reaches_backend_as_clamped_value(
 async def test_query_limit_one_returns_exactly_one(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx, limit=1)
-    assert len(results) == 1
+    envelope = await query("fvBD", tool_ctx, limit=1)
+    assert len(envelope["results"]) == 1
 
 
 @pytest.mark.asyncio
 async def test_query_limit_at_cap_200_respected(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx, limit=200)
-    assert len(results) <= 200
+    envelope = await query("fvBD", tool_ctx, limit=200)
+    assert len(envelope["results"]) <= 200
 
 
 @pytest.mark.asyncio
 async def test_query_limit_cap_plus_one_still_capped_at_200(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx, limit=201)
-    assert len(results) <= 200
+    envelope = await query("fvBD", tool_ctx, limit=201)
+    assert len(envelope["results"]) <= 200
 
 
 @pytest.mark.asyncio
 async def test_query_order_by_asc(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx, order_by="fvBD.name|asc")
-    names = [r["name"] for r in results]
+    envelope = await query("fvBD", tool_ctx, order_by="fvBD.name|asc")
+    names = [r["name"] for r in envelope["results"]]
     assert names == sorted(names)
 
 
@@ -293,8 +302,8 @@ async def test_query_order_by_asc(tool_ctx):
 async def test_query_order_by_desc(tool_ctx):
     from main import query
 
-    results = await query("fvBD", tool_ctx, order_by="fvBD.name|desc")
-    names = [r["name"] for r in results]
+    envelope = await query("fvBD", tool_ctx, order_by="fvBD.name|desc")
+    names = [r["name"] for r in envelope["results"]]
     assert names == sorted(names, reverse=True)
 
 
@@ -302,9 +311,9 @@ async def test_query_order_by_desc(tool_ctx):
 async def test_query_none_filters_equivalent_to_empty(tool_ctx):
     from main import query
 
-    results_none = await query("fvTenant", tool_ctx, filters=None)
-    results_empty = await query("fvTenant", tool_ctx, filters={})
-    assert len(results_none) == len(results_empty)
+    envelope_none = await query("fvTenant", tool_ctx, filters=None)
+    envelope_empty = await query("fvTenant", tool_ctx, filters={})
+    assert len(envelope_none["results"]) == len(envelope_empty["results"])
 
 
 @pytest.mark.asyncio
@@ -312,11 +321,127 @@ async def test_query_include_children_populates_children_key(tool_ctx):
     from main import query
 
     # fvBD "mgmt" in sample_imdata has a fvSubnet child
-    results = await query("fvBD", tool_ctx, include_children=["fvSubnet"])
-    mgmt = next((r for r in results if r["name"] == "mgmt"), None)
+    envelope = await query("fvBD", tool_ctx, include_children=["fvSubnet"])
+    mgmt = next((r for r in envelope["results"] if r["name"] == "mgmt"), None)
     assert mgmt is not None
     assert "_children" in mgmt
     assert mgmt["_children"][0]["_class"] == "fvSubnet"
+
+
+# ── query — truncation envelope ───────────────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_query_truncated_false_when_returned_less_than_limit(tool_ctx):
+    """Only 2 fvTenant objects exist in sample_imdata — well under the
+    default limit=20 — so this is a natural end, not a partial page."""
+    from main import query
+
+    envelope = await query("fvTenant", tool_ctx)
+    assert envelope["returned"] < 20
+    assert envelope["truncated"] is False
+    assert envelope["complete"] is True
+    assert envelope["note"] is None
+    assert envelope["next_page"] is None
+
+
+@pytest.mark.asyncio
+async def test_query_truncated_true_reports_total_and_note(tool_ctx):
+    """3 fvBD objects exist; limit=2 returns only a partial page."""
+    from main import query
+
+    envelope = await query("fvBD", tool_ctx, limit=2)
+    assert envelope["returned"] == 2
+    assert envelope["total_available"] == 3
+    assert envelope["truncated"] is True
+    assert envelope["note"] is not None
+    assert envelope["next_page"] == 1
+    assert envelope["complete"] is True
+
+
+@pytest.mark.asyncio
+async def test_query_fetch_all_returns_everything(tool_ctx):
+    from main import query
+
+    envelope = await query("fvBD", tool_ctx, limit=2, fetch_all=True)
+    assert envelope["returned"] == 3
+    assert envelope["total_available"] == 3
+    assert envelope["truncated"] is False
+    assert envelope["complete"] is True
+    assert envelope["note"] is None
+    assert envelope["next_page"] is None
+    backend = tool_ctx.lifespan_context["backend"]
+    assert backend.calls[-1]["fetch_all"] is True
+
+
+# ── query — regression: argmax over a truncated page is wrong (Task 6) ───────
+#
+# The original bug this fix addresses: an agent asked "which bridge domain
+# has the most subnets" called query(fvBD, include_children=[fvSubnet],
+# limit=200), got exactly `limit` results, and computed argmax over that
+# partial page — silently picking the wrong bridge domain because the real
+# maximum was beyond page 1. This test encodes that scenario end to end.
+
+_LARGE_BD_COUNT = 250
+_ARGMAX_BD_INDEX = 100  # well beyond a default (or even limit=20) first page
+_ARGMAX_SUBNET_COUNT = 12  # strictly greater than every other BD's count
+
+
+def _make_bd_item(index: int, subnet_count: int) -> dict:
+    """Build one fvBD imdata item, optionally carrying `subnet_count` fvSubnet
+    children — mirrors make_imdata_objects()'s shape but inlines the children
+    map per-object since counts vary per index here."""
+    dn = f"uni/tn-OT/BD-bd{index:04d}"
+    obj: dict = {"attributes": {"name": f"bd{index:04d}", "dn": dn}}
+    if subnet_count:
+        obj["children"] = [
+            {
+                "fvSubnet": {
+                    "attributes": {
+                        "ip": f"10.{index % 250}.{i}.1/24",
+                        "dn": f"{dn}/subnet-[10.{index % 250}.{i}.1/24]",
+                    }
+                }
+            }
+            for i in range(subnet_count)
+        ]
+    return {"fvBD": obj}
+
+
+def _build_large_bd_imdata() -> list[dict]:
+    """250 fvBD objects; the one with the most fvSubnet children (index
+    _ARGMAX_BD_INDEX) sits well beyond a default query() page."""
+    return [
+        _make_bd_item(
+            i, _ARGMAX_SUBNET_COUNT if i == _ARGMAX_BD_INDEX else (i % 5)
+        )
+        for i in range(_LARGE_BD_COUNT)
+    ]
+
+
+def _argmax_bd_name(results: list[dict]) -> str:
+    return max(results, key=lambda r: len(r.get("_children", [])))["name"]
+
+
+@pytest.mark.asyncio
+async def test_query_default_page_argmax_wrong_fetch_all_argmax_right(schemas_dir):
+    from main import query
+
+    ctx = _stub_ctx(_build_large_bd_imdata(), schemas_dir)
+    true_argmax = f"bd{_ARGMAX_BD_INDEX:04d}"
+
+    partial = await query("fvBD", ctx, include_children=["fvSubnet"])
+    assert partial["truncated"] is True
+    assert _argmax_bd_name(partial["results"]) != true_argmax
+
+    complete = await query(
+        "fvBD", ctx, include_children=["fvSubnet"], fetch_all=True
+    )
+    assert complete["truncated"] is False
+    assert complete["complete"] is True
+    assert complete["total_available"] == _LARGE_BD_COUNT
+    assert complete["returned"] == _LARGE_BD_COUNT
+    assert _argmax_bd_name(complete["results"]) == true_argmax
 
 
 # ── query — unknown class (UnknownClassError) ─────────────────────────────────
@@ -400,8 +525,8 @@ async def test_query_allows_class_absent_from_descriptions_but_with_schema(
     )
     ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
 
-    results = await query("aaaExtraOnlyClass", ctx)
-    assert isinstance(results, list)
+    envelope = await query("aaaExtraOnlyClass", ctx)
+    assert isinstance(envelope["results"], list)
 
 
 @pytest.mark.asyncio
@@ -471,7 +596,8 @@ async def test_query_config_only_strips_operational_attrs(schemas_dir):
     from main import query
 
     ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
-    results = await query("fvBD", ctx, config_only=True)
+    envelope = await query("fvBD", ctx, config_only=True)
+    results = envelope["results"]
     assert results[0]["name"] == "servers"
     assert "modTs" not in results[0]
     assert "lcOwn" not in results[0]
@@ -482,8 +608,8 @@ async def test_query_without_config_only_keeps_all_attrs(schemas_dir):
     from main import query
 
     ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
-    results = await query("fvBD", ctx)
-    assert "modTs" in results[0]
+    envelope = await query("fvBD", ctx)
+    assert "modTs" in envelope["results"][0]
 
 
 # ── get_by_dn (Task 3) ────────────────────────────────────────────────────────

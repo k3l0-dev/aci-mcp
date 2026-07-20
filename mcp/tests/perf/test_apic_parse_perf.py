@@ -74,11 +74,11 @@ async def test_parse_1000_flat_objects_under_50ms(large_imdata):
     client = _client_with_static_response(body)
 
     t0 = time.perf_counter()
-    results = await client.query_class("fvBD", {})
+    result = await client.query_class("fvBD", {})
     elapsed = time.perf_counter() - t0
 
-    assert len(results) == 1_000
-    assert all(r["_class"] == "fvBD" for r in results)
+    assert len(result.objects) == 1_000
+    assert all(r["_class"] == "fvBD" for r in result.objects)
     assert elapsed < 0.050, (
         f"Parsing 1000 objects took {elapsed * 1000:.1f}ms — must be < 50ms"
     )
@@ -110,11 +110,11 @@ async def test_parse_200_objects_with_5_children_each():
     client = _client_with_static_response(body)
 
     t0 = time.perf_counter()
-    results = await client.query_class("fvBD", {}, include_children=["fvSubnet"])
+    result = await client.query_class("fvBD", {}, include_children=["fvSubnet"])
     elapsed = time.perf_counter() - t0
 
-    assert len(results) == 200
-    assert all(len(r["_children"]) == 5 for r in results)
+    assert len(result.objects) == 200
+    assert all(len(r["_children"]) == 5 for r in result.objects)
     assert elapsed < 0.050, (
         f"Parsing 200 objects × 5 children took {elapsed * 1000:.1f}ms — must be < 50ms"
     )
@@ -155,11 +155,13 @@ async def test_concurrent_queries_do_not_share_state():
     results = await asyncio.gather(*[client.query_class("fvBD", {}) for _ in range(20)])
 
     for r in results:
-        assert len(r) == 5
+        assert len(r.objects) == 5
         # Mutate one result and verify others are not affected
-    results[0].clear()
+    results[0].objects.clear()
     for r in results[1:]:
-        assert len(r) == 5, "Mutation of one result affected another — shared state bug"
+        assert len(r.objects) == 5, (
+            "Mutation of one result affected another — shared state bug"
+        )
 
 
 # ── Throughput benchmark ──────────────────────────────────────────────────────
