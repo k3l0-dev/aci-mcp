@@ -66,9 +66,9 @@ jobs:
 
       - uses: astral-sh/setup-uv@v5
 
-      - name: Audit mcp/
+      - name: Audit mcp/ (including dev dependencies)
         working-directory: mcp
-        run: uv export --frozen --no-dev | uvx pip-audit -r /dev/stdin
+        run: uv export --frozen | uvx pip-audit -r /dev/stdin
 
   build:
     name: Docker build
