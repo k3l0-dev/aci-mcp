@@ -29,6 +29,13 @@ _FVBD_SCHEMA = {
         "className": "BD",
         "classPkg": "fv",
         "dnFormats": ["uni/tn-{name}/BD-{name}"],
+        # contains — {"pkg:Class": ""} dict, projected to sorted flat names.
+        "contains": {
+            "fv:Subnet": "",
+            "fv:RsCtx": "",
+            "tag:Tag": "",
+            "fault:Inst": "",
+        },
         "properties": {
             "name": {"type": "string"},
             "arpFlood": {"type": "scalar:Enum8"},
@@ -41,6 +48,83 @@ _FVBD_SCHEMA = {
         "relationFrom": {
             "fvRsBDSubnetToProfile": {"sourceClass": "fvSubnet"},
             "fvRsBDToNdP": "fvNdPolicy",  # plain string format
+        },
+    }
+}
+
+# Rich fvSubnet fixture mirroring the real per-property jsonmeta structure
+# (modelType, validValues with a "defaultValue" marker, isNaming, readOnly,
+# mandatory, list-of-lines comment with the "null" sentinel).  Used to exercise
+# property_details projection.
+_FVSUBNET_SCHEMA = {
+    "fvSubnet": {
+        "identifiedBy": ["ip"],
+        "rnFormat": "subnet-[{ip}]",
+        "containedBy": {"fv:BD": ""},
+        "label": "Subnet",
+        "isAbstract": False,
+        "isConfigurable": True,
+        "className": "Subnet",
+        "classPkg": "fv",
+        "contains": {"fault:Inst": "", "tag:Tag": ""},
+        "properties": {
+            "ip": {
+                "modelType": "address:Ip",
+                "baseType": "address:Ip",
+                "isConfigurable": True,
+                "isNaming": True,
+                "readWrite": False,
+                "readOnly": False,
+                "createOnly": False,
+                "comment": ["The IP address and mask of the default gateway."],
+            },
+            "scope": {
+                "modelType": "fv:RouteScp",
+                "baseType": "scalar:Bitmask8",
+                "isConfigurable": True,
+                "readWrite": True,
+                "readOnly": False,
+                "createOnly": False,
+                "default": "private",
+                "validValues": [
+                    {"value": "private", "localName": "defaultValue"},
+                    {"value": "2", "localName": "private"},
+                    {"value": "1", "localName": "public"},
+                    {"value": "4", "localName": "shared"},
+                ],
+                "comment": ["The network visibility of the subnet."],
+            },
+            "preferred": {
+                "modelType": "scalar:Bool",
+                "isConfigurable": True,
+                "readWrite": True,
+                "default": "false",
+                "validValues": [
+                    {"value": "false", "localName": "defaultValue"},
+                    {"value": "false", "localName": "no"},
+                    {"value": "true", "localName": "yes"},
+                ],
+            },
+            "descr": {
+                "modelType": "naming:Descr",
+                "baseType": "string:Basic",
+                "isConfigurable": True,
+                "readWrite": True,
+                "comment": ["Specifies the description of a policy component."],
+            },
+            "operSt": {
+                "modelType": "fv:OperStQual",
+                "isConfigurable": False,
+                "readOnly": True,
+                "comment": ["Operational state of the subnet."],
+            },
+            "name": {
+                "modelType": "naming:Name",
+                "isConfigurable": True,
+                "readWrite": True,
+                "mandatory": True,
+                "comment": ["null"],  # sentinel — must be dropped
+            },
         },
     }
 }
@@ -64,6 +148,9 @@ def schema_dir(tmp_path):
     (tmp_path / "fvBD.json").write_text(json.dumps(_FVBD_SCHEMA), encoding="utf-8")
     (tmp_path / "nwItem.json").write_text(
         json.dumps(_ABSTRACT_SCHEMA), encoding="utf-8"
+    )
+    (tmp_path / "fvSubnet.json").write_text(
+        json.dumps(_FVSUBNET_SCHEMA), encoding="utf-8"
     )
     return tmp_path
 
@@ -224,3 +311,97 @@ def test_os_error_on_read_raises_schema_load_error(tmp_path):
             load_schema("fvBD", tmp_path)
     finally:
         schema_file.chmod(0o644)
+
+
+# ── contains projection (Task 1) ─────────────────────────────────────────────
+
+
+def test_contains_projected_to_sorted_flat_names(schema_dir):
+    # {"fv:Subnet","fv:RsCtx","tag:Tag","fault:Inst"} → sorted flat names
+    schema = load_schema("fvBD", schema_dir)
+    assert schema["contains"] == ["faultInst", "fvRsCtx", "fvSubnet", "tagTag"]
+
+
+def test_contains_is_list_of_strings(schema_dir):
+    schema = load_schema("fvBD", schema_dir)
+    assert isinstance(schema["contains"], list)
+    assert all(isinstance(c, str) for c in schema["contains"])
+    # colon must be gone — names are ready to feed to query/get_schema
+    assert all(":" not in c for c in schema["contains"])
+
+
+def test_contains_absent_when_class_has_no_children(schema_dir):
+    # nwItem fixture declares no "contains" key
+    schema = load_schema("nwItem", schema_dir)
+    assert "contains" not in schema
+
+
+# ── property_details projection (Task 2) ──────────────────────────────────────
+
+
+def test_property_details_absent_by_default(schema_dir):
+    schema = load_schema("fvSubnet", schema_dir)
+    assert "property_details" not in schema
+    # the cheap name list is still present
+    assert "properties" in schema
+
+
+def test_property_details_full_dump_covers_all_properties(schema_dir):
+    schema = load_schema("fvSubnet", schema_dir, include_property_details=True)
+    assert set(schema["property_details"].keys()) == set(schema["properties"])
+
+
+def test_properties_filter_limits_to_requested(schema_dir):
+    schema = load_schema("fvSubnet", schema_dir, properties_filter=["scope", "ip"])
+    assert set(schema["property_details"].keys()) == {"scope", "ip"}
+
+
+def test_properties_filter_skips_unknown_names(schema_dir):
+    schema = load_schema(
+        "fvSubnet", schema_dir, properties_filter=["scope", "doesNotExist"]
+    )
+    assert set(schema["property_details"].keys()) == {"scope"}
+
+
+def test_property_detail_enum_shape(schema_dir):
+    schema = load_schema("fvSubnet", schema_dir, properties_filter=["scope"])
+    scope = schema["property_details"]["scope"]
+    assert scope["type"] == "fv:RouteScp"
+    assert scope["access"] == "read-write"
+    assert scope["default"] == "private"
+    # localNames minus the "defaultValue" marker, order preserved
+    assert scope["options"] == ["private", "public", "shared"]
+    assert scope["comment"] == "The network visibility of the subnet."
+
+
+def test_property_detail_naming_is_create_only(schema_dir):
+    schema = load_schema("fvSubnet", schema_dir, properties_filter=["ip"])
+    ip = schema["property_details"]["ip"]
+    assert ip["naming"] is True
+    # naming props carry no read/write flag — treated as immutable after create
+    assert ip["access"] == "create-only"
+    assert "options" not in ip
+
+
+def test_property_detail_read_only_when_not_configurable(schema_dir):
+    schema = load_schema("fvSubnet", schema_dir, properties_filter=["operSt"])
+    assert schema["property_details"]["operSt"]["access"] == "read-only"
+
+
+def test_property_detail_mandatory_flag_and_null_comment_dropped(schema_dir):
+    schema = load_schema("fvSubnet", schema_dir, properties_filter=["name"])
+    name = schema["property_details"]["name"]
+    assert name["mandatory"] is True
+    # the "null" sentinel comment must not surface
+    assert "comment" not in name
+
+
+def test_property_detail_omits_absent_fields(schema_dir):
+    # descr has no enum, no default, no naming/mandatory flags
+    schema = load_schema("fvSubnet", schema_dir, properties_filter=["descr"])
+    descr = schema["property_details"]["descr"]
+    assert descr["access"] == "read-write"
+    assert "options" not in descr
+    assert "default" not in descr
+    assert "naming" not in descr
+    assert "mandatory" not in descr
