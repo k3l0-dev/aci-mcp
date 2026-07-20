@@ -39,6 +39,15 @@ Changelog = "https://github.com/k3l0-dev/aci-mcp/blob/main/CHANGELOG.md"
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+# Exclude tests/live/ (real APIC required) from the default run so a plain
+# `uv run pytest` never attempts network access to the internal lab
+# simulator. Run the live suite explicitly with:
+#   uv run pytest tests/live/ -m live
+# or override this default entirely with --override-ini addopts="".
+addopts = ["-m", "not live"]
+markers = [
+    "live: requires a reachable real APIC (see tests/live/conftest.py)",
+]
 
 [dependency-groups]
 dev = [
