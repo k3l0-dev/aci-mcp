@@ -23,6 +23,9 @@ schema-collector/cobra-sdk/
 # Internal CI
 .gitlab-ci.yml
 
+# Internal agent evaluation harness — never part of the public repository
+agent-eval/
+
 # Runtime artifacts
 .lab*
 tmp/
