@@ -50,38 +50,70 @@ Every MO has:
 
 ## 2. Canonical object shape
 
-The `query` tool returns a flat list. Each item is the object's attributes
-plus a `_class` key injected by the MCP server:
+The `query` tool returns an **envelope**, not a bare list — the objects live
+under `results`, alongside the true size of the matching set:
 
 ```json
-[
-  {
-    "_class": "<ClassName>",
-    "dn": "<full/path/to/object>",
-    "name": "<identifier>",
-    "<attr>": "<value>",
-    ...
-  }
-]
+{
+  "results": [
+    {
+      "_class": "<ClassName>",
+      "dn": "<full/path/to/object>",
+      "name": "<identifier>",
+      "<attr>": "<value>",
+      ...
+    }
+  ],
+  "returned": 1,
+  "total_available": 1,
+  "truncated": false,
+  "next_page": null,
+  "complete": true,
+  "note": null
+}
 ```
 
-All attribute values are **strings** (including numbers and booleans).
+| Field | Meaning |
+|---|---|
+| `results` | The objects, same per-item shape as before (`_class`, `dn`, attributes, optional `_children`) |
+| `returned` | `len(results)` — how many objects came back in this call |
+| `total_available` | The APIC-reported true match count — fabric-wide or subtree-wide, regardless of how many were fetched |
+| `truncated` | `total_available > returned` — this call did NOT return everything that matches |
+| `next_page` | `page + 1` when `truncated` and `fetch_all` was not used; `null` otherwise |
+| `complete` | `false` only when `fetch_all=True` hit the safety cap before exhausting all matches |
+| `note` | Guidance string when `truncated` or capped; `null` otherwise |
 
-When `include_children` is set, each object also contains `_children` — a flat
-list of child attribute dicts, each with their own `_class` key:
+**`truncated: true` is a hard stop for any max/min/total/all-of conclusion** —
+see section 5's Pagination subsection and the FULL-FABRIC AGGREGATION rule in
+the server instructions.
+
+All attribute values in `results` items are **strings** (including numbers
+and booleans).
+
+When `include_children` is set, each object in `results` also contains
+`_children` — a flat list of child attribute dicts, each with their own
+`_class` key:
 
 ```json
-[
-  {
-    "_class": "fvBD",
-    "dn": "uni/tn-OT/BD-servers",
-    "unicastRoute": "yes",
-    "_children": [
-      {"_class": "fvSubnet", "dn": "uni/tn-OT/BD-servers/subnet-[10.0.0.1/24]", "ip": "10.0.0.1/24"},
-      {"_class": "fvRsCtx",  "dn": "uni/tn-OT/BD-servers/rsctx", "tnFvCtxName": "ot.main.vrf"}
-    ]
-  }
-]
+{
+  "results": [
+    {
+      "_class": "fvBD",
+      "dn": "uni/tn-OT/BD-servers",
+      "unicastRoute": "yes",
+      "_children": [
+        {"_class": "fvSubnet", "dn": "uni/tn-OT/BD-servers/subnet-[10.0.0.1/24]", "ip": "10.0.0.1/24"},
+        {"_class": "fvRsCtx",  "dn": "uni/tn-OT/BD-servers/rsctx", "tnFvCtxName": "ot.main.vrf"}
+      ]
+    }
+  ],
+  "returned": 1,
+  "total_available": 1,
+  "truncated": false,
+  "next_page": null,
+  "complete": true,
+  "note": null
+}
 ```
 
 ---
@@ -356,9 +388,9 @@ query("faultRecord", time_range="1week")
 query("aaaModLR", time_range="2026-01-01|2026-01-31")
 ```
 
-### Pagination — `page`
+### Pagination — `page` and `fetch_all`
 
-Works with `limit` (= page-size). Pages are 0-based.
+`limit` is the page size. Pages are 0-based.
 
 ```python
 # First 20 faults (page 0)
@@ -366,6 +398,26 @@ query("faultInst", limit=20, order_by="faultInst.severity|desc", page=0)
 # Next 20 (page 1)
 query("faultInst", limit=20, order_by="faultInst.severity|desc", page=1)
 ```
+
+**One-call exhaustive alternative — `fetch_all=True`.** Instead of paging
+manually, walk every page in one call and get the complete matching set back:
+
+```python
+query("fvBD", include_children=["fvSubnet"], fetch_all=True)
+# → {"results": [...all matching fvBD...], "total_available": N,
+#    "truncated": false, "complete": true, ...}
+```
+
+`fetch_all` uses `limit` as the page size internally and stops at the first
+short page (the natural end) or at a safety cap on very large result sets —
+if the cap is hit, `complete` comes back `false` and `total_available` still
+tells you the true size; narrow the query (e.g. `scope_dn`) and combine.
+
+**Rule: a max/min/sum/all-of question over a class is only answerable from a
+complete set.** If `truncated` is `true` in the response, do not draw that
+conclusion from it — re-run with `fetch_all=True`, or page with `page`/`limit`
+until `truncated` is `false`, before computing a maximum, minimum, total, or
+"all of X" answer.
 
 ### Configuration only — `config_only`
 
@@ -397,9 +449,9 @@ get_by_dn("uni/tn-OT/BD-servers",
           include_children=["fvSubnet", "fvRsCtx"])
 ```
 
-Return shape is a single object dict (same element shape as a `query` result),
-**not** a list. If the DN does not exist, you get an explicit not-found instead
-of a silent empty result:
+Return shape is a single object dict (same shape as one item of `query`'s
+`results` list), **not** an envelope and **not** a list. If the DN does not
+exist, you get an explicit not-found instead of a silent empty result:
 
 ```json
 {"found": false, "dn": "uni/tn-OT/BD-typo",
@@ -423,6 +475,27 @@ count("fvSubnet", filters={"scope": "public"})  # public subnets only
 
 Verify the class name with `search_classes` first — `count` raises the same
 `UnknownClassError` (with suggestions) as `query` for an unknown class.
+
+**Counting vs. ranking.** `count` gives a scalar tally — it cannot tell you
+*which* object is the extreme case. "How many subnets in total?" is `count`.
+"Which bridge domain has the most subnets?" is argmax, and needs the actual
+objects: fetch everything with `fetch_all=True`, then group/argmax locally.
+
+```python
+query("fvBD", include_children=["fvSubnet"], fetch_all=True)
+# → {"results": [...every fvBD, each with "_children"...], "complete": true, ...}
+```
+
+```bash
+# Then, locally over .results (see section 7 for the full jq recipe):
+echo '<json>' | jq '.results | max_by(._children | length) | {name, count: (._children | length)}'
+```
+
+Never compute this from a plain default `query()` call — a `truncated: true`
+page only contains *some* bridge domains, so its argmax can be the wrong
+answer even though the call succeeded and returned data. This is the
+canonical example FULL-FABRIC AGGREGATION in the server instructions guards
+against.
 
 > **An error is not an answer.** A tool call that raises an error — unknown
 > class, unreachable DN, malformed filter — did not execute the query; it has
@@ -454,7 +527,7 @@ get_schema(ClassA)
 → relationTo: {RsXxx: {targetClass: "pkg:ClassB"}}
 
 query("RsXxx", scope_dn=<objectA_dn>, limit=1)
-→ result attributes contain "tn{ClassB}Name": "<target_identifier>"
+→ results[0] attributes contain "tn{ClassB}Name": "<target_identifier>"
 
 get_schema("pkgClassB")          ← to find containedBy for scope_dn
 → containedBy: [...]
@@ -480,15 +553,21 @@ Example: `fvRsCtx` → attribute `tnFvCtxName` holds the VRF name.
 
 ## 7. jq quick reference (CLI exploration)
 
+`query`'s output is an envelope — the objects are under `.results`, not at
+the top level (see section 2). All recipes below read from there.
+
 ```bash
+# Check before concluding anything max/min/total/all-of from this response
+echo '<json>' | jq '{truncated, total_available, returned, complete}'
+
 # All DNs from a query result
-echo '<json>' | jq -r '.[].dn'
+echo '<json>' | jq -r '.results[].dn'
 
 # Specific attribute from all objects
-echo '<json>' | jq -r '.[].name'
+echo '<json>' | jq -r '.results[].name'
 
 # Filter objects where attribute matches value
-echo '<json>' | jq '[.[] | select(.severity == "critical")]'
+echo '<json>' | jq '[.results[] | select(.severity == "critical")]'
 
 # Extract schema field
 echo '<json>' | jq '{identifiedBy, rnFormat, containedBy}'
@@ -496,14 +575,18 @@ echo '<json>' | jq '{identifiedBy, rnFormat, containedBy}'
 # List all relation target classes from schema
 echo '<json>' | jq '.relationTo | to_entries[] | {rel: .key, target: .value.targetClass}'
 
-# Count objects per unique attribute value
-echo '<json>' | jq 'group_by(.severity) | map({(.[0].severity): length}) | add'
+# Count objects per unique attribute value (tally over a fetched set)
+echo '<json>' | jq '.results | group_by(.severity) | map({(.[0].severity): length}) | add'
+
+# Argmax over a class — "which BD has the most subnets" (requires
+# fetch_all=True first; see section 5.6, Counting vs. ranking)
+echo '<json>' | jq '.results | max_by(._children | length) | {name, count: (._children | length)}'
 
 # Extract _children of a specific class (include_children results)
-echo '<json>' | jq '.[].`_children`[] | select(._class == "fvSubnet") | .ip'
+echo '<json>' | jq '.results[]._children[] | select(._class == "fvSubnet") | .ip'
 
 # Flatten parent + children into one table
-echo '<json>' | jq '[.[] | {bd: .name, subnet: (._children // [] | map(select(._class=="fvSubnet")) | .[0].ip // "-"), vrf: (._children // [] | map(select(._class=="fvRsCtx")) | .[0].tnFvCtxName // "-")}]'
+echo '<json>' | jq '[.results[] | {bd: .name, subnet: (._children // [] | map(select(._class=="fvSubnet")) | .[0].ip // "-"), vrf: (._children // [] | map(select(._class=="fvRsCtx")) | .[0].tnFvCtxName // "-")}]'
 ```
 
 ---
@@ -558,11 +641,18 @@ a sample object without filters to observe the actual values in context.
             → Use time_range="24h" / "1week" / date range
         - Large result set?
             → Use limit + page for pagination
+        - Aggregating over the WHOLE class (max/min/total/all)?
+            → Use fetch_all=True, and check truncated/complete before
+              concluding — see section 5's Pagination subsection and 5.6
 
 4. query(class_name, ...)
-        ↓ results: list of attribute dicts + "_class"
+        ↓ envelope: {"results": [...], "returned", "total_available",
+                     "truncated", "next_page", "complete", "note"}
+          each result item: attribute dict + "_class"
           dn is always present and is a valid scope_dn for children
           _children present when include_children was set
+          truncated=true → do not conclude a max/min/total/all-of answer;
+          re-run with fetch_all=True or page to exhaustion first
 
 5. Navigate further if needed:
         - Children: query child class with scope_dn = result dn
@@ -587,8 +677,9 @@ a sample object without filters to observe the actual values in context.
 | Symptom | Cause | Recovery |
 |---|---|---|
 | `query`/`count` raises "Unknown ACI class '...'" | Wrong or nonexistent class name | The class does not exist — this is a failed lookup, not a zero result. Retry with one of the suggested closest matches or a fresh `search_classes` call; never report a count or existence answer from this error. |
-| `query` returns `[]`, class is valid | Object absent from backend OR wrong filter value | Remove filters first to confirm objects exist, then re-add filters |
-| `query` returns `[]`, class is abstract (`isAbstract: true`) | Abstract class — not instantiable | `search_classes` to find the concrete subclass |
+| `query` returns `results: []`, class is valid | Object absent from backend OR wrong filter value | Remove filters first to confirm objects exist, then re-add filters |
+| `query` returns `results: []`, class is abstract (`isAbstract: true`) | Abstract class — not instantiable | `search_classes` to find the concrete subclass |
+| `query` returns `truncated: true` | This call only returned part of the matching set (`returned < total_available`) | Partial data — do not conclude a maximum, minimum, total, or complete list from it. Re-run with `fetch_all=True`, or page with `page`/`limit` until `truncated` is `false` |
 | `search_classes` returns no results | Keyword too specific | Try acronym, English label, or first 3 chars of the expected class name |
 | `get_schema` returns `{}` | Class not in local schema collection | Query without filters, inspect `properties` of a sample result |
 | `_children` is empty despite `include_children` | Children don't exist under that parent, or wrong child class name | Query child class directly with scope_dn to verify |

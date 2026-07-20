@@ -10,6 +10,10 @@ Handles authentication (cookie-based token), class queries, and subtree queries.
 A single ApicClient instance is created at server startup via the lifespan and
 shared across all tool invocations through the FastMCP context.
 
+query_class() returns a QueryResult (objects + the APIC-reported totalCount +
+a completeness flag) rather than a bare list, so callers can tell a partial
+page from the whole matching set — see QueryResult and the fetch_all param.
+
 APIC endpoint reference:
   POST /api/aaaLogin.json                          — authenticate
   GET  /api/class/{cls}.json                       — fabric-wide class query
@@ -18,6 +22,7 @@ APIC endpoint reference:
 
 import asyncio
 import logging
+from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
@@ -30,6 +35,12 @@ from exceptions import (
 from registry.filter import build_filter
 
 logger = logging.getLogger("aci-mcp.apic")
+
+# fetch_all safety caps — a fabric-wide class scan with no scope_dn can be
+# unbounded (a bad filter, or a class with tens of thousands of instances),
+# so a page-loop needs its own hard stop independent of the caller's limit.
+_MAX_PAGES = 25
+_MAX_OBJECTS = 5000
 
 # HTTP statuses treated as transient and worth a bounded retry, rather than an
 # immediate permanent failure. 404 is included deliberately: nowhere in this
@@ -69,6 +80,28 @@ def _extract_apic_error_text(resp: httpx.Response) -> str:
         return body["imdata"][0]["error"]["attributes"]["text"]
     except (ValueError, KeyError, IndexError, TypeError):
         return ""
+
+
+@dataclass
+class QueryResult:
+    """Result of a query_class() call — objects plus the true match size.
+
+    Attributes:
+        objects:          Parsed attribute dicts, in the same shape query_class()
+                          has always returned (each with a "_class" key, and
+                          "_children" when include_children was set).
+        total_available:  The APIC-reported totalCount for the query — the
+                          true number of matching objects fabric-wide (or
+                          subtree-wide with scope_dn), independent of how many
+                          were actually fetched into `objects`.
+        complete:         True unless fetch_all=True and the page loop stopped
+                          early after hitting _MAX_PAGES/_MAX_OBJECTS before
+                          exhausting all matching objects.
+    """
+
+    objects: list[dict[str, Any]] = field(default_factory=list)
+    total_available: int = 0
+    complete: bool = True
 
 
 class ApicClient:
@@ -159,75 +192,23 @@ class ApicClient:
         self._client.cookies.set("APIC-cookie", token)
         logger.info("Authenticated to APIC as %s @ %s", self._user, self._host)
 
-    async def query_class(
+    def _build_query_params(
         self,
         class_name: str,
         filters: dict[str, str],
-        scope_dn: str = "",
-        limit: int = 20,
-        order_by: str = "",
-        include_children: list[str] | None = None,
-        filter_expr: str | None = None,
-        rsp_subtree_include: str | None = None,
-        time_range: str | None = None,
-        page: int | None = None,
-        config_only: bool = False,
-    ) -> list[dict[str, Any]]:
-        """Query ACI objects by class, optionally scoped to a subtree DN.
+        scope_dn: str,
+        limit: int,
+        order_by: str,
+        include_children: list[str] | None,
+        filter_expr: str | None,
+        rsp_subtree_include: str | None,
+        time_range: str | None,
+        config_only: bool,
+    ) -> tuple[str, dict[str, str]]:
+        """Build the (url, params) pair shared by every query_class() page request.
 
-        When `scope_dn` is provided the request targets the APIC subtree
-        endpoint (`/api/mo/{scope_dn}.json?query-target=subtree`) which is
-        more efficient than a fabric-wide class scan for large deployments.
-
-        When `include_children` is provided, the APIC `rsp-subtree=children`
-        parameter is added so each returned object embeds its direct children
-        of the listed classes as `_children` — equivalent to
-        `moquery -x rsp-subtree=children -x rsp-subtree-class=X,Y`.
-
-        The APIC filter string is built internally from `filters` via
-        registry.filter.build_filter() — callers pass plain dicts.
-
-        Args:
-            class_name:          ACI class to query, e.g. "fvBD".
-            filters:             Attribute equality filters {attr: value}.
-            scope_dn:            Optional parent DN to scope the query.
-            limit:               Maximum objects to return (APIC page-size).
-            order_by:            Optional ordering expression.
-            include_children:    Child class names to embed via rsp-subtree=children.
-            filter_expr:         Raw APIC filter string for complex predicates,
-                                 e.g. 'wcard(fvBD.dn,"uni/tn-OT")' or
-                                 'and(ne(fabricNode.role,"controller"),...)'.
-                                 Combined with `filters` via and() when both set.
-            rsp_subtree_include: Subtree categories to include, e.g. "faults",
-                                 "health", "audit-logs", "faults,no-scoped".
-            time_range:          Time range for log record classes, e.g. "24h",
-                                 "1week", "2024-01-01|2024-01-31".
-            page:                Page number for paginated results (0-based).
-            config_only:         When True, add rsp-prop-include=config-only so the
-                                 APIC returns only user-configurable attributes and
-                                 drops operational/internal noise (~40 attrs → the
-                                 handful that define the object's intended config).
-
-        Returns:
-            List of attribute dicts with "_class" key.  When include_children
-            is set, each dict also contains "_children": list of child dicts,
-            each with their own "_class" key.
-
-        Raises:
-            ApicAuthError:     Both the initial request and the re-auth retry
-                               were rejected with 401/403.
-            ApicConnectionError: The APIC host is still unreachable, or the
-                               request still timed out, after exhausting the
-                               retry budget (see _TRANSIENT_STATUSES).
-            ApicRequestError:  APIC returned a non-2xx, non-auth status that
-                               persisted across the retry budget — e.g. 400
-                               for a malformed filter_expr (never retried,
-                               since it is a permanent error), or a transient
-                               500/502/503/504/404 that never recovered.
-                               Carries the HTTP status and, when present, the
-                               APIC-supplied error text.
-            ApicResponseError: The response body is not valid JSON, or is
-                               missing the expected 'imdata' key.
+        `page` is deliberately excluded — the caller sets it per request, since
+        a fetch_all loop needs the same base params with only `page` varying.
         """
         params: dict[str, str] = {"page-size": str(limit)}
 
@@ -255,14 +236,16 @@ class ApicClient:
             params["rsp-subtree-include"] = rsp_subtree_include
         if time_range:
             params["time-range"] = time_range
-        if page is not None:
-            params["page"] = str(page)
         if config_only:
             params["rsp-prop-include"] = "config-only"
 
-        logger.debug("GET %s params=%s", url, params)
-        body = await self._request_json(url, params)
+        return url, params
 
+    @staticmethod
+    def _parse_query_objects(
+        body: dict[str, Any], include_children: list[str] | None
+    ) -> list[dict[str, Any]]:
+        """Parse one APIC class/subtree response body into attribute dicts."""
         objects: list[dict[str, Any]] = []
         for item in body.get("imdata", []):
             for cls, obj in item.items():
@@ -277,9 +260,151 @@ class ApicClient:
                             children.append(child_attrs)
                     attrs["_children"] = children
                 objects.append(attrs)
-
-        logger.debug("query_class(%s) → %d objects", class_name, len(objects))
         return objects
+
+    @staticmethod
+    def _parse_total_available(body: dict[str, Any], fallback: int) -> int:
+        """Coerce the APIC-reported totalCount, defensively.
+
+        Mirrors the try/except int-coercion in _extract_count(): a missing or
+        non-numeric totalCount falls back to `fallback` rather than raising.
+        """
+        try:
+            return int(body.get("totalCount", fallback))
+        except (TypeError, ValueError):
+            return fallback
+
+    async def query_class(
+        self,
+        class_name: str,
+        filters: dict[str, str],
+        scope_dn: str = "",
+        limit: int = 20,
+        order_by: str = "",
+        include_children: list[str] | None = None,
+        filter_expr: str | None = None,
+        rsp_subtree_include: str | None = None,
+        time_range: str | None = None,
+        page: int | None = None,
+        config_only: bool = False,
+        fetch_all: bool = False,
+    ) -> QueryResult:
+        """Query ACI objects by class, optionally scoped to a subtree DN.
+
+        When `scope_dn` is provided the request targets the APIC subtree
+        endpoint (`/api/mo/{scope_dn}.json?query-target=subtree`) which is
+        more efficient than a fabric-wide class scan for large deployments.
+
+        When `include_children` is provided, the APIC `rsp-subtree=children`
+        parameter is added so each returned object embeds its direct children
+        of the listed classes as `_children` — equivalent to
+        `moquery -x rsp-subtree=children -x rsp-subtree-class=X,Y`.
+
+        The APIC filter string is built internally from `filters` via
+        registry.filter.build_filter() — callers pass plain dicts.
+
+        Args:
+            class_name:          ACI class to query, e.g. "fvBD".
+            filters:             Attribute equality filters {attr: value}.
+            scope_dn:            Optional parent DN to scope the query.
+            limit:               Maximum objects to return per page (APIC
+                                 page-size). Also the page size used internally
+                                 when fetch_all=True.
+            order_by:            Optional ordering expression.
+            include_children:    Child class names to embed via rsp-subtree=children.
+            filter_expr:         Raw APIC filter string for complex predicates,
+                                 e.g. 'wcard(fvBD.dn,"uni/tn-OT")' or
+                                 'and(ne(fabricNode.role,"controller"),...)'.
+                                 Combined with `filters` via and() when both set.
+            rsp_subtree_include: Subtree categories to include, e.g. "faults",
+                                 "health", "audit-logs", "faults,no-scoped".
+            time_range:          Time range for log record classes, e.g. "24h",
+                                 "1week", "2024-01-01|2024-01-31".
+            page:                Page number for explicit manual pagination
+                                 (0-based). Ignored when fetch_all=True, which
+                                 always walks pages from 0.
+            config_only:         When True, add rsp-prop-include=config-only so the
+                                 APIC returns only user-configurable attributes and
+                                 drops operational/internal noise (~40 attrs → the
+                                 handful that define the object's intended config).
+            fetch_all:           When True, loop pages (0, 1, 2, ...) using `limit`
+                                 as the page size, accumulating every matching
+                                 object into one QueryResult instead of returning
+                                 just the first page. Stops at the first short
+                                 page (fewer objects than `limit` — the natural
+                                 end) or at the _MAX_PAGES/_MAX_OBJECTS safety
+                                 cap, whichever comes first; the latter sets
+                                 `complete=False` on the returned QueryResult.
+
+        Returns:
+            A QueryResult carrying:
+              objects:         Attribute dicts with "_class" key (and
+                               "_children" when include_children is set).
+              total_available: The APIC-reported totalCount — the true number
+                               of matching objects, regardless of how many
+                               were actually fetched.
+              complete:        False only when fetch_all=True hit the safety
+                               cap before exhausting all matching objects.
+
+        Raises:
+            ApicAuthError:     Both the initial request and the re-auth retry
+                               were rejected with 401/403.
+            ApicConnectionError: The APIC host is still unreachable, or the
+                               request still timed out, after exhausting the
+                               retry budget (see _TRANSIENT_STATUSES).
+            ApicRequestError:  APIC returned a non-2xx, non-auth status that
+                               persisted across the retry budget — e.g. 400
+                               for a malformed filter_expr (never retried,
+                               since it is a permanent error), or a transient
+                               500/502/503/504/404 that never recovered.
+                               Carries the HTTP status and, when present, the
+                               APIC-supplied error text.
+            ApicResponseError: The response body is not valid JSON, or is
+                               missing the expected 'imdata' key.
+        """
+        url, base_params = self._build_query_params(
+            class_name, filters, scope_dn, limit, order_by, include_children,
+            filter_expr, rsp_subtree_include, time_range, config_only,
+        )
+
+        if not fetch_all:
+            params = dict(base_params)
+            if page is not None:
+                params["page"] = str(page)
+            logger.debug("GET %s params=%s", url, params)
+            body = await self._request_json(url, params)
+            objects = self._parse_query_objects(body, include_children)
+            total_available = self._parse_total_available(body, len(objects))
+            logger.debug("query_class(%s) → %d objects", class_name, len(objects))
+            return QueryResult(objects=objects, total_available=total_available)
+
+        objects: list[dict[str, Any]] = []
+        total_available = 0
+        complete = True
+        for page_num in range(_MAX_PAGES):
+            params = dict(base_params)
+            params["page"] = str(page_num)
+            logger.debug("GET %s params=%s", url, params)
+            body = await self._request_json(url, params)
+            page_objects = self._parse_query_objects(body, include_children)
+            objects.extend(page_objects)
+            total_available = self._parse_total_available(body, len(objects))
+
+            if len(page_objects) < limit:
+                break
+            if len(objects) >= _MAX_OBJECTS:
+                complete = False
+                break
+        else:
+            complete = False
+
+        logger.debug(
+            "query_class(%s, fetch_all=True) → %d/%d objects, complete=%s",
+            class_name, len(objects), total_available, complete,
+        )
+        return QueryResult(
+            objects=objects, total_available=total_available, complete=complete
+        )
 
     async def _send(self, url: str, params: dict[str, str]) -> httpx.Response:
         """Issue one authenticated GET, handling 401/403 re-auth-and-retry.

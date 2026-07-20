@@ -47,6 +47,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   re-authenticate-and-retry flow is unchanged, now isolated in a new
   `_send()` helper that the retry loop wraps.
 
+### Security
+
+- Bumped locked dependencies to clear 36 known vulnerabilities flagged by
+  the CI dependency audit across 10 packages (`fastmcp` 3.1.1→3.4.4, `mcp`
+  1.26.0→1.28.1, `starlette` 1.0.0→1.3.1, `cryptography` 46.0.6→49.0.0,
+  `authlib` 1.6.9→1.7.2, `click`, `idna`, `pydantic-settings`, `pyjwt`,
+  `python-multipart`) — no direct dependency constraint changes, resolved
+  within the existing `pyproject.toml` ranges via `uv lock --upgrade`.
+
 ## [1.1.0] - 2026-07-20
 
 Expands the tool surface with three new capabilities (direct DN lookup,

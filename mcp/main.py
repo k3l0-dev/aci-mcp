@@ -3,7 +3,7 @@
 """
 main.py
 
-Schema-driven FastMCP server for Cisco ACI APIC — v1.1.0.
+Schema-driven FastMCP server for Cisco ACI APIC — v1.2.0.
 
 Architecture
 ------------
@@ -44,6 +44,8 @@ query() parameters
   filters              Simple equality filters {attr: value}
   scope_dn             Restrict query to a subtree DN
   limit / page         Pagination (page-size / 0-based page number)
+  fetch_all            Walk every page and return the complete matching set
+                       in one call, instead of just the first page
   order_by             e.g. "faultInst.severity|desc"
   include_children     Embed direct children inline, e.g. ["fvSubnet","fvRsCtx"]
                        Equivalent to rsp-subtree=children&rsp-subtree-class=X,Y
@@ -53,6 +55,16 @@ query() parameters
                        "faults,required", "faults,no-scoped"
   time_range           Log record window: "24h", "1week", "2026-01-01|2026-01-31"
                        Valid for faultRecord, aaaModLR, eventRecord
+
+query() return shape
+--------------------
+  An envelope, not a bare list:
+    {"results": [...], "returned": <int>, "total_available": <int>,
+     "truncated": <bool>, "next_page": <int|None>, "complete": <bool>,
+     "note": <str|None>}
+  A `truncated: true` response must never be read as a maximum, minimum,
+  total, or complete list — re-run with fetch_all=True or page to exhaustion
+  first. See the FULL-FABRIC AGGREGATION section of the server instructions.
 """
 
 import asyncio
@@ -207,13 +219,29 @@ SHORTCUT — skip discovery when you already have an exact DN:
 
 COUNTING — to answer "how many X?" call count(class_name, filters, scope_dn).
     It returns a tally without transferring the objects — far cheaper than
-    fetching everything just to measure the result set.
+    fetching everything just to measure the result set.  count() only gives
+    a scalar tally, never a ranking: "how many subnets in total" is count();
+    "which BD has the most subnets" is argmax and needs the actual objects —
+    call query(..., fetch_all=True) and aggregate locally over "results".
     If count() or query() cannot run at all — an unknown class name, an
     unreachable object, a malformed filter — that is a failure to answer,
     not an answer of zero.  Never restate a tool error as a count or as
     "0 objects"; state that the question could not be verified, and take
     the corrective step the error points to (e.g. call search_classes()
     with one of the suggested closest matches).
+
+FULL-FABRIC AGGREGATION — a single default query() page is NOT the whole
+    fabric.  query() returns an envelope: {"results": [...], "returned",
+    "total_available", "truncated", "next_page", "complete", "note"}.  For
+    "which X has the most/least Y", "how many X in total", "list all X", or
+    "max/min across the fabric" questions, a response with truncated=true
+    must never be used to state a maximum, minimum, total, or complete list —
+    get the rest first.  Use count() for a pure tally; use
+    query(..., fetch_all=True) for ranking, argmax, or an exhaustive list,
+    aggregating locally over "results".  total_available is the true size of
+    the matching set regardless of how much was fetched; if complete=false
+    even after fetch_all=True, the safety cap was hit — narrow the query
+    (e.g. by tenant scope_dn) and combine results across narrower calls.
 
 CLEAN CONFIG — pass config_only=True to query() or get_by_dn() to drop the ~40
     operational/internal attributes and keep only the intended configuration,
@@ -362,7 +390,8 @@ async def query(
     time_range: str | None = None,
     page: int | None = None,
     config_only: bool = False,
-) -> list[dict[str, Any]]:
+    fetch_all: bool = False,
+) -> dict[str, Any]:
     """Query ACI objects of a given class from the APIC.
 
     ⚠ PREREQUISITE — before calling this tool you MUST have:
@@ -376,6 +405,12 @@ async def query(
     Providing `scope_dn` issues a subtree query rooted at that DN,
     which is faster and more precise than a fabric-wide class scan.
 
+    ⚠ A single page is NOT the whole fabric. `limit` caps how many objects
+    come back in one call — a class can have far more matches than that.
+    Check the returned `truncated` field before treating a default-page
+    result as a maximum, minimum, total, or complete list. See `fetch_all`
+    below, and the FULL-FABRIC AGGREGATION section of these instructions.
+
     Args:
         class_name: Exact ACI class name verified via search_classes(),
                     e.g. "fvBD", "faultInst", "fabricNode".
@@ -387,28 +422,48 @@ async def query(
         scope_dn:   DN of a parent object to scope the subtree query.
                     Example: "uni/tn-OT" restricts results to tenant OT.
                     Use the "dn" field from a previous query result.
-        limit:            Maximum objects to return (default 20). Clamped to
-                          the range [1, 200] — values below 1 (including 0
-                          and negatives) are raised to 1 rather than passed
-                          through to the APIC as an invalid page-size.
+        limit:            Maximum objects to return per page (default 20).
+                          Clamped to the range [1, 200] — values below 1
+                          (including 0 and negatives) are raised to 1 rather
+                          than passed through to the APIC as an invalid
+                          page-size. Also the page size used internally when
+                          fetch_all=True.
         order_by:         APIC ordering expression, e.g. "faultInst.severity|desc".
         include_children: Child class names to embed in each result in one call,
                           e.g. ["fvSubnet", "fvRsCtx"].  Each returned object
                           will contain a "_children" list of child attribute dicts.
                           Equivalent to moquery -x rsp-subtree=children
                           -x rsp-subtree-class=X,Y.
+        page:             Page number for explicit manual pagination (0-based).
+                          Ignored when fetch_all=True.
         config_only:      When True, return only user-configurable attributes
                           (APIC rsp-prop-include=config-only) instead of the full
                           ~40-attribute set.  Use it when comparing, backing up,
                           or diffing intended configuration without operational
                           noise (runtime state, timestamps, monitoring counters).
+        fetch_all:        When True, walk every page (using `limit` as page
+                          size) and return the complete matching set in one
+                          call — the reliable way to answer a max/min/total/
+                          all-of question over a whole class instead of
+                          paging manually. Stops early only if a safety cap
+                          (thousands of objects) is hit, in which case
+                          `complete` is False in the response; narrow the
+                          query (e.g. scope_dn) and combine results.
 
     Returns:
-        List of attribute dicts.  Each dict contains all APIC attributes for
-        the object plus a "_class" key with the ACI class name.
-        The "dn" attribute is always present and encodes the full object path.
-        When include_children is set, each dict also contains "_children":
-        a list of child attribute dicts, each with their own "_class" key.
+        An envelope dict:
+          {"results": [...],            # attribute dicts, same shape as before
+           "returned": <int>,           # len(results)
+           "total_available": <int>,    # true match count, fabric/subtree-wide
+           "truncated": <bool>,         # total_available > returned
+           "next_page": <int|None>,     # page+1 when truncated and not fetch_all
+           "complete": <bool>,          # False only if fetch_all hit the safety cap
+           "note": <str|None>}          # guidance, present only when truncated or capped
+        Each dict in "results" contains all APIC attributes for the object
+        plus a "_class" key with the ACI class name. The "dn" attribute is
+        always present and encodes the full object path. When
+        include_children is set, each dict also contains "_children": a list
+        of child attribute dicts, each with their own "_class" key.
 
     Raises:
         UnknownClassError: class_name is neither in the descriptions registry
@@ -452,10 +507,10 @@ async def query(
     clamped_limit = max(1, min(limit, 200))
     await ctx.info(
         f"query({class_name!r}, filters={filters!r}, scope={scope_dn!r}, "
-        f"limit={clamped_limit})"
+        f"limit={clamped_limit}, fetch_all={fetch_all})"
     )
 
-    results = await backend.query_class(
+    result = await backend.query_class(
         class_name=class_name,
         filters=filters or {},
         scope_dn=scope_dn or "",
@@ -467,9 +522,49 @@ async def query(
         time_range=time_range,
         page=page,
         config_only=config_only,
+        fetch_all=fetch_all,
     )
-    await ctx.info(f"query → {len(results)} objects returned")
-    return results
+
+    returned = len(result.objects)
+    truncated = result.total_available > returned
+
+    note: str | None = None
+    if truncated and not fetch_all:
+        note = (
+            f"Only {returned} of {result.total_available} results returned — "
+            "this is a partial page. Do not conclude a maximum, minimum, "
+            "total, or complete list from it. Re-run with fetch_all=True to "
+            "get everything, or page explicitly."
+        )
+        await ctx.warning(
+            f"query({class_name!r}) truncated — {returned}/{result.total_available} "
+            "returned; re-run with fetch_all=True or page explicitly"
+        )
+    elif not result.complete:
+        note = (
+            f"Fetched {returned} of {result.total_available} objects before "
+            "hitting the safety cap. Narrow the query (e.g. scope_dn) and "
+            "combine results."
+        )
+        await ctx.warning(
+            f"query({class_name!r}, fetch_all=True) capped — "
+            f"{returned}/{result.total_available} fetched"
+        )
+
+    await ctx.info(
+        f"query → {returned}/{result.total_available} objects returned "
+        f"(truncated={truncated}, complete={result.complete})"
+    )
+
+    return {
+        "results": result.objects,
+        "returned": returned,
+        "total_available": result.total_available,
+        "truncated": truncated,
+        "next_page": (page or 0) + 1 if truncated and not fetch_all else None,
+        "complete": result.complete,
+        "note": note,
+    }
 
 
 @mcp.tool
@@ -546,6 +641,10 @@ async def count(
     filter_expr: str | None = None,
 ) -> dict[str, Any]:
     """Count ACI objects of a class without transferring them.
+
+    Answers "how many X?" — a pure tally. It does NOT answer "which X has the
+    most/least Y?" (ranking/argmax): that needs the actual objects, so use
+    query(..., fetch_all=True) plus local aggregation instead.
 
     ⚠ PREREQUISITE — like query(), verify the class name with search_classes()
     (and its filter attributes with get_schema()) before calling this tool.
