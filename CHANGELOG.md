@@ -7,6 +7,38 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+### Added
+
+- `mcp/client/SKILL.md` documents `dnFormats` — the full DN template chained
+  from every ancestor's `rnFormat` — alongside the existing `rnFormat`
+  coverage, with an explicit note that a repeated placeholder name (e.g.
+  `{name}` appearing twice) reflects two ancestors sharing an identifying
+  attribute and must be quoted verbatim, never renamed for readability.
+- `ApicClient` retries a bounded number of times (default 3 attempts, small
+  exponential backoff capped at 2s) on transient failures — connection
+  errors/timeouts and HTTP 404/500/502/503/504 — before raising. A genuine
+  application error (e.g. 400 for a malformed filter) is still raised
+  immediately, never retried. Configurable via new `retry_attempts` /
+  `retry_backoff_base` constructor arguments.
+
+### Changed
+
+- `mcp/client/SKILL.md` and `main.py`'s server instructions now state
+  explicitly that a tool error (unknown class, unreachable object, malformed
+  filter) is a failed lookup, not an answer of zero or an empty result — and
+  that every specific fact in a final answer (a property name, a configured
+  value, a DN template, a count) must trace back to an actual tool result
+  from the conversation rather than general ACI knowledge. Also fixes a
+  stale row in SKILL.md's error-handling table that described a
+  `{"error": ..., "closest_matches": [...]}` return shape `query` has never
+  actually used — `UnknownClassError` is raised, not returned, matching the
+  file's own `count` section a few paragraphs earlier.
+- `apic/client.py` — `query_class()` now shares its transport/retry logic
+  with `get_by_dn()`/`count_class()` via `_request_json()`, instead of
+  duplicating the request-and-error-handling block. The 401/403
+  re-authenticate-and-retry flow is unchanged, now isolated in a new
+  `_send()` helper that the retry loop wraps.
+
 ## [1.1.0] - 2026-07-20
 
 Expands the tool surface with three new capabilities (direct DN lookup,

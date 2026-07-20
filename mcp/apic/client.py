@@ -16,6 +16,7 @@ APIC endpoint reference:
   GET  /api/mo/{dn}.json?query-target=subtree&...  — subtree query under a DN
 """
 
+import asyncio
 import logging
 from typing import Any
 
@@ -29,6 +30,22 @@ from exceptions import (
 from registry.filter import build_filter
 
 logger = logging.getLogger("aci-mcp.apic")
+
+# HTTP statuses treated as transient and worth a bounded retry, rather than an
+# immediate permanent failure. 404 is included deliberately: nowhere in this
+# client does a real "doesn't exist" condition surface as an HTTP 404 —
+# query_class()/count_class() only ever reach the backend with a class name
+# already validated against the local registry, and get_by_dn()'s "no object
+# at this DN" case is APIC returning 200 with an empty imdata list, not a
+# 404. An observed 404 here is therefore presumptively infrastructure noise
+# (a proxy/load-balancer hiccup in front of the APIC), not an application
+# error — confirmed empirically by repeating one otherwise-successful
+# request several times against a live fabric and seeing it intermittently
+# fail with a bare 404 (no APIC error body) between successes. A genuine
+# application-level rejection (a malformed filter_expr, for instance) comes
+# back as 400, which is deliberately NOT in this set — retrying a real 400
+# would only add latency to a failure that will never succeed.
+_TRANSIENT_STATUSES = frozenset({404, 500, 502, 503, 504})
 
 
 def _extract_apic_error_text(resp: httpx.Response) -> str:
@@ -69,21 +86,41 @@ class ApicClient:
         password: str,
         verify_ssl: bool = False,
         timeout: float = 30.0,
+        retry_attempts: int = 3,
+        retry_backoff_base: float = 0.2,
     ) -> None:
         """Initialise the client without opening a connection.
 
         Args:
-            host:       APIC hostname or IP (no scheme), e.g. "10.41.71.11".
-            user:       APIC username, typically "admin".
-            password:   APIC password. Never logged.
-            verify_ssl: Set True to enforce TLS certificate verification.
-            timeout:    Per-request timeout in seconds (default 30 s).
+            host:               APIC hostname or IP (no scheme), e.g. "10.41.71.11".
+            user:               APIC username, typically "admin".
+            password:           APIC password. Never logged.
+            verify_ssl:         Set True to enforce TLS certificate verification.
+            timeout:            Per-request timeout in seconds (default 30 s).
+            retry_attempts:     Total attempts (including the first) for a
+                                transient failure — see _TRANSIENT_STATUSES —
+                                before it is raised as a permanent error.
+            retry_backoff_base: Base delay in seconds for the exponential
+                                backoff between retries (doubles each attempt,
+                                capped at 2s). Set to 0 in tests to avoid
+                                real sleeps.
         """
         self._host = host
         self._user = user
         self._password = password
         self._base = f"https://{host}"
         self._client = httpx.AsyncClient(verify=verify_ssl, timeout=timeout)
+        self._retry_attempts = retry_attempts
+        self._retry_backoff_base = retry_backoff_base
+
+    def _backoff_delay(self, attempt: int) -> float:
+        """Delay before retry attempt `attempt` (1-based), exponential and capped.
+
+        attempt=1 → base, attempt=2 → 2×base, ... capped at 2.0s so a run of
+        transient failures can't turn a single tool call into a multi-second
+        stall for the LLM agent waiting on it.
+        """
+        return min(self._retry_backoff_base * (2 ** (attempt - 1)), 2.0)
 
     async def authenticate(self) -> None:
         """Obtain an APIC session token and store it as a cookie.
@@ -179,10 +216,14 @@ class ApicClient:
         Raises:
             ApicAuthError:     Both the initial request and the re-auth retry
                                were rejected with 401/403.
-            ApicConnectionError: The APIC host is unreachable, or the request
-                               timed out (before or after re-auth).
-            ApicRequestError:  APIC returned a non-2xx, non-auth status —
-                               e.g. 400 for a malformed filter_expr, or 500.
+            ApicConnectionError: The APIC host is still unreachable, or the
+                               request still timed out, after exhausting the
+                               retry budget (see _TRANSIENT_STATUSES).
+            ApicRequestError:  APIC returned a non-2xx, non-auth status that
+                               persisted across the retry budget — e.g. 400
+                               for a malformed filter_expr (never retried,
+                               since it is a permanent error), or a transient
+                               500/502/503/504/404 that never recovered.
                                Carries the HTTP status and, when present, the
                                APIC-supplied error text.
             ApicResponseError: The response body is not valid JSON, or is
@@ -220,45 +261,7 @@ class ApicClient:
             params["rsp-prop-include"] = "config-only"
 
         logger.debug("GET %s params=%s", url, params)
-        try:
-            resp = await self._client.get(url, params=params)
-        except httpx.TimeoutException as exc:
-            raise ApicConnectionError(self._host, f"request timed out: {exc}") from exc
-        except httpx.ConnectError as exc:
-            raise ApicConnectionError(self._host, str(exc)) from exc
-
-        if resp.status_code in (401, 403):
-            logger.warning(
-                "APIC returned %d — re-authenticating and retrying", resp.status_code
-            )
-            await self.authenticate()
-            try:
-                resp = await self._client.get(url, params=params)
-            except httpx.TimeoutException as exc:
-                raise ApicConnectionError(
-                    self._host, f"request timed out after re-auth: {exc}"
-                ) from exc
-            except httpx.ConnectError as exc:
-                raise ApicConnectionError(self._host, str(exc)) from exc
-            if resp.status_code in (401, 403):
-                raise ApicAuthError(
-                    self._host,
-                    resp.status_code,
-                    "still unauthorized after re-authentication",
-                )
-
-        if resp.status_code >= 400:
-            raise ApicRequestError(
-                url, resp.status_code, _extract_apic_error_text(resp)
-            )
-
-        try:
-            body = resp.json()
-        except ValueError as exc:
-            raise ApicResponseError(url, f"response is not valid JSON: {exc}") from exc
-
-        if "imdata" not in body:
-            raise ApicResponseError(url, "response body missing 'imdata' key")
+        body = await self._request_json(url, params)
 
         objects: list[dict[str, Any]] = []
         for item in body.get("imdata", []):
@@ -278,32 +281,22 @@ class ApicClient:
         logger.debug("query_class(%s) → %d objects", class_name, len(objects))
         return objects
 
-    async def _request_json(
-        self, url: str, params: dict[str, str]
-    ) -> dict[str, Any]:
-        """Issue an authenticated GET and return the parsed APIC JSON body.
+    async def _send(self, url: str, params: dict[str, str]) -> httpx.Response:
+        """Issue one authenticated GET, handling 401/403 re-auth-and-retry.
 
-        Shared by get_by_dn() and count_class().  Performs the same 401/403
-        re-authenticate-and-retry and JSON/imdata validation as query_class(),
-        but is kept as a self-contained helper so those endpoints do not alter
-        the established query_class() code path.
-
-        Args:
-            url:    Absolute APIC URL to GET.
-            params: Query-string parameters.
-
-        Returns:
-            The decoded response body — a dict guaranteed to carry an "imdata" key.
+        This is the low-level transport step shared by every endpoint via
+        _request_json(): it does not interpret the response status beyond
+        401/403 (re-authenticate once and retry) — deciding whether any
+        other status is a transient condition worth retrying or a permanent
+        failure is _request_json()'s job, not this method's, so that the
+        retry budget in _request_json() governs the *outer* attempt loop
+        while this method's own one-shot re-auth stays a single, independent
+        step within each of those attempts.
 
         Raises:
             ApicConnectionError: Host unreachable or request timed out.
-            ApicAuthError:       Still unauthorized after re-authentication.
-            ApicRequestError:    APIC returned a non-2xx, non-auth status —
-                                 carries the HTTP status and, when present,
-                                 the APIC-supplied error text.
-            ApicResponseError:   Body is not valid JSON or lacks 'imdata'.
+            ApicAuthError:       Still unauthorized (401/403) after re-authenticating.
         """
-        logger.debug("GET %s params=%s", url, params)
         try:
             resp = await self._client.get(url, params=params)
         except httpx.TimeoutException as exc:
@@ -331,20 +324,98 @@ class ApicClient:
                     "still unauthorized after re-authentication",
                 )
 
-        if resp.status_code >= 400:
-            raise ApicRequestError(
-                url, resp.status_code, _extract_apic_error_text(resp)
-            )
+        return resp
 
-        try:
-            body = resp.json()
-        except ValueError as exc:
-            raise ApicResponseError(url, f"response is not valid JSON: {exc}") from exc
+    async def _request_json(
+        self, url: str, params: dict[str, str]
+    ) -> dict[str, Any]:
+        """Issue an authenticated GET, retrying transient failures, and return
+        the parsed APIC JSON body.
 
-        if "imdata" not in body:
-            raise ApicResponseError(url, "response body missing 'imdata' key")
+        Shared by query_class(), get_by_dn(), and count_class() — the single
+        transport path for every read this client makes.
 
-        return body
+        Retries up to `self._retry_attempts` total attempts (small exponential
+        backoff between them — see _backoff_delay()) when a request fails
+        with either a connection-level error (timeout/refused) or a status in
+        _TRANSIENT_STATUSES (404/500/502/503/504 — see that constant's
+        docstring for why 404 is included here specifically). A genuine
+        application-level error — a 400 from a malformed filter_expr, for
+        instance — is raised immediately on the first attempt, since retrying
+        it would only add latency to a failure that will never succeed. The
+        401/403 re-authenticate-and-retry flow (see _send()) is a separate,
+        one-shot step nested inside each attempt and is unaffected by this
+        retry budget either way.
+
+        Args:
+            url:    Absolute APIC URL to GET.
+            params: Query-string parameters.
+
+        Returns:
+            The decoded response body — a dict guaranteed to carry an "imdata" key.
+
+        Raises:
+            ApicConnectionError: Host unreachable or request timed out, after
+                                 exhausting the retry budget.
+            ApicAuthError:       Still unauthorized after re-authentication —
+                                 never retried beyond _send()'s own one-shot
+                                 re-auth, since a bad credential won't fix
+                                 itself on a second attempt.
+            ApicRequestError:    APIC returned a non-2xx, non-auth status that
+                                 was either permanent (e.g. 400) or transient
+                                 but never recovered within the retry budget.
+                                 Carries the HTTP status and, when present,
+                                 the APIC-supplied error text.
+            ApicResponseError:   Body is not valid JSON or lacks 'imdata'.
+        """
+        logger.debug("GET %s params=%s", url, params)
+        last_exc: ApicConnectionError | None = None
+
+        for attempt in range(1, self._retry_attempts + 1):
+            try:
+                resp = await self._send(url, params)
+            except ApicConnectionError as exc:
+                last_exc = exc
+                if attempt < self._retry_attempts:
+                    logger.warning(
+                        "Connection error (attempt %d/%d) — retrying: %s",
+                        attempt, self._retry_attempts, exc,
+                    )
+                    await asyncio.sleep(self._backoff_delay(attempt))
+                    continue
+                raise
+
+            if resp.status_code in _TRANSIENT_STATUSES:
+                if attempt < self._retry_attempts:
+                    logger.warning(
+                        "APIC returned transient status %d (attempt %d/%d) — retrying",
+                        resp.status_code, attempt, self._retry_attempts,
+                    )
+                    await asyncio.sleep(self._backoff_delay(attempt))
+                    continue
+                raise ApicRequestError(
+                    url, resp.status_code, _extract_apic_error_text(resp)
+                )
+
+            if resp.status_code >= 400:
+                raise ApicRequestError(
+                    url, resp.status_code, _extract_apic_error_text(resp)
+                )
+
+            try:
+                body = resp.json()
+            except ValueError as exc:
+                raise ApicResponseError(url, f"response is not valid JSON: {exc}") from exc
+
+            if "imdata" not in body:
+                raise ApicResponseError(url, "response body missing 'imdata' key")
+
+            return body
+
+        # Unreachable when self._retry_attempts >= 1 (every loop iteration
+        # either returns or raises) — satisfies the type checker without
+        # papering over a real bug if it somehow is reached.
+        raise last_exc or ApicConnectionError(self._host, "retry budget exhausted")
 
     async def get_by_dn(
         self,

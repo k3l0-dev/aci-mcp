@@ -131,6 +131,23 @@ Tells you the DN component shape. If you already know the parent DN and the
 identifying attribute value, you can derive `scope_dn` without a prior query:
 `parent_dn + "/" + render(rnFormat, attributes)`.
 
+### `dnFormats` — the complete DN template (quote it verbatim)
+
+```json
+"dnFormats": ["uni/tn-{name}/BD-{name}"]
+```
+
+The full path template, built by chaining every ancestor's `rnFormat`. Each
+`{...}` placeholder is already named after the *schema's own* identifying
+attribute — not a human-friendly label. Two placeholders legitimately read
+the same name when two ancestors share an identifying attribute (a tenant
+and a bridge domain are both identified by `name`, hence `{name}` appearing
+twice above) — that repetition is expected, not a copy error, and must not
+be "cleaned up" by renaming it to something more descriptive when you quote
+it. When stating a DN pattern in an answer, quote `dnFormats` (or `rnFormat`
+for just the last component) exactly, substituting only the literal values
+— never reconstruct or paraphrase a DN template from memory.
+
 ### `containedBy` — the parent class(es) in `pkg:Class` notation
 
 ```json
@@ -393,6 +410,14 @@ count("fvSubnet", filters={"scope": "public"})  # public subnets only
 Verify the class name with `search_classes` first — `count` raises the same
 `UnknownClassError` (with suggestions) as `query` for an unknown class.
 
+> **An error is not an answer.** A tool call that raises an error — unknown
+> class, unreachable DN, malformed filter — did not execute the query; it has
+> no data to report. Never restate that absence as a count of zero, an empty
+> result, or "no such objects" — those are valid answers to a query that *did*
+> run. When `count` or `query` raises `UnknownClassError`, report that the
+> question cannot be answered as asked (the class does not exist), not a
+> number.
+
 > **Eventual consistency.** A read taken right after a large config push reflects
 > the fabric state *at that instant*. Counts and object sets can keep moving for
 > a few seconds while the fabric materialises the change (BDs, EPGs, and
@@ -533,13 +558,21 @@ a sample object without filters to observe the actual values in context.
 6. Synthesize and answer:
         Never dump raw JSON. Extract relevant attributes, explain what
         the data means operationally. Highlight anomalies.
+        State only what is actually present in a tool result from this
+        conversation. A property name, a configured value, a DN template,
+        or a count is only fit to appear in your answer if you can point
+        to the tool call that returned it — do not fill a gap with general
+        ACI product knowledge, since a real deployment's schema and
+        configuration vary by APIC version, customization, and applied
+        config. If you aren't sure a detail was actually returned, say so,
+        or make another call to check, rather than stating it as fact.
 ```
 
 ### Error handling
 
 | Symptom | Cause | Recovery |
 |---|---|---|
-| `query` returns `{"error": ..., "closest_matches": [...]}` | Wrong class name | `search_classes` with a closest_match or synonym |
+| `query`/`count` raises "Unknown ACI class '...'" | Wrong or nonexistent class name | The class does not exist — this is a failed lookup, not a zero result. Retry with one of the suggested closest matches or a fresh `search_classes` call; never report a count or existence answer from this error. |
 | `query` returns `[]`, class is valid | Object absent from backend OR wrong filter value | Remove filters first to confirm objects exist, then re-add filters |
 | `query` returns `[]`, class is abstract (`isAbstract: true`) | Abstract class — not instantiable | `search_classes` to find the concrete subclass |
 | `search_classes` returns no results | Keyword too specific | Try acronym, English label, or first 3 chars of the expected class name |
