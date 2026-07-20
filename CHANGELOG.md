@@ -20,6 +20,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   application error (e.g. 400 for a malformed filter) is still raised
   immediately, never retried. Configurable via new `retry_attempts` /
   `retry_backoff_base` constructor arguments.
+- `query()` gains `fetch_all=True` — walks every page (bounded by a safety
+  cap of 25 pages / 5000 objects) and returns the complete matching set in
+  one call. Closes a real gap where a default page's max/min/argmax over a
+  class (e.g. "which bridge domain has the most subnets") could be silently
+  wrong once the fabric grew past a single page. `count()`'s docstring and
+  the server instructions now distinguish a pure tally (`count()`) from
+  ranking/argmax (`fetch_all=True` plus local aggregation over `results`).
 
 ### Changed
 
@@ -46,6 +53,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   duplicating the request-and-error-handling block. The 401/403
   re-authenticate-and-retry flow is unchanged, now isolated in a new
   `_send()` helper that the retry loop wraps.
+- **Breaking:** `query()` now returns an envelope — `{results, returned,
+  total_available, truncated, next_page, complete, note}` — instead of a
+  bare list, so a partial page is never silently indistinguishable from a
+  complete one. `total_available` is the APIC-reported true match count
+  (previously parsed and discarded by `query_class()`); `truncated`/
+  `complete` and an explicit `note` tell the caller when a max/min/total/
+  all-of conclusion from the current response would be wrong.
+  `mcp/client/SKILL.md`'s canonical response shape, pagination, and
+  counting sections updated accordingly. Version bumped 1.1.0 → 1.2.0.
 
 ### Security
 
