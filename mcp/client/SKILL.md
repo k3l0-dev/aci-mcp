@@ -17,7 +17,15 @@ return, how to read a schema, and how to navigate the object tree.
 **Discovery vs. shortcut.** The `search_classes → get_schema → query` sequence
 below is mandatory only when you do *not* already hold a verified class name and
 DN. When you already have an exact DN (from a previous result or a design), call
-`get_by_dn(dn)` directly — no search/schema detour. See section 5.5.
+`get_by_dn(dn)` directly — no search/schema detour. See section 6.
+
+**Scope.** This MCP answers object lookup and relation-traversal questions —
+including multi-hop chains you compose yourself from `relationTo`/
+`relationFrom` and repeated queries. It has no primitive for causal or impact
+reasoning (blast-radius, root-cause propagation across domains, predicting
+what a change will do downstream). Do not synthesize that kind of conclusion
+from traversal results — report the structure you found and say impact
+analysis is out of scope.
 
 ---
 
@@ -251,7 +259,7 @@ Per-property fields (only `type` and `access` are always present):
 | `options` | allowed values — the **exact strings** the APIC accepts in `filters` and config |
 | `comment` | one-line description |
 
-`options` removes the guesswork behind section 8: never guess an enum's casing —
+`options` removes the guesswork behind section 10: never guess an enum's casing —
 read it here. Use `include_property_details=True` to dump every property only
 when you genuinely need the full picture.
 
@@ -283,7 +291,7 @@ A filter on an attribute not in `properties` returns `[]` silently.
 
 Each key is a **Relation Source (Rs)** class — an intermediate object that
 lives under this MO and holds the reference to the target.
-See section 5 for how to traverse it.
+See section 8 for how to traverse it.
 
 ### `relationFrom` — incoming Rt relations (another object → this one)
 
@@ -304,7 +312,7 @@ return `[]`. Use `search_classes` to find the concrete subclass instead.
 
 ---
 
-## 5. Query parameters reference
+## 5. `query` parameters reference
 
 ### Simple equality filters — `filters`
 
@@ -342,7 +350,8 @@ query("fvBD", filter_expr='wcard(fvBD.dn,"uni/tn-OT")')
 
 Fetches parent objects with specified child classes embedded in `_children`.
 Equivalent to `moquery -x rsp-subtree=children -x rsp-subtree-class=X,Y`.
-Use to avoid N+1 query patterns.
+Use to avoid N+1 query patterns — see the batching rule in section 11's
+Workflow before looping this per object.
 
 ```python
 # BDs with their subnets and VRF in one call
@@ -433,7 +442,7 @@ query("fvBD", filters={"name": "servers"}, config_only=True)
 
 ---
 
-## 5.5 Shortcut: `get_by_dn` — fetch one object by DN
+## 6. Shortcut: `get_by_dn` — fetch one object by DN
 
 When you **already hold an exact DN** (from a previous result, or a design you
 are verifying), skip `search_classes` and `get_schema` entirely and read the
@@ -461,7 +470,9 @@ exist, you get an explicit not-found instead of a silent empty result:
 A not-found usually means a stale or mistyped DN — re-derive it from a fresh
 `query` result rather than reconstructing it from memory.
 
-## 5.6 Counting: `count` — how many, cheaply
+---
+
+## 7. Counting: `count` — how many, cheaply
 
 "How many BDs / EPGs / subnets?" needs a tally, not the objects. `count` answers
 in one small request; filtering and scoping work exactly as in `query`.
@@ -487,15 +498,17 @@ query("fvBD", include_children=["fvSubnet"], fetch_all=True)
 ```
 
 ```bash
-# Then, locally over .results (see section 7 for the full jq recipe):
-echo '<json>' | jq '.results | max_by(._children | length) | {name, count: (._children | length)}'
+# Then, locally over .results — the full recipe:
+echo '<json>' | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+top = max(d["results"], key=lambda r: len(r.get("_children", [])))
+print(top["name"], len(top.get("_children", [])))
+'
 ```
 
-Never compute this from a plain default `query()` call — a `truncated: true`
-page only contains *some* bridge domains, so its argmax can be the wrong
-answer even though the call succeeded and returned data. This is the
-canonical example FULL-FABRIC AGGREGATION in the server instructions guards
-against.
+This is exactly the case section 5's Pagination rule guards against — do not
+compute an argmax from a plain default `query()` call; see there for why.
 
 > **An error is not an answer.** A tool call that raises an error — unknown
 > class, unreachable DN, malformed filter — did not execute the query; it has
@@ -514,7 +527,7 @@ against.
 
 ---
 
-## 6. Relation navigation (Rs/Rt pattern)
+## 8. Relation navigation (Rs/Rt pattern)
 
 Relations in ACI are **first-class objects**, not inline attributes.
 To answer "what VRF does this BD use?" or "what contracts does this EPG consume?",
@@ -551,47 +564,59 @@ Example: `fvRsCtx` → attribute `tnFvCtxName` holds the VRF name.
 
 ---
 
-## 7. jq quick reference (CLI exploration)
+## 9. Local post-processing with python3 (CLI exploration)
 
 `query`'s output is an envelope — the objects are under `.results`, not at
 the top level (see section 2). All recipes below read from there.
 
 ```bash
 # Check before concluding anything max/min/total/all-of from this response
-echo '<json>' | jq '{truncated, total_available, returned, complete}'
+echo '<json>' | python3 -c 'import json,sys; d=json.load(sys.stdin); print({k: d[k] for k in ("truncated","total_available","returned","complete")})'
 
 # All DNs from a query result
-echo '<json>' | jq -r '.results[].dn'
+echo '<json>' | python3 -c 'import json,sys; [print(r["dn"]) for r in json.load(sys.stdin)["results"]]'
 
 # Specific attribute from all objects
-echo '<json>' | jq -r '.results[].name'
+echo '<json>' | python3 -c 'import json,sys; [print(r["name"]) for r in json.load(sys.stdin)["results"]]'
 
 # Filter objects where attribute matches value
-echo '<json>' | jq '[.results[] | select(.severity == "critical")]'
+echo '<json>' | python3 -c 'import json,sys; d=json.load(sys.stdin); print(json.dumps([r for r in d["results"] if r.get("severity")=="critical"]))'
 
 # Extract schema field
-echo '<json>' | jq '{identifiedBy, rnFormat, containedBy}'
+echo '<json>' | python3 -c 'import json,sys; d=json.load(sys.stdin); print({k: d.get(k) for k in ("identifiedBy","rnFormat","containedBy")})'
 
 # List all relation target classes from schema
-echo '<json>' | jq '.relationTo | to_entries[] | {rel: .key, target: .value.targetClass}'
+echo '<json>' | python3 -c 'import json,sys; d=json.load(sys.stdin); [print(rel, info["targetClass"]) for rel, info in d.get("relationTo", {}).items()]'
 
 # Count objects per unique attribute value (tally over a fetched set)
-echo '<json>' | jq '.results | group_by(.severity) | map({(.[0].severity): length}) | add'
+echo '<json>' | python3 -c '
+import json, sys
+from collections import Counter
+d = json.load(sys.stdin)
+print(dict(Counter(r["severity"] for r in d["results"])))
+'
 
-# Argmax over a class — "which BD has the most subnets" (requires
-# fetch_all=True first; see section 5.6, Counting vs. ranking)
-echo '<json>' | jq '.results | max_by(._children | length) | {name, count: (._children | length)}'
+# Argmax over a class ("which BD has the most subnets") — see section 7
+# (`count`, Counting vs. ranking) for the full recipe; needs fetch_all=True first.
 
 # Extract _children of a specific class (include_children results)
-echo '<json>' | jq '.results[]._children[] | select(._class == "fvSubnet") | .ip'
+echo '<json>' | python3 -c 'import json,sys; d=json.load(sys.stdin); [print(c["ip"]) for r in d["results"] for c in r.get("_children", []) if c["_class"] == "fvSubnet"]'
 
 # Flatten parent + children into one table
-echo '<json>' | jq '[.results[] | {bd: .name, subnet: (._children // [] | map(select(._class=="fvSubnet")) | .[0].ip // "-"), vrf: (._children // [] | map(select(._class=="fvRsCtx")) | .[0].tnFvCtxName // "-")}]'
+echo '<json>' | python3 -c '
+import json, sys
+d = json.load(sys.stdin)
+for r in d["results"]:
+    ch = r.get("_children", [])
+    subnet = next((c["ip"] for c in ch if c["_class"] == "fvSubnet"), "-")
+    vrf = next((c["tnFvCtxName"] for c in ch if c["_class"] == "fvRsCtx"), "-")
+    print(r["name"], subnet, vrf)
+'
 ```
 
 ---
 
-## 8. Common attribute values
+## 10. Common attribute values
 
 Attribute values in APIC are always strings. These are common enumerations
 to use in `filters` and `filter_expr` — guessing the wrong casing returns `[]` silently:
@@ -611,7 +636,7 @@ a sample object without filters to observe the actual values in context.
 
 ---
 
-## 9. Workflow
+## 11. Workflow
 
 ```
 1. search_classes(keyword)
@@ -633,17 +658,20 @@ a sample object without filters to observe the actual values in context.
         - What filters?
             → Simple equality: use filters={}
             → wcard / ne / and-or combinations: use filter_expr
-        - Do I need children inline?
-            → Yes if retrieving Rs relations or subnets alongside parents
-            → Use include_children=["RsClass", "ChildClass"]
-            → Avoids N separate queries — one call per parent
+        - Do I need children inline, or would I otherwise loop per object?
+            → "For each X in this scope, give me Y" is ONE call: scope_dn
+              (+ include_children or fetch_all), then aggregate locally.
+            → RULE: never loop a tool call per object — never N separate
+              get_by_dn/query calls, one per X. Reach for a per-object call
+              only for an object nothing else already returned.
         - Is this a log/audit query?
             → Use time_range="24h" / "1week" / date range
         - Large result set?
             → Use limit + page for pagination
         - Aggregating over the WHOLE class (max/min/total/all)?
             → Use fetch_all=True, and check truncated/complete before
-              concluding — see section 5's Pagination subsection and 5.6
+              concluding — see section 5's Pagination subsection and
+              section 7
 
 4. query(class_name, ...)
         ↓ envelope: {"results": [...], "returned", "total_available",
@@ -656,7 +684,7 @@ a sample object without filters to observe the actual values in context.
 
 5. Navigate further if needed:
         - Children: query child class with scope_dn = result dn
-        - Relations: follow Rs pattern (section 6), or use include_children
+        - Relations: follow Rs pattern (section 8), or use include_children
         - Siblings: query same class with scope_dn = parent dn
 
 6. Synthesize and answer:
@@ -670,6 +698,10 @@ a sample object without filters to observe the actual values in context.
         configuration vary by APIC version, customization, and applied
         config. If you aren't sure a detail was actually returned, say so,
         or make another call to check, rather than stating it as fact.
+        This also covers class-name/property-name trivia: do not explain
+        what a class prefix (fv, vz, mo...) "stands for" historically, or
+        why a property is named the way it is — that etymology was never
+        returned by any tool, no matter how plausible it sounds.
 ```
 
 ### Error handling
@@ -684,6 +716,35 @@ a sample object without filters to observe the actual values in context.
 | `get_schema` returns `{}` | Class not in local schema collection | Query without filters, inspect `properties` of a sample result |
 | `_children` is empty despite `include_children` | Children don't exist under that parent, or wrong child class name | Query child class directly with scope_dn to verify |
 | `get_by_dn` returns `{"found": false, ...}` | DN is stale, mistyped, or the object was deleted | Re-derive the DN from a fresh `query` result — never reconstruct it from memory |
-| `count` disagrees with a follow-up `query` | Read taken mid-materialisation after a config push | Wait for stabilisation and re-read (eventual consistency, section 5.6) |
+| `count` disagrees with a follow-up `query` | Read taken mid-materialisation after a config push | Wait for stabilisation and re-read (eventual consistency, section 7) |
+
+---
+
+## 12. Worked example: "What VRF does BD `servers` in tenant `OT` use?"
+
+```
+1. search_classes("bridge domain")
+   → confirms fvBD
+
+2. get_schema("fvBD")
+   → identifiedBy=["name"], containedBy=["fv:Tenant"],
+     relationTo={"fvRsCtx": {"targetClass": "fv:Ctx", ...}}
+
+3. query("fvTenant", filters={"name": "OT"})
+   → results[0].dn = "uni/tn-OT"
+
+4. query("fvBD", scope_dn="uni/tn-OT", filters={"name": "servers"},
+         include_children=["fvRsCtx"])
+   → results[0]._children[0] = {"_class": "fvRsCtx",
+                                 "tnFvCtxName": "ot.main.vrf", ...}
+
+5. Synthesize: "BD `servers` in tenant OT uses VRF `ot.main.vrf`."
+```
+
+Step 4 combines the relation lookup with the parent fetch via
+`include_children` in one call. The full unshortcut Rs-traversal pattern
+(query the `fvRsCtx` object directly, scoped under the BD) is in section 8
+and is only needed when you must inspect the Rs object itself — its own DN
+or other attributes — not just the target's identifier.
 
 ---
