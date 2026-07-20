@@ -9,6 +9,7 @@ from exceptions import (
     ApicAuthError,
     ApicConnectionError,
     ApicError,
+    ApicRequestError,
     ApicResponseError,
     AuthenticationError,
     ConfigurationError,
@@ -36,6 +37,7 @@ def test_all_exceptions_inherit_from_base():
         ApicAuthError,
         ApicConnectionError,
         ApicResponseError,
+        ApicRequestError,
     ):
         assert issubclass(cls, AciMcpError), f"{cls.__name__} must inherit AciMcpError"
 
@@ -46,7 +48,12 @@ def test_registry_subclasses():
 
 
 def test_apic_subclasses():
-    for cls in (ApicAuthError, ApicConnectionError, ApicResponseError):
+    for cls in (
+        ApicAuthError,
+        ApicConnectionError,
+        ApicResponseError,
+        ApicRequestError,
+    ):
         assert issubclass(cls, ApicError), f"{cls.__name__} must inherit ApicError"
 
 
@@ -185,3 +192,28 @@ def test_apic_response_error_attributes():
 def test_apic_response_error_is_catchable_as_apic_error():
     with pytest.raises(ApicError):
         raise ApicResponseError("https://host/api", "bad json")
+
+
+# ── ApicRequestError ──────────────────────────────────────────────────────────
+
+
+def test_apic_request_error_attributes():
+    exc = ApicRequestError(
+        "https://apic/api/class/fvBD.json", 400, "unable to process the query"
+    )
+    assert exc.url == "https://apic/api/class/fvBD.json"
+    assert exc.status == 400
+    assert exc.apic_text == "unable to process the query"
+    assert "400" in str(exc)
+    assert "unable to process the query" in str(exc)
+
+
+def test_apic_request_error_without_apic_text():
+    exc = ApicRequestError("https://host/api", 500)
+    assert exc.apic_text == ""
+    assert "500" in str(exc)
+
+
+def test_apic_request_error_is_catchable_as_apic_error():
+    with pytest.raises(ApicError):
+        raise ApicRequestError("https://host/api", 400, "bad filter")

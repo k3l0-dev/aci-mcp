@@ -80,8 +80,32 @@ def generate_imdata(class_name: str, count: int = 1_000) -> list[dict]:
     ]
 
 
-def generate_schema_files(directory: Path, count: int = 200) -> None:
-    """Write `count` synthetic jsonmeta schema files to `directory`."""
+def generate_schema_files(
+    directory: Path, count: int = 200, version: str = "mo-apic-v6.0_9c"
+) -> Path:
+    """Write `count` synthetic jsonmeta schema files nested one level deep.
+
+    Mirrors the production layout — schema-collector writes every collection
+    run into its own versioned subdirectory (e.g.
+    `data/schemas/mo-apic-v6.0_9c/*.json`), never flat at the top level. An
+    earlier version of this fixture wrote files flat at `directory`'s top
+    level, which meant the perf suite silently exercised a code path that
+    never runs in production and could not catch a per-call glob scan hidden
+    behind a "file not found at the top level" fallback.
+
+    Args:
+        directory: Parent directory to create the versioned subdir under.
+        count:     Number of synthetic schema files to write.
+        version:   Versioned subdirectory name, matching schema-collector's
+                   `mo-apic-v{version}` convention.
+
+    Returns:
+        The versioned subdirectory that was created and populated — this is
+        the "resolved" directory a real deployment would compute once via
+        `registry.schema.resolve_schemas_dir()` at startup.
+    """
+    subdir = directory / version
+    subdir.mkdir(parents=True, exist_ok=True)
     for i in range(count):
         cls = _make_class_name(i)
         schema = {
@@ -102,7 +126,8 @@ def generate_schema_files(directory: Path, count: int = 200) -> None:
                 },
             }
         }
-        (directory / f"{cls}.json").write_text(json.dumps(schema), encoding="utf-8")
+        (subdir / f"{cls}.json").write_text(json.dumps(schema), encoding="utf-8")
+    return subdir
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -122,7 +147,15 @@ def large_imdata():
 
 @pytest.fixture(scope="session")
 def large_schema_dir(tmp_path_factory):
-    """Temporary directory with 200 synthetic schema files."""
+    """Resolved, versioned-subdir schema directory with 200 synthetic files.
+
+    Mirrors production: schema-collector writes into a versioned subdir, and
+    registry.schema.resolve_schemas_dir() resolves that subdir exactly once
+    at server startup. This fixture returns the already-resolved directory —
+    the same thing load_schema() receives on every call in production — so
+    the perf assertions in tests/perf/test_schema_perf.py actually exercise
+    the direct-access hot path instead of a flat layout that would hide a
+    per-call glob-scan regression.
+    """
     d = tmp_path_factory.mktemp("schemas")
-    generate_schema_files(d, count=200)
-    return d
+    return generate_schema_files(d, count=200)

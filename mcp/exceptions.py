@@ -18,7 +18,8 @@ AciMcpError
 └── ApicError                 — base for APIC communication errors
     ├── ApicAuthError         — authentication failed (bad credentials or server error)
     ├── ApicConnectionError   — APIC unreachable (network error or timeout)
-    └── ApicResponseError     — APIC returned an unexpected or malformed response
+    ├── ApicResponseError     — APIC returned an unexpected or malformed response
+    └── ApicRequestError      — APIC rejected the request (400/404/500/... — non-auth)
 """
 
 
@@ -160,3 +161,27 @@ class ApicResponseError(ApicError):
     def __init__(self, url: str, reason: str) -> None:
         self.url = url
         super().__init__(f"Unexpected APIC response from {url}: {reason}")
+
+
+class ApicRequestError(ApicError):
+    """APIC rejected a request with a non-2xx, non-authentication status.
+
+    Raised by ApicClient.query_class() for any status code other than
+    401/403 (which trigger the re-auth-and-retry flow instead) — typically
+    400 for a malformed filter_expr or query-target-filter, 404 for an
+    unknown DN, or 500 for a server-side APIC failure.
+
+    Carries the raw HTTP status and, when the response body follows APIC's
+    usual error shape (`imdata[0].error.attributes.text`), the human-readable
+    reason APIC supplied — so an LLM caller gets an actionable message
+    instead of an opaque httpx.HTTPStatusError.
+    """
+
+    def __init__(self, url: str, status: int, apic_text: str = "") -> None:
+        self.url = url
+        self.status = status
+        self.apic_text = apic_text
+        msg = f"APIC request to {url} failed with HTTP {status}"
+        if apic_text:
+            msg += f": {apic_text}"
+        super().__init__(msg)

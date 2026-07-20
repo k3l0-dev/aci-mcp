@@ -20,10 +20,38 @@ import logging
 from typing import Any
 
 import httpx
-from exceptions import ApicAuthError, ApicConnectionError, ApicResponseError
+from exceptions import (
+    ApicAuthError,
+    ApicConnectionError,
+    ApicRequestError,
+    ApicResponseError,
+)
 from registry.filter import build_filter
 
 logger = logging.getLogger("aci-mcp.apic")
+
+
+def _extract_apic_error_text(resp: httpx.Response) -> str:
+    """Best-effort extraction of the human-readable APIC error message.
+
+    APIC embeds a reason for 4xx/5xx failures (malformed filter, unknown DN,
+    internal error, ...) at `imdata[0].error.attributes.text` in the response
+    body. This is opportunistic: any shape mismatch (non-JSON body, empty
+    imdata, missing keys) simply yields "" rather than raising, since the
+    caller (ApicRequestError) already has a usable message from the HTTP
+    status alone.
+
+    Args:
+        resp: The httpx response object for the failed request.
+
+    Returns:
+        The APIC-supplied error text, or "" when unavailable.
+    """
+    try:
+        body = resp.json()
+        return body["imdata"][0]["error"]["attributes"]["text"]
+    except (ValueError, KeyError, IndexError, TypeError):
+        return ""
 
 
 class ApicClient:
@@ -144,8 +172,16 @@ class ApicClient:
             each with their own "_class" key.
 
         Raises:
-            httpx.HTTPStatusError: On non-2xx APIC responses.
-            httpx.RequestError:    On network-level failures.
+            ApicAuthError:     Both the initial request and the re-auth retry
+                               were rejected with 401/403.
+            ApicConnectionError: The APIC host is unreachable, or the request
+                               timed out (before or after re-auth).
+            ApicRequestError:  APIC returned a non-2xx, non-auth status —
+                               e.g. 400 for a malformed filter_expr, or 500.
+                               Carries the HTTP status and, when present, the
+                               APIC-supplied error text.
+            ApicResponseError: The response body is not valid JSON, or is
+                               missing the expected 'imdata' key.
         """
         params: dict[str, str] = {"page-size": str(limit)}
 
@@ -204,7 +240,10 @@ class ApicClient:
                     "still unauthorized after re-authentication",
                 )
 
-        resp.raise_for_status()
+        if resp.status_code >= 400:
+            raise ApicRequestError(
+                url, resp.status_code, _extract_apic_error_text(resp)
+            )
 
         try:
             body = resp.json()

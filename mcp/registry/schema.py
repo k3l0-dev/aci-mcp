@@ -39,6 +39,64 @@ _SCALAR_KEYS = {
 }
 
 
+def resolve_schemas_dir(schemas_dir: Path) -> Path:
+    """Resolve the directory that actually holds *.json jsonmeta files.
+
+    schema-collector writes each collection run into its own versioned
+    subdirectory (e.g. ``data/schemas/mo-apic-v6.0_9c/``) so multiple APIC
+    versions can coexist on disk. That means the configured top-level
+    directory (``data/schemas/``) itself is normally empty of *.json files,
+    and the real files live exactly one level down.
+
+    This function performs that one-time discovery so `load_schema()` never
+    has to: call it once at server startup (see `main.app_lifespan`) and pass
+    the *returned* directory to every `load_schema()` call afterwards.
+    Doing the discovery per-call via `Path.glob("*/{class}.json")` means
+    scanning every entry of a 15k+-file directory tree on every single
+    `get_schema()` tool invocation — this function scans the (small) list of
+    top-level subdirectories once and never again.
+
+    Resolution order:
+      1. Flat layout — `schemas_dir` itself directly contains one or more
+         *.json files: returned unchanged. Keeps backward compatibility with
+         a hand-populated flat directory (e.g. in tests or ad-hoc setups).
+      2. Single versioned subdirectory — exactly one immediate subdirectory
+         contains *.json files: that subdirectory is returned.
+      3. Multiple versioned subdirectories — several immediate subdirectories
+         each contain *.json files (schema-collector has been run against more
+         than one APIC version over time): the subdirectory whose name sorts
+         last is returned. schema-collector names these `mo-apic-v{version}`,
+         and lexicographic sort of that naming scheme tracks chronological
+         "newest version" closely enough in practice; this is a heuristic,
+         not a semantic-version comparison, so an operator who needs a
+         specific older version pinned should point `schemas_dir` directly at
+         that subdirectory instead of the shared parent.
+      4. Nothing found — `schemas_dir` does not exist, or exists but holds no
+         *.json files anywhere: `schemas_dir` is returned unchanged, and
+         every subsequent `load_schema()` call will simply report the class
+         as not found — identical to today's behaviour for a missing or
+         not-yet-collected schema set.
+
+    Args:
+        schemas_dir: The configured top-level schema directory, e.g.
+                     `REPO_ROOT / "data" / "schemas"`.
+
+    Returns:
+        The directory to pass to `load_schema()` for direct, non-wildcard
+        file access.
+    """
+    if not schemas_dir.is_dir():
+        return schemas_dir
+
+    if any(schemas_dir.glob("*.json")):
+        return schemas_dir
+
+    versioned = sorted(
+        d for d in schemas_dir.iterdir() if d.is_dir() and any(d.glob("*.json"))
+    )
+    return versioned[-1] if versioned else schemas_dir
+
+
 def load_schema(class_name: str, schemas_dir: Path) -> dict[str, Any]:
     """Load and simplify the jsonmeta schema for a single ACI class.
 
@@ -58,20 +116,23 @@ def load_schema(class_name: str, schemas_dir: Path) -> dict[str, Any]:
       classPkg      — package prefix, e.g. "fv"
       label         — human-readable label, e.g. "Bridge Domain"
 
+    This is the hot path — it is called on every `get_schema()` tool
+    invocation — so it performs a single direct file stat/open with no
+    wildcard scanning. `schemas_dir` must already be the *resolved* schema
+    directory (see `resolve_schemas_dir()`, called once at server startup);
+    this function does not search subdirectories.
+
     Args:
         class_name:  Flat ACI class name, e.g. "fvBD", "faultInst".
-        schemas_dir: Directory containing one JSON file per ACI class.
+        schemas_dir: Resolved directory containing one JSON file per ACI
+                     class — see `resolve_schemas_dir()`.
 
     Returns:
         Populated dict, or an empty dict when the class file is not found.
     """
     path = schemas_dir / f"{class_name}.json"
     if not path.exists():
-        # schemas may live one level down (versioned subdir, e.g. mo-apic-v6.0_9c/)
-        matches = list(schemas_dir.glob(f"*/{class_name}.json"))
-        if not matches:
-            return {}
-        path = matches[0]
+        return {}
 
     try:
         raw = json.loads(path.read_text(encoding="utf-8"))

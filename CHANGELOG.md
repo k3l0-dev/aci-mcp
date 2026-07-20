@@ -5,6 +5,64 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- `mcp/exceptions.py` — `ApicRequestError`: wraps non-2xx, non-authentication APIC
+  responses (400 for a malformed `filter_expr`, 404, 500, ...), carrying the HTTP
+  status and, when present, the APIC-supplied error text from
+  `imdata[0].error.attributes.text`. Previously these escaped as raw
+  `httpx.HTTPStatusError`.
+- `mcp/registry/schema.py` — `resolve_schemas_dir()`: resolves the actual jsonmeta
+  schema directory (flat vs. versioned subdir, e.g. `mo-apic-v6.0_9c/`) once at
+  server startup, so `load_schema()` never has to scan for it per call.
+- Boundary tests (0, -1, 1, cap, cap+1) for the `limit` parameter of both
+  `search_classes` and `query`.
+- Tests covering the `query()` registry/schema fallback (class present in the
+  schema collection but absent from `class-descriptions.json`) and the new
+  `ApicRequestError` paths (400 with/without an APIC error body, 500).
+
+### Changed
+
+- `mcp/registry/schema.py` — `load_schema()` no longer performs a
+  `schemas_dir.glob(f"*/{class}.json")` scan when the flat top-level path misses.
+  It now does a single direct file stat on the *resolved* directory handed to it,
+  eliminating a full scandir of the 15k+-entry schema tree on every `get_schema()`
+  call. Callers must resolve `schemas_dir` once via `resolve_schemas_dir()` (done
+  in `main.app_lifespan` at startup) before passing it in.
+- `mcp/main.py` — `query()` no longer rejects a class outright just because it is
+  absent from `class-descriptions.json`: it now falls back to checking whether a
+  schema file resolves for that class before raising `UnknownClassError`, closing
+  a ~300-class gap between the two collections built by separate schema-collector
+  passes. The fallback path logs a warning instead of failing silently either way.
+- `mcp/main.py` — `search_classes` and `query` now clamp `limit` to `max(1, min(limit, cap))`
+  instead of `min(limit, cap)`, so a zero or negative `limit` can no longer reach
+  the APIC as an invalid `page-size` parameter.
+- `mcp/registry/descriptions.py` — `search()` clamps a non-positive `limit` to 1
+  before slicing results, guarding against silent mis-slicing on a negative value.
+- `mcp/tests/perf/conftest.py` — `generate_schema_files()` now writes synthetic
+  schema files into a versioned subdirectory (matching the real
+  `data/schemas/mo-apic-v6.0_9c/` layout) instead of flat at the fixture's top
+  level, so `tests/perf/test_schema_perf.py` actually exercises the hot path this
+  suite exists to guard.
+- `mcp/pyproject.toml` — moved `pytest` and `pytest-asyncio` from
+  `[project.optional-dependencies]` into `[dependency-groups].dev`. They were
+  previously only installed via `uv sync --extra dev`; the documented `uv sync`
+  workflow (and CI's `uv sync --frozen --dev`) silently skipped them, so every
+  async test failed with "async def functions are not natively supported."
+
+### Fixed
+
+- `get_schema()` cold-load latency: removed the per-call wildcard scan described
+  above (measured ~8.3 ms per call against the real 15,452-file schema collection,
+  against a documented < 5 ms budget).
+- A negative or zero `limit` on `search_classes`/`query` no longer reaches the
+  APIC as `page-size=-1`/`0`, nor silently mis-slices `registry.descriptions.search()`'s
+  result list.
+
+---
+
 ## [1.0.0] - 2026-06-24
 
 First public open-source release.
@@ -126,6 +184,7 @@ First public open-source release.
 
 ---
 
+[Unreleased]: https://github.com/k3l0-dev/aci-mcp/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.1.0...v0.2.0
