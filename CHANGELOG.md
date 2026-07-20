@@ -71,6 +71,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   `authlib` 1.6.9→1.7.2, `click`, `idna`, `pydantic-settings`, `pyjwt`,
   `python-multipart`) — no direct dependency constraint changes, resolved
   within the existing `pyproject.toml` ranges via `uv lock --upgrade`.
+- `pytest` bumped 8.4.2 → 9.1.1 (`pytest-asyncio` 0.26.0 → 1.4.0 for
+  compatibility) to clear GHSA-6w46-j5rx-g56g (vulnerable tmpdir handling),
+  a dev-only dependency vulnerability GitHub's Dependabot alerts caught but
+  the CI dependency audit missed — that job ran `pip-audit` with `--no-dev`,
+  excluding dev dependencies entirely. CI now audits the full dependency set
+  including dev dependencies.
 
 ## [1.1.0] - 2026-07-20
 
