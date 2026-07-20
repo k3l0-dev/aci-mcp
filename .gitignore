@@ -14,11 +14,9 @@ __pycache__/
 data/schemas/
 data/cobra-sdk/
 
-# Schema collector — local tooling (not distributed)
-schema-collector/.venv/
-schema-collector/dist/
-schema-collector/mo-schemas/
-schema-collector/cobra-sdk/
+# Schema collector — local tooling, never published (data collection
+# methodology stays private, see commit 4351bf8)
+schema-collector/
 
 # Internal CI
 .gitlab-ci.yml
