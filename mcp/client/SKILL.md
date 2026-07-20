@@ -172,6 +172,13 @@ Already in flat notation — feed a name straight to `get_schema`, `query`, or
 answering "what can a bridge domain contain?" no longer requires guessing.
 Combine with `include_children` to pull the relevant children inline.
 
+`contains` only names the child *classes* — it says nothing about which of
+them are relations or what each one targets. Do not describe a class listed
+here as "the relation to X" or state its relation target: that information
+only comes from `relationTo` (section below), and only for the specific
+Rs classes it lists. If a class in `contains` also happens to be an Rs
+class, its target is unknown until you look it up in `relationTo`.
+
 ### `property_details` — per-property constraints (opt-in)
 
 `properties` gives only names. To learn a property's **type, allowed values,
@@ -215,6 +222,13 @@ Per-property fields (only `type` and `access` are always present):
 `options` removes the guesswork behind section 8: never guess an enum's casing —
 read it here. Use `include_property_details=True` to dump every property only
 when you genuinely need the full picture.
+
+If you have not called `get_schema` with `property_details` (via
+`properties_filter` or `include_property_details`) for a given property, you
+do not know its type, default, or allowed values — do not state them, even
+ones that sound familiar from common ACI deployments. `properties` alone
+(the plain name list) tells you a property *exists* and is filterable;
+it tells you nothing about what it means or what it currently allows.
 
 ### `properties` — all queryable attribute names
 
