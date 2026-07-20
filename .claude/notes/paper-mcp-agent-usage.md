@@ -74,14 +74,53 @@ Deux pistes complémentaires, pas redondantes :
     le MCP" — plutôt "le modèle ne revérifie pas assez souvent, préfère
     réutiliser un résultat déjà en contexte." Argument central pour RQ3.
 
+## Travaux connexes (recherche du 20/07, agent web)
+
+**Constat principal : notre pari central (outils génériques qui miment les
+primitives du système + introspection à la demande, plutôt qu'un outil par
+ressource) n'est PAS nouveau — c'est le pattern dominant, arrivé
+indépendamment partout où l'échelle l'exige.**
+
+- **AWS API MCP Server** — analogue quasi identique : 15k+ opérations AWS →
+  essentiellement 2 outils génériques (`suggest_aws_commands` = découverte +
+  schéma, `call_aws` = exécution). À citer comme prior art direct du pattern.
+- **MCP Postgres/bases de données** (Postgres MCP Pro, pgEdge) — même boucle
+  introspection-puis-requête, domaine relationnel.
+- **"Code execution with MCP" (Anthropic, nov. 2025)** — LA référence
+  centrale : valide les deux moitiés de notre design (outils chargés à la
+  demande + dossier `./skills/`/SKILL.md comme mécanisme d'enseignement de
+  navigation). Anthropic lie explicitement le concept de skill à la surface
+  d'outils générique.
+- **Littérature sur la sélection d'outils à grande échelle** (RAG-MCP,
+  Tulip Agent, AnyTool, "Tool RAG") — à situer comme approche alternative
+  (recherche sémantique sur un registre d'outils) plutôt qu'à revendiquer.
+  ⚠ RAG-MCP est souvent mal attribué à Anthropic dans des blogs secondaires —
+  c'est Gan & Sun (arXiv 2505.03275), à citer correctement.
+- **Contre-exemple utile pour la discussion** : le MCP Cisco NSO — ~10 outils
+  fixes codés en dur, aucune introspection de schéma, aucun skill embarqué.
+  Exactement le style "un outil par tâche anticipée" qu'on a délibérément
+  évité. Bon faire-valoir concret.
+- **Aucun MCP réseau/infra publié trouvé n'opère génériquement à l'échelle
+  du MIT ACI (15k+ classes)** — c'est là que la nouveauté de domaine est la
+  plus défendable.
+
+**Ce qui reste défendable comme vraie contribution** (pas déjà établi
+ailleurs) :
+
+1. Le couplage explicite SKILL.md-enseigne-la-navigation + surface
+   générique — les pièces existent séparément, l'articulation comme principe
+   de design est neuve.
+2. **La validation croisée sur des familles de modèles hétérogènes**
+   (Claude + Qwen3.6 35B MoE ouvert, via opencode) — quasi tout le prior art
+   cité valide sur un seul vendor. Notre preuve empirique la plus forte.
+3. L'instanciation à l'échelle du MIT ACI (15k+ classes), non démontrée
+   ailleurs dans le MCP réseau publié.
+
+Sources complètes (avec URLs) conservées dans le rapport de l'agent —
+à ressortir au moment de rédiger la bibliographie.
+
 ## À faire avant d'écrire quoi que ce soit
 
-- [ ] Recherche en cours (agent lancé le 20/07) : comparaison avec comment
-  d'autres construisent des MCP pour des systèmes à API très riche
-  (Kubernetes, cloud providers, ServiceNow, pattern "code execution with
-  MCP" d'Anthropic, littérature sur la sélection d'outils à grande échelle) —
-  pour la section travaux connexes et pour situer honnêtement ce qui est
-  vraiment nouveau dans notre combinaison vs. déjà établi ailleurs.
 - [ ] Décider du canal (arXiv, blog technique, ou les deux — pas exclusif).
   arXiv : barre de qualité plus basse qu'on ne croit (pas de peer review),
   mais friction pratique d'endorsement en tant que non-académicien à vérifier.
