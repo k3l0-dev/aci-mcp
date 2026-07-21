@@ -5,6 +5,25 @@
 > décidées, pas encore scoping-ées. À faire remonter dans `todo.md` ou un
 > fichier dédié le jour où une idée devient un vrai projet.
 
+## Tentative BM25 personnelle passée — diagnostic post-mortem
+
+Le mainteneur avait essayé de mettre en place BM25 pour `search_classes`
+avant la réécriture actuelle, sans succès. Diagnostic établi le 21/07 :
+probablement pas un problème d'absence de base vectorisée (BM25 est un
+algorithme purement lexical sur index inversé — aucun rapport avec les
+embeddings/bases vectorielles, confusion technique courante) mais le vrai
+problème identifié : **le jargon métier et les synonymes sans ancre
+textuelle dans le schéma**, la limite connue et documentée de tout BM25 pur
+(zéro compréhension sémantique, juste du chevauchement de tokens). C'est
+exactement ce que la table de synonymes/jargon curée à la main dans
+`search_classes` actuel (`mcp/registry/descriptions.py`) résout aujourd'hui
+— pas par des embeddings, juste une couche de correspondance manuelle
+appliquée en amont du matching lexical. Décision du 21/07 : **on reste sur
+le setup actuel, pas de changement pour l'instant** — mais si un jour on
+revisite l'idée BM25 (ex. migrer vers un vrai moteur BM25/index inversé
+pour des raisons de perf ou d'échelle), ne pas oublier d'y adjoindre la même
+couche de correspondance jargon→terme réel dès le départ, sinon même échec.
+
 ## Paper — évaluation empirique de l'usage du MCP par des agents
 
 Voir le fichier dédié [`paper-mcp-agent-usage.md`](./paper-mcp-agent-usage.md)
