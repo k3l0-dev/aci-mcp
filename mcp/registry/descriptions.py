@@ -14,9 +14,14 @@ lifespan context.
 
 Search strategy history
 ------------------------
-v1 (Rs/Rt penalty): weighted substring match over three fields (class name
-×3, label ×2, comment ×1), with a -3 penalty for ACI relation classes
-(Rs/Rt naming pattern, e.g. fvRsCtx). Baseline for the numbers below.
+v1: weighted substring match over three fields (class name ×3, label ×2,
+comment ×1), with a -3 penalty for ACI relation classes (Rs/Rt naming
+pattern, e.g. fvRsCtx), plus a prop_labels fallback (+1, no accumulation)
+for classes that score 0 on the three main fields — the final v1 state
+this module was rewritten from, and the baseline for the numbers below
+(see docs/internals/search-algorithm.md for the full axis-by-axis history,
+including the intermediate Rs/Rt-only state before the prop_labels axis
+was added).
 
 v2 (this version): tokenized, camelCase-aware matching replaces raw
 substring search, so a multi-word query like "fabric node" can match a
@@ -58,9 +63,9 @@ tests/eval_search.py and tests/fixtures/search_golden.json):
 
   Metric        v1, 39 queries   v2, 39 queries   v2, 74 queries (grown set)
   ──────────    ──────────────   ──────────────   ──────────────────────────
-  Recall@1           28.2%            69.2%                 78.4%
-  Recall@5           41.0%            89.7%                 94.6%
-  MRR                0.338            0.793                 0.854
+  Recall@1           30.8%            69.2%                 78.4%
+  Recall@5           53.8%            89.7%                 94.6%
+  MRR                0.400            0.793                 0.854
 
 The golden set grew from 39 to 74 queries alongside the v2 rewrite, adding
 breadth (more classes, more phrasing styles) rather than cases picked to

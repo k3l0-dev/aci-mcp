@@ -415,7 +415,9 @@ Because both sides of the comparison go through the same tokenizer, `"fabric nod
 | Query phrase found as a substring inside the label or jargon phrase | +6 | e.g. `"routing instance"` inside jargon `"vrf context routing instance"`. |
 | Token coverage of the label / class name (squared) | up to +8 / +5 | Rewards a query that names *most or all* of a concept over one sharing one incidental word — squaring makes partial coverage fall off fast. |
 | Query phrase found inside the joined property-label haystack | +6 | The tier 3 case: `"ARP flooding"` inside fvBD's own `arpFlood` property label. |
-| Token coverage of property labels / comment (squared) | up to +2 / +1 | Weaker signal — comments and property names are the least targeted fields. |
+| Query phrase found as a substring inside the comment | +2 | Same idea as the property-label substring check above, one tier weaker — the comment is prose, not curated terminology. |
+| Token coverage of property labels (squared), when no substring hit | up to +2 | Fallback when the phrase isn't a literal substring of the property-label haystack. |
+| Token coverage of comment (squared), when no substring hit | up to +1 | Weakest signal — comments are the least targeted field. |
 | Curated synonym hit (see below) | up to +3 × coverage | A soft nudge, not an override — cannot beat a genuine exact match on its own. |
 
 ### Structural priors — what the object *is*, not what it's called
