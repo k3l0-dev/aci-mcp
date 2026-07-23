@@ -61,6 +61,40 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
     the comment field's direct-substring-match branch (+2) into the same
     row as its squared-coverage fallback (+1) — split into two rows,
     matching how the property-label branch was already documented.
+  - `mcp/client/SKILL.md` (never previously audited): a wrong enum list for
+    `topSystem.state` (claimed a nonexistent `unknown` value, missing 4 real
+    ones), a false claim that querying an `isAbstract` class always returns
+    `[]` (it returns the polymorphic union of concrete subclasses), a
+    `relationFrom` example with an invented `sourceClass`, and
+    `relationTo`/`relationFrom` examples missing the colon notation real
+    schema keys actually use (`fv:RsCtx`, not `fvRsCtx`). Also reconciled a
+    `time_range`-eligible-classes list that disagreed with `main.py`'s own
+    docstring (`healthRecord` was missing from the latter).
+  - CHANGELOG's own `[1.0.0]` entry claimed the license shipped was AGPL-3.0;
+    git history shows PolyForm Noncommercial was already in place by the
+    time that tag was cut (same-day license swap). Corrected. Also fixed
+    `[0.2.0]`/`[0.3.0]` compare links pointing at a `v0.2.0` tag that was
+    never created (replaced with the real commit SHA).
+  - `overview.md` and two `main.py` comments quoted a "~300 classes" gap
+    between the `schemas/` collection and `class-descriptions.json`;
+    measured directly, it's ~200 (213).
+  - `auth.md`/`middleware.md` described the `X-API-Key` fallback as
+    triggered "only when `Authorization` is absent" — it's actually
+    whenever `Authorization` doesn't start with `Bearer` (absent, empty, or
+    a different scheme).
+  - `ApicConnectionError`'s docstring claimed retry-then-raise universally;
+    that's true for `query_class()`/`get_by_dn()`/`count_class()`'s shared
+    request path, but `authenticate()` has no retry loop and raises
+    immediately — docstring scoped correctly now.
+  - `get_schema()` had no `Raises` section despite being able to raise
+    `SchemaLoadError`; `query()`'s docstring was missing three real
+    parameters (`filter_expr`, `rsp_subtree_include`, `time_range`) from its
+    `Args`; `FilterError` was described (in `exceptions.py`, `main.py`, and
+    the tool docs) as triggerable by a filter *value* — only an identifier
+    (class/attribute name) can ever raise it, values are always escaped;
+    `count()` shares the same `FilterError` exposure as `query()` but never
+    documented it; `query.md`'s URL-construction diagram was missing
+    `rsp-prop-include=config-only`.
 
 ## [1.2.0] - 2026-07-20
 
@@ -254,13 +288,16 @@ First public open-source release.
 
 ### Added
 
-- `LICENSE` — GNU Affero General Public License v3 (AGPL-3.0-or-later).
+- `LICENSE` — PolyForm Noncommercial License 1.0.0. (Briefly AGPL-3.0-or-later
+  earlier the same day; replaced before this tag was cut — every file's SPDX
+  header and the shipped `LICENSE` text at `v1.0.0` are PolyForm Noncommercial,
+  never AGPL.)
 - `LICENSE-COMMERCIAL.md` — commercial license terms for proprietary integrations.
 - `SKILL.md` — LLM skill guide at repo root for client discovery.
 - `scripts/list-configurable-classes.sh` — query configurable ACI classes from jsonmeta
   schemas. Options: `--package`, `--exclude-rsrt`, `--count`.
 - SPDX license headers (`Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl /
-  SPDX-License-Identifier: AGPL-3.0-or-later`) on all Python source files.
+  SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0`) on all Python source files.
 - `[project.authors]`, `[project.urls]`, `classifiers`, `keywords` in both
   `mcp/pyproject.toml` and `schema-collector/pyproject.toml`.
 
@@ -373,6 +410,6 @@ First public open-source release.
 [1.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.3.0...v1.0.0
-[0.3.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.1.0...v0.2.0
+[0.3.0]: https://github.com/k3l0-dev/aci-mcp/compare/fac502e...v0.3.0
+[0.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.1.0...fac502e
 [0.1.0]: https://github.com/k3l0-dev/aci-mcp/releases/tag/v0.1.0

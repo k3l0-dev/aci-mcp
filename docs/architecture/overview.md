@@ -164,7 +164,7 @@ sequenceDiagram
 
 ### Class validation before APIC
 
-`query()` and `count()` check `class_name` against the in-memory `descriptions` dict before forwarding to `ApicClient`. The APIC silently returns `[]` for unknown classes. This pre-check returns a typed `UnknownClassError` with nearest matches so the LLM can self-correct without an extra `search_classes()` round-trip. A class absent from `descriptions` but still resolvable to a real schema file (the `schemas/` collection runs ~300 classes ahead of `class-descriptions.json`) is let through with a logged warning instead of being rejected — the two collections are allowed to disagree slightly on "known".
+`query()` and `count()` check `class_name` against the in-memory `descriptions` dict before forwarding to `ApicClient`. The APIC silently returns `[]` for unknown classes. This pre-check returns a typed `UnknownClassError` with nearest matches so the LLM can self-correct without an extra `search_classes()` round-trip. A class absent from `descriptions` but still resolvable to a real schema file (the `schemas/` collection runs ~200 classes ahead of `class-descriptions.json`) is let through with a logged warning instead of being rejected — the two collections are allowed to disagree slightly on "known".
 
 ### Stateless HTTP
 

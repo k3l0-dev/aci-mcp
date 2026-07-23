@@ -54,7 +54,7 @@ query() parameters
   rsp_subtree_include  Inline subtrees: "faults", "health", "audit-logs",
                        "faults,required", "faults,no-scoped"
   time_range           Log record window: "24h", "1week", "2026-01-01|2026-01-31"
-                       Valid for faultRecord, aaaModLR, eventRecord
+                       Valid for faultRecord, aaaModLR, eventRecord, healthRecord
 
 query() return shape
 --------------------
@@ -364,6 +364,13 @@ async def get_schema(
     Returns:
         Schema dict as described above, or an empty dict when the class file
         is not found in the local schema collection.
+
+    Raises:
+        SchemaLoadError: A schema file exists on disk for this class but
+                         could not be parsed — malformed or empty JSON.
+                         Indicates a corrupted or manually edited file in
+                         data/schemas/, not a missing class (a missing class
+                         returns {} instead, see Returns above).
     """
     schemas_dir: Path = ctx.lifespan_context["schemas_dir"]
     schema = load_schema(
@@ -437,6 +444,16 @@ async def query(
                           will contain a "_children" list of child attribute dicts.
                           Equivalent to moquery -x rsp-subtree=children
                           -x rsp-subtree-class=X,Y.
+        filter_expr:      Raw APIC filter predicate for operations beyond simple
+                          equality (wcard, ne, gt, ...), e.g.
+                          'wcard(fvBD.dn,"uni/tn-OT")'. Combined with `filters`
+                          via and() when both are provided.
+        rsp_subtree_include: Inline subtree categories to include in the same
+                          response, e.g. "faults", "health", "audit-logs",
+                          "faults,no-scoped", "faults,required".
+        time_range:       Time window for log-record classes, e.g. "24h",
+                          "1week", "2026-01-01|2026-01-31". Valid for
+                          faultRecord, aaaModLR, eventRecord, healthRecord.
         page:             Page number for explicit manual pagination (0-based).
                           Ignored when fetch_all=True.
         config_only:      When True, return only user-configurable attributes
@@ -475,9 +492,11 @@ async def query(
                            has a schema file but no descriptions entry (a
                            small gap between the two collections) is allowed
                            through with a logged warning instead of raising.
-        FilterError:       An entry in `filters` has a class/attribute name or
-                           value that cannot be safely embedded in an APIC
-                           filter string (see registry.filter.build_filter).
+        FilterError:       `class_name` or a `filters` key contains characters
+                           outside the expected ACI identifier format (see
+                           registry.filter.build_filter). Filter *values* are
+                           always escaped, never rejected — this can only be
+                           raised by an identifier, not a value.
         ApicRequestError:  APIC returned a non-2xx, non-auth response — e.g.
                            400 for a malformed filter_expr, or 500. Carries
                            the HTTP status and, when present, the APIC error
@@ -489,7 +508,7 @@ async def query(
 
     # Validate class_name against the registry — catch typos and wrong names
     # before hitting the backend (which would silently return []). The
-    # schemas/ collection is ~300 classes larger than class-descriptions.json
+    # schemas/ collection is ~200 classes larger than class-descriptions.json
     # (schema-collector builds them from separate passes over /doc/jsonmeta/),
     # so a class absent from `descriptions` may still be a perfectly valid,
     # queryable ACI class — fall back to a schema-file check before rejecting.
@@ -679,6 +698,10 @@ async def count(
                            has a schema file but no descriptions entry (the
                            same small gap query() tolerates) is allowed
                            through with a logged warning instead of raising.
+        FilterError:       `class_name` or a `filters` key contains characters
+                           outside the expected ACI identifier format (see
+                           registry.filter.build_filter). Filter values are
+                           always escaped, never rejected.
         ApicRequestError:  APIC returned a non-2xx, non-auth response — e.g.
                            400 for a malformed filter_expr, or 500. Carries
                            the HTTP status and, when present, the APIC error
@@ -689,7 +712,7 @@ async def count(
     schemas_dir: Path = ctx.lifespan_context["schemas_dir"]
 
     # Validate class_name against the registry — identical guard to query(),
-    # including the same schema-file fallback for the ~300-class gap between
+    # including the same schema-file fallback for the ~200-class gap between
     # class-descriptions.json and the schemas/ collection, so count() and
     # query() never disagree on whether a class is "known".
     if class_name not in descriptions:

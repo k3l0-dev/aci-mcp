@@ -30,9 +30,9 @@ Two accepted header forms, checked in priority order:
 | Header | Format | Priority |
 |---|---|---|
 | `Authorization` | `Bearer <token>` | First |
-| `X-API-Key` | `<token>` | Fallback (only when Authorization absent) |
+| `X-API-Key` | `<token>` | Fallback, whenever `Authorization` doesn't start with `Bearer` (with the trailing space that separates it from the token) — that includes it being absent, empty, or using a different scheme (e.g. `Basic ...`) |
 
-When `Authorization: Bearer` is present but the token is invalid, `X-API-Key` is **not** consulted. The `Authorization` header takes full precedence.
+When `Authorization: Bearer` is present but the token is invalid, `X-API-Key` is **not** consulted — `Authorization` starting with `Bearer ` is what decides which header is read, independent of whether the extracted token then turns out to be valid.
 
 ---
 

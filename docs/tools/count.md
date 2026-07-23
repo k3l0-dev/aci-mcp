@@ -57,6 +57,7 @@ Uses the APIC `rsp-subtree-include=count` mechanism: the response carries a sing
 | Exception | Condition |
 |---|---|
 | `UnknownClassError` | `class_name` is not in the registry. Includes `.suggestions` (list) and `.registry_size` (int). |
+| `FilterError` | `class_name` or a `filters` key contains characters outside the expected ACI identifier format. Filter values are always escaped, never rejected. |
 | `ApicRequestError` | APIC returned a non-2xx, non-auth response — e.g. 400 for a malformed `filter_expr`, or a transient 5xx that never recovered. Carries the HTTP status and, when present, the APIC error text. |
 
 ---

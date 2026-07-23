@@ -128,7 +128,7 @@ Any code written against the older (pre-envelope) shape of this doc needs updati
 | Exception | Condition |
 |---|---|
 | `UnknownClassError` | `class_name` is neither in the 15k-class descriptions registry nor resolvable to a schema file. Includes `.suggestions` (list) and `.registry_size` (int). A class with a schema file but no descriptions entry is allowed through with a warning instead of raising. |
-| `FilterError` | An entry in `filters` has a class/attribute name or value that cannot be safely embedded in an APIC filter string. |
+| `FilterError` | `class_name` or a `filters` key contains characters outside the expected ACI identifier format. Filter *values* are always escaped, never rejected — this can only be raised by an identifier, not a value. |
 | `ApicRequestError` | APIC returned a non-2xx, non-auth response — e.g. 400 for a malformed `filter_expr`, or a transient 5xx that never recovered. Carries the HTTP status and, when present, the APIC error text. |
 
 ---
@@ -153,6 +153,7 @@ flowchart TD
         P5["rsp-subtree-include"]
         P6["time-range"]
         P7["page"]
+        P8["rsp-prop-include=config-only (when config_only=True)"]
     end
 ```
 
