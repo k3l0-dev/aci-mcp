@@ -44,14 +44,12 @@ Download the prebuilt bundle from the GitHub release:
 ./scripts/download-schemas.sh
 ```
 
-This extracts into:
+This script only populates `data/schemas/` — it downloads and extracts the jsonmeta bundle there (flat; the release's version-named top directory is stripped on extraction). `data/class-descriptions.json` is a separate, much smaller file already tracked in git — it arrived with the `git clone` in step 1, not from this script:
 
 ```
 data/
-  class-descriptions.json   ← keyword-searchable class index
-  schemas/                  ← jsonmeta files, one per class (flat — the
-                               release's version-named top directory is
-                               stripped on extraction)
+  class-descriptions.json   ← keyword-searchable class index (already in git, from step 1)
+  schemas/                  ← jsonmeta files, one per class (populated by this script)
 ```
 
 ### 4 — Start the server
@@ -66,13 +64,13 @@ Expected output:
 
 ```
 WARNING aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication.
-INFO  aci-mcp  Registry loaded — 15432 class descriptions
-INFO  aci-mcp  Schema directory resolved — data/schemas
+INFO  aci-mcp  Registry loaded — 15239 class descriptions
+INFO  aci-mcp  Schema directory resolved — /path/to/aci-mcp/data/schemas
 INFO  aci-mcp  Connected to APIC — your-apic.example.com
 INFO  fastmcp  Starting MCP server 'aci-mcp' with transport 'http' on http://0.0.0.0:8000/mcp
 ```
 
-The API-key warning is logged first (before the HTTP server starts); the registry/schema/APIC lines come from the FastMCP lifespan, which only runs once the server actually starts serving.
+The API-key warning is logged first (before the HTTP server starts); the registry/schema/APIC lines come from the FastMCP lifespan, which only runs once the server actually starts serving. The schema-directory path is logged as an **absolute** path (resolved from `main.py`'s own location), not the relative `data/schemas` shown here for brevity — the real line reflects wherever you cloned the repo.
 
 The MCP endpoint is at `http://localhost:8000/mcp`.
 

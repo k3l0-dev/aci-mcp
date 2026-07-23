@@ -25,7 +25,7 @@ Not sure where to start? Look for issues labelled
 ```bash
 git clone https://github.com/k3l0-dev/aci-mcp.git
 cd aci-mcp/mcp
-uv sync --extra dev
+uv sync
 cp ../.env.example ../.env   # fill in APIC_HOST, APIC_USER, APIC_PASSWORD
 ```
 

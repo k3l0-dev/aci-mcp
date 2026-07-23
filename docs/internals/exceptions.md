@@ -143,7 +143,7 @@ try:
 except UnknownClassError as exc:
     print(exc.class_name)     # "fvBd"
     print(exc.suggestions)    # ["fvBD", "fvCEp", ...]
-    print(exc.registry_size)  # 15432
+    print(exc.registry_size)  # 15239
 ```
 
 ---
