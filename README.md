@@ -230,7 +230,7 @@ Paste the contents of `mcp/client/SKILL.md` into your agent's system prompt, pro
 
 Once both steps are done, ask your agent:
 
-> *"Show me all bridge domains in the OT tenant with their associated VRFs."*
+> *"List all tenants configured in this fabric."*
 
 It will call `search_classes`, `get_schema`, and `query` in the correct order — no manual API work required.
 
