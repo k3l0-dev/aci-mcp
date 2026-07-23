@@ -13,7 +13,7 @@ give any LLM instant, schema-aware access to your APIC fabric.</p>
 
 <br/>
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.2.0-blue)](CHANGELOG.md)
 [![License: PolyForm NC](https://img.shields.io/badge/license-PolyForm%20NC-blue)](LICENSE)
 [![Commercial License](https://img.shields.io/badge/license-Commercial-orange)](LICENSE-COMMERCIAL.md)
 [![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
@@ -266,7 +266,7 @@ See [SECURITY.md](SECURITY.md) for the vulnerability disclosure policy.
 
 ## Tools
 
-The server exposes a small set of generic tools. Documentation and usage examples are in [`SKILL.md`](SKILL.md) and [`docs/tools/`](docs/tools/).
+The server exposes a small set of generic tools. Documentation and usage examples are in [`mcp/client/SKILL.md`](mcp/client/SKILL.md) and [`docs/tools/`](docs/tools/).
 
 | Tool | Description |
 |---|---|

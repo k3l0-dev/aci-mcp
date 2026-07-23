@@ -49,7 +49,9 @@ This extracts into:
 ```
 data/
   class-descriptions.json   ← keyword-searchable class index
-  schemas/{version}/        ← jsonmeta files, one per class
+  schemas/                  ← jsonmeta files, one per class (flat — the
+                               release's version-named top directory is
+                               stripped on extraction)
 ```
 
 ### 4 — Start the server
@@ -63,11 +65,14 @@ python main.py
 Expected output:
 
 ```
-INFO  aci-mcp  Registry loaded — 15432 class descriptions
-INFO  aci-mcp  Connected to APIC — your-apic.example.com
 WARNING aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication.
+INFO  aci-mcp  Registry loaded — 15432 class descriptions
+INFO  aci-mcp  Schema directory resolved — data/schemas
+INFO  aci-mcp  Connected to APIC — your-apic.example.com
 INFO  fastmcp  Starting MCP server 'aci-mcp' with transport 'http' on http://0.0.0.0:8000/mcp
 ```
+
+The API-key warning is logged first (before the HTTP server starts); the registry/schema/APIC lines come from the FastMCP lifespan, which only runs once the server actually starts serving.
 
 The MCP endpoint is at `http://localhost:8000/mcp`.
 

@@ -40,8 +40,8 @@ sequenceDiagram
     participant desc as descriptions dict (in-memory)
 
     LLM->>tool: search_classes("bridge domain")
-    tool->>desc: iterate 15k entries
-    Note over desc: score per entry:<br/>class name match → +3<br/>label match → +2<br/>comment match → +1<br/>prop_labels fallback → +1 (no accumulation)<br/>Rs/Rt class name → −3 penalty
+    tool->>desc: tokenize keyword + all fields (camelCase-aware), score each entry
+    Note over desc: v2 algorithm — see internals/search-algorithm.md:<br/>exact label/jargon match → +20/+18<br/>squashed class-name match → +25<br/>token coverage of label/name/props/comment (squared)<br/>curated synonym hit → up to +3 × coverage<br/>then structural priors: isConfigurable +6, isAbstract −6,<br/>stats-suffix −10, Rs/Rt −8<br/>tie-break: fewer name tokens → shorter name → alphabetical
     desc-->>tool: scored list, sorted desc, capped at limit
     tool-->>LLM: [{class_name, label, comment}, ...]
 ```
@@ -54,14 +54,14 @@ sequenceDiagram
 sequenceDiagram
     participant LLM
     participant tool as get_schema()
-    participant fs as data/schemas/{version}/
+    participant fs as data/schemas/ (resolved)
 
+    Note over fs: resolve_schemas_dir() runs ONCE at server startup —<br/>picks the flat dir or the right versioned subdirectory.<br/>load_schema() itself never globs; it does one direct<br/>stat/open of schemas_dir/fvBD.json, no subdirectory search.
     LLM->>tool: get_schema("fvBD")
-    tool->>fs: look up fvBD.json
-    Note over fs: 1. try schemas_dir/fvBD.json<br/>2. fallback: glob schemas_dir/*/fvBD.json
+    tool->>fs: read fvBD.json directly
     fs-->>tool: raw jsonmeta object
 
-    Note over tool: extract query-planning fields only:<br/>identifiedBy, rnFormat, containedBy (normalised to list),<br/>dnFormats, relationTo, relationFrom,<br/>properties (names only), isAbstract,<br/>isConfigurable, className, classPkg, label
+    Note over tool: extract query-planning fields only:<br/>identifiedBy, rnFormat, containedBy (normalised to list),<br/>contains (child classes, flat notation),<br/>dnFormats, relationTo, relationFrom,<br/>properties (names only), isAbstract,<br/>isConfigurable, className, classPkg, label<br/>+ property_details, opt-in only (include_property_details<br/>or properties_filter), skipped by default for token economy
 
     Note over tool: discard heavy fields:<br/>writeAccess, events, stats, faults,<br/>full property metadata
 
@@ -112,7 +112,7 @@ sequenceDiagram
     end
 
     apic-->>tool: [{"dn": ..., "name": ..., "_class": "fvBD"}]
-    tool-->>LLM: list of attribute dicts
+    tool-->>LLM: envelope dict — {"results": [...], "returned",<br/>"total_available", "truncated", "next_page",<br/>"complete", "note"} — NOT a bare list
 ```
 
 ---
@@ -139,6 +139,7 @@ flowchart TD
         P5["rsp-subtree-include (faults / health / audit-logs / ...)"]
         P6["time-range (24h / 1week / date|date)"]
         P7["page = N (0-based)"]
+        P8["rsp-prop-include=config-only (when config_only=True)"]
     end
 ```
 

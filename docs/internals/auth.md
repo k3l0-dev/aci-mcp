@@ -71,9 +71,9 @@ def _is_valid(token: str, keys: frozenset[str]) -> bool:
     return any(hmac.compare_digest(token_bytes, k.encode()) for k in keys)
 ```
 
-`hmac.compare_digest` runs in constant time relative to the compared values' length. A naive `token in keys` would return early on the first match, leaking whether a partial token is close to a valid one.
+`hmac.compare_digest` runs in constant time relative to the compared values' length — no single comparison leaks a partial byte-wise match via timing. This is what actually defeats byte-by-byte key discovery.
 
-The function always iterates over all keys — time is proportional to the key count, not to the position of the matching key.
+**Correction:** the loop itself is not position-independent. `any()` short-circuits on the first match, so a valid token matching an early key (in `frozenset` iteration order) returns faster than one matching a late key. For an *invalid* token — the brute-force-guessing case this guards against — every key is compared every time, so timing is constant across guesses. The position-dependent timing only shows up once a token is already valid, at which point an attacker gains little from it: they already hold a working key.
 
 ---
 

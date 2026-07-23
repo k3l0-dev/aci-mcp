@@ -276,9 +276,12 @@ async def search_classes(
 ) -> list[dict[str, str]]:
     """Search ACI class descriptions by keyword.
 
-    Performs a case-insensitive substring match against three fields:
-    class name, human-readable label, and description comment.  Results
-    are ranked by relevance (class name match > label > comment).
+    Tokenizes the keyword and each class's name/label/comment/property
+    labels (camelCase-aware), then scores by weighted signal — exact
+    label/jargon match, squashed class-name match, token coverage, a small
+    curated synonym table — plus structural priors applied after the text
+    score (configurable/abstract/stats-suffix/relation-class). See
+    docs/internals/search-algorithm.md for the full algorithm.
 
     Use this tool whenever the exact ACI class name for a concept is not
     known (e.g. "bridge domain", "contract", "fault", "VRF", "node").

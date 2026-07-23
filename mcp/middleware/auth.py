@@ -159,10 +159,18 @@ def _build_unauthorized(request: Request) -> JSONResponse:
 
 
 def _is_valid(token: str, keys: frozenset[str]) -> bool:
-    """Constant-time membership test across all keys to prevent timing-oracle attacks.
+    """Membership test using constant-time comparisons to prevent a timing oracle
+    on any single key.
 
-    Uses hmac.compare_digest for every key in the set so the total comparison
-    time is proportional to the number of keys, not to where the match is found.
+    Uses hmac.compare_digest for each key so no individual comparison leaks a
+    partial byte-wise match via timing. Note: any() short-circuits on the
+    first match, so total loop time is NOT independent of match position — a
+    valid token matching an early key in iteration order returns faster than
+    one matching a late key. For an invalid token (the brute-force-guessing
+    case this guards against), every key is compared every time, so timing is
+    constant across guesses; the guarantee that matters — resisting
+    byte-by-byte key discovery — comes from compare_digest itself, not from
+    loop-level uniformity.
     """
     token_bytes = token.encode()
     return any(hmac.compare_digest(token_bytes, k.encode()) for k in keys)
