@@ -140,8 +140,8 @@ In raw jsonmeta, `containedBy` is a dict with class names as keys:
 
 | Layout | Resolves to | Used when |
 |---|---|---|
-| Flat | `schemas_dir` itself | `data/schemas/*.json` exist directly (the default today — see [quickstart](../getting-started/quickstart.md)) |
-| Single versioned subdir | `schemas_dir/{version}/` | Exactly one immediate subdirectory holds `*.json` files |
+| Flat | `schemas_dir` itself | `data/schemas/*.json` exist directly — what you get by following [quickstart](../getting-started/quickstart.md)'s `download-schemas.sh` path (the release tarball's own top-level directory is stripped on extraction) |
+| Single versioned subdir | `schemas_dir/{version}/` | Exactly one immediate subdirectory holds `*.json` files — what `schema-collector` produces directly (used to build that same release tarball, and in local dev checkouts run against a live APIC) |
 | Multiple versioned subdirs | The lexicographically last subdirectory | `schema-collector` has run against more than one APIC version; this is a naming heuristic (`mo-apic-v{version}`), not semantic-version comparison |
 | Nothing found | `schemas_dir` unchanged | Every subsequent `get_schema()` reports the class as not found |
 

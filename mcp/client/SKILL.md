@@ -283,11 +283,14 @@ A filter on an attribute not in `properties` returns `[]` silently.
 
 ```json
 "relationTo": {
-  "fvRsCtx":  {"targetClass": "fv:Ctx",   "cardinality": ""},
-  "fvRsCons": {"targetClass": "vz:BrCP",  "cardinality": ""},
-  "fvRsProv": {"targetClass": "vz:BrCP",  "cardinality": ""}
+  "fv:RsCtx":       {"targetClass": "fv:Ctx",       "cardinality": ""},
+  "fv:RsBDToOut":   {"targetClass": "l3ext:Out",    "cardinality": ""},
+  "fv:RsBdFloodTo": {"targetClass": "vz:Filter",     "cardinality": ""}
 }
 ```
+
+(Real `get_schema("fvBD")` output — keys keep their colon notation, e.g.
+`fv:RsCtx`, not the flattened `fvRsCtx` form used by `contains`.)
 
 Each key is a **Relation Source (Rs)** class — an intermediate object that
 lives under this MO and holds the reference to the target.
@@ -297,9 +300,11 @@ See section 8 for how to traverse it.
 
 ```json
 "relationFrom": {
-  "fvRtCtx": {"sourceClass": "fv:BD"}
+  "fv:RtCtx": {"sourceClass": "fv:ABDPol"}
 }
 ```
+
+Note the key keeps its colon notation (`fv:RtCtx`), unlike `contains`, which is flattened.
 
 Reverse lookups: which objects of `sourceClass` point to this one.
 Traverse the same way as `relationTo` but query the `sourceClass` scoped to
@@ -307,8 +312,12 @@ the source object's DN.
 
 ### `isAbstract`
 
-If `true`, the class cannot be directly instantiated — `query` will always
-return `[]`. Use `search_classes` to find the concrete subclass instead.
+If `true`, the class cannot be directly **created** (no POST/config target)
+— but `query` does NOT always return `[]` for it. An abstract superclass
+(e.g. `fvABDPol`) can still be queried, returning the polymorphic union of
+its concrete subclasses' instances — this is standard APIC MIT behavior,
+not an error. If you specifically need the concrete class name, use
+`search_classes` to find it instead of assuming an abstract query is empty.
 
 ---
 
@@ -626,7 +635,7 @@ to use in `filters` and `filter_expr` — guessing the wrong casing returns `[]`
 | `faultInst` | `severity` | `critical` · `major` · `minor` · `warning` · `cleared` |
 | `fabricNode` | `role` | `spine` · `leaf` · `controller` |
 | `fabricNode` | `fabricSt` | `active` · `inactive` · `discovering` |
-| `topSystem`  | `state` | `in-service` · `out-of-service` · `unknown` |
+| `topSystem`  | `state` | `in-service` · `out-of-service` · `downloading-boot-script` · `downloading-firmware` · `invalid-ver` · `requesting-tep` |
 | any          | `adminSt` | `enabled` · `disabled` |
 | `fvBD`       | `unicastRoute` | `yes` · `no` |
 | `fvBD`       | `arpFlood` | `yes` · `no` |
@@ -709,8 +718,7 @@ a sample object without filters to observe the actual values in context.
 | Symptom | Cause | Recovery |
 |---|---|---|
 | `query`/`count` raises "Unknown ACI class '...'" | Wrong or nonexistent class name | The class does not exist — this is a failed lookup, not a zero result. Retry with one of the suggested closest matches or a fresh `search_classes` call; never report a count or existence answer from this error. |
-| `query` returns `results: []`, class is valid | Object absent from backend OR wrong filter value | Remove filters first to confirm objects exist, then re-add filters |
-| `query` returns `results: []`, class is abstract (`isAbstract: true`) | Abstract class — not instantiable | `search_classes` to find the concrete subclass |
+| `query` returns `results: []`, class is valid | Object absent from backend OR wrong filter value — this applies even to an abstract class (`isAbstract: true`): querying one returns the union of its concrete subclasses' instances, not an automatic `[]` | Remove filters first to confirm objects exist, then re-add filters |
 | `query` returns `truncated: true` | This call only returned part of the matching set (`returned < total_available`) | Partial data — do not conclude a maximum, minimum, total, or complete list from it. Re-run with `fetch_all=True`, or page with `page`/`limit` until `truncated` is `false` |
 | `search_classes` returns no results | Keyword too specific | Try acronym, English label, or first 3 chars of the expected class name |
 | `get_schema` returns `{}` | Class not in local schema collection | Query without filters, inspect `properties` of a sample result |

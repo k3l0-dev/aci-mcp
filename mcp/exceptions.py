@@ -110,9 +110,9 @@ class UnknownClassError(AciMcpError):
 class FilterError(AciMcpError):
     """Invalid input to build_filter().
 
-    Raised when a class name or attribute contains characters outside the
-    expected ACI identifier format, or when a filter value contains
-    characters that cannot be safely embedded in an APIC filter string.
+    Raised when a class name or attribute key contains characters outside
+    the expected ACI identifier format. Filter values are never rejected —
+    they are always escaped instead, so a value can never trigger this.
     """
 
 
@@ -143,10 +143,15 @@ class ApicConnectionError(ApicError):
     """APIC is unreachable — network error or request timeout.
 
     Wraps httpx.ConnectError and httpx.TimeoutException so callers do not
-    need to import httpx to handle connectivity problems. ApicClient retries
-    a bounded number of times (see ApicClient.__init__'s retry_attempts) with
-    a short backoff before giving up — this is raised only once that budget
-    is exhausted, never on the first connection failure alone.
+    need to import httpx to handle connectivity problems.
+
+    Retry behavior differs by call site: query_class(), get_by_dn(), and
+    count_class() share a request path (_request_json()) that retries a
+    bounded number of times (see ApicClient.__init__'s retry_attempts) with
+    a short backoff before giving up — for those three, this is raised only
+    once that budget is exhausted, never on the first connection failure
+    alone. authenticate() has no retry loop of its own and raises this
+    immediately on the first connection failure.
     """
 
     def __init__(self, host: str, reason: str) -> None:
