@@ -95,6 +95,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
     `count()` shares the same `FilterError` exposure as `query()` but never
     documented it; `query.md`'s URL-construction diagram was missing
     `rsp-prop-include=config-only`.
+  - `search-algorithm.md`'s tokenization example showed
+    `"l3extRtVrfValidationPol"` splitting into `["l3", "ext", ...]`; the
+    real `_TOKEN_RE` only splits at a lowercase→uppercase transition or an
+    acronym-run boundary, neither of which occurs inside `"l3ext"` — it
+    tokenizes as one token, `["l3ext", "rt", "vrf", "validation", "pol"]`.
+    Confirmed by running the actual regex, not just re-reading it.
 
 ## [1.2.0] - 2026-07-20
 
