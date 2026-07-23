@@ -400,9 +400,11 @@ v2 replaces the substring scheme with **tokenized matching** and adds **structur
 
 ```
 "fvBD"                    → ["fv", "bd"]
-"l3extRtVrfValidationPol" → ["l3", "ext", "rt", "vrf", "validation", "pol"]
+"l3extRtVrfValidationPol" → ["l3ext", "rt", "vrf", "validation", "pol"]
 "fabric node"             → ["fabric", "node"]
 ```
+
+(`_TOKEN_RE` only splits at a lowercase→uppercase transition or an acronym-run boundary — `"l3ext"` has neither internally, so it stays one token rather than splitting into `"l3"` + `"ext"`.)
 
 Because both sides of the comparison go through the same tokenizer, `"fabric node"` and `"fabricNode"` now produce the identical token set `{"fabric", "node"}` — problem 1 above is gone by construction, not by a special case.
 
