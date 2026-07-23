@@ -30,7 +30,7 @@ fv  BD
 | `fvCtx` | `fv` | `Ctx` | VRF (a Layer 3 routing domain) |
 | `fvAEPg` | `fv` | `AEPg` | Application Endpoint Group |
 | `vzBrCP` | `vz` | `BrCP` | Contract (security policy between EPGs) |
-| `faultInst` | — | — | Active fault (operational data) |
+| `faultInst` | `fault` | `Inst` | Active fault (operational data) |
 | `fabricNode` | `fabric` | `Node` | Physical switch in the fabric |
 
 The 15 000+ total classes include thousands of abstract base classes, internal relation objects, and monitoring classes — most are never queried directly. (Roughly 1,954 are abstract, 3,065 follow the Rs/Rt relation-object naming pattern, and 4,769 carry a stats/telemetry suffix — each category alone is in the thousands.)

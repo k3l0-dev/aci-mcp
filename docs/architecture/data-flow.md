@@ -77,8 +77,8 @@ sequenceDiagram
     participant LLM
     participant tool as query()
     participant desc as descriptions dict
-    participant filter as filter.build_filter()
     participant apic as ApicClient
+    participant filter as filter.build_filter()
     participant cisco as Cisco APIC
 
     LLM->>tool: query("fvBD", filters={"name":"srv"}, scope_dn="uni/tn-OT")
@@ -89,10 +89,10 @@ sequenceDiagram
         tool-->>LLM: UnknownClassError + nearest suggestions
     end
 
-    tool->>filter: build_filter("fvBD", {"name":"srv"})
-    filter-->>tool: 'eq(fvBD.name,"srv")'
-
-    tool->>apic: query_class(...)
+    tool->>apic: query_class("fvBD", filters={"name":"srv"}, ...)
+    Note over tool,apic: main.py never calls build_filter() itself —<br/>it forwards the raw filters dict unchanged.
+    apic->>filter: build_filter("fvBD", {"name":"srv"})
+    filter-->>apic: 'eq(fvBD.name,"srv")'
 
     alt scope_dn provided
         apic->>cisco: GET /api/mo/uni/tn-OT.json?query-target=subtree&target-subtree-class=fvBD&...

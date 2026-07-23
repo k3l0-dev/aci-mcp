@@ -66,7 +66,7 @@ graph TB
 
     subgraph datastore["data/ (shared)"]
         json["class-descriptions.json"]
-        schemas_dir["schemas/*.json\n15k+ jsonmeta files (flat)"]
+        schemas_dir["schemas/*.json (resolved dir)\n15k+ jsonmeta files\nflat or one versioned subdir — resolve_schemas_dir() handles either"]
     end
 
     llm -->|"MCP JSON-RPC"| caddy
@@ -81,15 +81,16 @@ graph TB
     fm --> t5
     t1 --> desc
     t2 --> schema
-    t3 --> filt
     t3 --> apic_client
     t4 --> apic_client
-    t5 --> filt
     t5 --> apic_client
+    apic_client --> filt
     desc -->|"loaded at startup"| json
     schema -->|"read on demand"| schemas_dir
     apic_client -->|"HTTPS"| rest
 ```
+
+`build_filter()` is called from inside `ApicClient` (`query_class()`/`count_class()`), not from the tool functions in `main.py` directly — `main.py` never imports `registry.filter`.
 
 ---
 
