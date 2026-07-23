@@ -19,7 +19,7 @@ give any LLM instant, schema-aware access to your APIC fabric.</p>
 [![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-3.1+-00C896)](https://github.com/jlowin/fastmcp)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](mcp/deploy/Dockerfile)
-
+[![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/k3l0-dev/aci-mcp)
 <br/>
 
 ![Cisco ACI](https://img.shields.io/badge/Cisco-ACI-1BA0D7?style=flat-square&logo=cisco&logoColor=white)
