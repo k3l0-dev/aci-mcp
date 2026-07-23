@@ -19,8 +19,11 @@ query(
     time_range: str | None = None,
     page: int | None = None,
     config_only: bool = False,
-) -> list[dict[str, Any]]
+    fetch_all: bool = False,
+) -> dict[str, Any]
 ```
+
+**Returns an envelope dict, not a bare list** — see [Return value](#return-value) below. This is a breaking-looking change for any code written against an older version of this doc: `result["results"][0]["dn"]`, not `result[0]["dn"]`.
 
 ---
 
@@ -49,9 +52,10 @@ query(
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `limit` | `int` | `20` | Maximum objects to return. **Capped at 200.** |
-| `page` | `int` | — | 0-based page number for paginated result sets. |
+| `limit` | `int` | `20` | Maximum objects to return per page. Clamped to `[1, 200]` — values below 1 are raised to 1 rather than passed to the APIC as an invalid page-size. Also the page size used internally when `fetch_all=True`. |
+| `page` | `int` | — | 0-based page number for paginated result sets. Ignored when `fetch_all=True`. |
 | `order_by` | `str` | — | APIC ordering expression, e.g. `"faultInst.severity\|desc"`. |
+| `fetch_all` | `bool` | `False` | Walk every page (using `limit` as page size) and return the complete matching set in one call — the reliable way to answer a max/min/total/all-of question over a whole class instead of paging manually. Stops early only if a safety cap (thousands of objects) is hit, in which case `complete` is `False` in the response; narrow the query (e.g. `scope_dn`) and combine results. |
 
 ### Children and subtrees
 
@@ -76,31 +80,46 @@ query(
 
 ## Return value
 
-List of attribute dicts. Each dict contains:
-
-- All APIC attributes for the object (from `obj.attributes`)
-- `"_class"` — the ACI class name
-- `"dn"` — always present, encodes the full object path
-- `"_children"` — present only when `include_children` is set
+An **envelope dict** — not a bare list:
 
 ```json
-[
-  {
-    "_class": "fvBD",
-    "dn": "uni/tn-OT/BD-servers",
-    "name": "servers",
-    "arpFlood": "no",
-    "unicastRoute": "yes",
-    "_children": [
-      {
-        "_class": "fvSubnet",
-        "dn": "uni/tn-OT/BD-servers/subnet-[10.0.1.0/24]",
-        "ip": "10.0.1.1/24"
-      }
-    ]
-  }
-]
+{
+  "results": [
+    {
+      "_class": "fvBD",
+      "dn": "uni/tn-OT/BD-servers",
+      "name": "servers",
+      "arpFlood": "no",
+      "unicastRoute": "yes",
+      "_children": [
+        {
+          "_class": "fvSubnet",
+          "dn": "uni/tn-OT/BD-servers/subnet-[10.0.1.0/24]",
+          "ip": "10.0.1.1/24"
+        }
+      ]
+    }
+  ],
+  "returned": 1,
+  "total_available": 1,
+  "truncated": false,
+  "next_page": null,
+  "complete": true,
+  "note": null
+}
 ```
+
+| Field | Type | Description |
+|---|---|---|
+| `results` | `list[dict]` | The objects themselves — each dict has all APIC attributes, a `"_class"` key, an always-present `"dn"`, and `"_children"` when `include_children` is set. Same per-object shape as before; the change is the wrapper around it. |
+| `returned` | `int` | `len(results)` |
+| `total_available` | `int` | True match count, fabric- or subtree-wide — independent of how many were actually fetched |
+| `truncated` | `bool` | `total_available > returned` — a default-page result is a **partial page**, not the whole matching set. Never conclude a max/min/total/complete-list answer from a truncated result. |
+| `next_page` | `int \| None` | `page + 1` when truncated and `fetch_all` was not used; `None` otherwise |
+| `complete` | `bool` | `False` only if `fetch_all=True` hit the safety cap before exhausting all matches |
+| `note` | `str \| None` | Guidance text, present only when truncated or capped |
+
+Any code written against the older (pre-envelope) shape of this doc needs updating: `result["results"][0]["dn"]`, not `result[0]["dn"]`.
 
 ---
 
@@ -108,7 +127,9 @@ List of attribute dicts. Each dict contains:
 
 | Exception | Condition |
 |---|---|
-| `UnknownClassError` | `class_name` is not in the 15k-class registry. Includes `.suggestions` (list) and `.registry_size` (int). |
+| `UnknownClassError` | `class_name` is neither in the 15k-class descriptions registry nor resolvable to a schema file. Includes `.suggestions` (list) and `.registry_size` (int). A class with a schema file but no descriptions entry is allowed through with a warning instead of raising. |
+| `FilterError` | An entry in `filters` has a class/attribute name or value that cannot be safely embedded in an APIC filter string. |
+| `ApicRequestError` | APIC returned a non-2xx, non-auth response — e.g. 400 for a malformed `filter_expr`, or a transient 5xx that never recovered. Carries the HTTP status and, when present, the APIC error text. |
 
 ---
 
@@ -177,21 +198,23 @@ query("fvBD",
 
 ```python
 tenants = await query("fvTenant", filters={"name": "OT"})
-bds = await query("fvBD", scope_dn=tenants[0]["dn"])
+bds = await query("fvBD", scope_dn=tenants["results"][0]["dn"])
 ```
 
 ### Bridge domain with its subnets and VRF relation
 
 ```python
-results = await query("fvBD",
+result = await query("fvBD",
     filters={"name": "servers"},
     include_children=["fvSubnet", "fvRsCtx"])
+bd = result["results"][0]
 ```
 
 ### Recent faults (last 24 hours)
 
 ```python
 faults = await query("faultRecord", time_range="24h", order_by="faultRecord.created|desc")
+records = faults["results"]
 ```
 
 ### Paginated results
@@ -199,13 +222,24 @@ faults = await query("faultRecord", time_range="24h", order_by="faultRecord.crea
 ```python
 page_0 = await query("faultInst", limit=50, page=0)
 page_1 = await query("faultInst", limit=50, page=1)
+# page_0["truncated"] / page_0["next_page"] tell you whether to keep paging
+```
+
+### Every fault, regardless of page size (fetch_all)
+
+```python
+all_faults = await query("faultInst", fetch_all=True)
+if not all_faults["complete"]:
+    # hit the safety cap — narrow with scope_dn and combine
+    ...
+count = all_faults["returned"]
 ```
 
 ### Active faults on a specific EPG
 
 ```python
 epgs = await query("fvAEPg", filters={"name": "web"})
-dn = epgs[0]["dn"]
+dn = epgs["results"][0]["dn"]
 faults = await query("faultInst", scope_dn=dn, rsp_subtree_include="faults,no-scoped")
 ```
 
@@ -215,6 +249,7 @@ faults = await query("faultInst", scope_dn=dn, rsp_subtree_include="faults,no-sc
 nodes = await query("fabricNode",
     filter_expr='ne(fabricNode.role,"controller")',
     order_by="fabricNode.id|asc")
+node_list = nodes["results"]
 ```
 
 ### Configuration snapshot for backup / diff
@@ -222,6 +257,7 @@ nodes = await query("fabricNode",
 ```python
 # Only the intended config, no operational churn
 bds = await query("fvBD", scope_dn="uni/tn-OT", config_only=True)
+config = bds["results"]
 ```
 
 ---

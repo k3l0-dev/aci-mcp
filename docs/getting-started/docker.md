@@ -88,12 +88,12 @@ All variables are documented in the [settings reference](../configuration/settin
 
 ## Updating data/ without rebuilding
 
-Mount `data/` as a read-only volume to inject updated schemas without rebuilding the image:
+Mount `data/` as a read-only volume to inject updated schemas without rebuilding the image. The Dockerfile copies `data/` to `/data` (a sibling of `/app`, not inside it) — mount to that path, not `/app/data`:
 
 ```bash
 docker run \
   --env-file .env \
-  -v $(pwd)/data:/app/data:ro \
+  -v $(pwd)/data:/data:ro \
   -p 8000:8000 \
   aci-mcp:latest
 ```

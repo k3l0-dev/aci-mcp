@@ -15,6 +15,44 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   or outdated dependency surfaces on a schedule instead of only at the next
   manual audit.
 
+### Fixed
+
+- Documentation across `README.md` and `docs/` had drifted from the
+  current implementation (mostly predating the `get_by_dn`/`count` tools,
+  the `query()` envelope return, and the v2 search algorithm). Corrected,
+  across architecture, internals, and tool-reference docs:
+  - `query()`'s documented return shape — an envelope dict
+    (`results`/`returned`/`total_available`/`truncated`/`next_page`/
+    `complete`/`note`), not a bare list — including every stale code
+    example built against the old shape.
+  - `search_classes`'s scoring algorithm description, which still
+    described the retired v1 substring scheme instead of the current
+    tokenized/structural-priors v2 algorithm — including the live tool
+    docstring in `main.py` itself, which is what an MCP client actually
+    sees as the tool's capability description.
+  - `get_schema()`'s schema-directory resolution: documented as a
+    per-call glob fallback across versioned subdirectories, when
+    resolution actually happens once at server startup.
+  - `get_by_dn`/`count` missing from several tool-count diagrams and
+    tables that still showed only 3 of the 5 tools.
+  - Two invented ACI class names (`fvRsConsumedBrCP`/`fvRsProvidedBrCP`)
+    in the object-model doc, replaced with the real ones (`fvRsCons`/`fvRsProv`).
+  - The `ApicRequestError` exception and the retry/backoff behavior
+    (exponential backoff, transient-status retries), missing from the
+    documented exception hierarchy and client internals.
+  - A security-relevant docstring inaccuracy in the API-key comparison
+    (`middleware/auth.py`'s `_is_valid`): claimed comparison time is
+    always independent of key position, which is false — `any()`
+    short-circuits on the first match. Corrected the docstring and the
+    two docs copying it, with the accurate (and lower-severity) framing:
+    the leak only manifests once a token is already valid.
+  - Smaller inaccuracies: wrong version badges (both READMEs), a wrong
+    Docker volume-mount target (`/app/data` vs. the real `/data`), `.env`
+    precedence documented backwards, a stale expected-log-output order in
+    the quickstart, and quantitative errors in the object-model doc
+    ("hundreds" vs. the real low-thousands counts for abstract/relation/
+    configurable classes).
+
 ## [1.2.0] - 2026-07-20
 
 ### Added

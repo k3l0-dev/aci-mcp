@@ -33,7 +33,7 @@ fv  BD
 | `faultInst` | — | — | Active fault (operational data) |
 | `fabricNode` | `fabric` | `Node` | Physical switch in the fabric |
 
-The 15 000+ total classes include hundreds of abstract base classes, internal relation objects, and monitoring classes — most are never queried directly.
+The 15 000+ total classes include thousands of abstract base classes, internal relation objects, and monitoring classes — most are never queried directly. (Roughly 1,954 are abstract, 3,065 follow the Rs/Rt relation-object naming pattern, and 4,769 carry a stats/telemetry suffix — each category alone is in the thousands.)
 
 ---
 
@@ -75,7 +75,7 @@ Tenant (fvTenant)
 │   └── Subnet (fvSubnet)    — IP prefix on the BD
 └── Application Profile (fvAp)
     └── EPG (fvAEPg)         — group of endpoints with shared policy
-        └── Contract (via relation fvRsConsumedBrCP / fvRsProvided)
+        └── Contract (via relation fvRsCons / fvRsProv)
 ```
 
 This is why `scope_dn` matters in `query()`: fetching all Bridge Domains in a specific tenant is much faster than a fabric-wide class scan when you pass `scope_dn="uni/tn-OT"`.
@@ -89,10 +89,10 @@ ACI uses a special type of object to model relationships between objects. These 
 | Relation class | Connects | Direction |
 |---|---|---|
 | `fvRsCtx` | BD → VRF | "this BD is in this VRF" |
-| `fvRsConsumedBrCP` | EPG → Contract | "this EPG consumes this contract" |
-| `fvRsProvidedBrCP` | EPG → Contract | "this EPG provides this contract" |
+| `fvRsCons` | EPG → Contract | "this EPG consumes this contract" |
+| `fvRsProv` | EPG → Contract | "this EPG provides this contract" |
 
-These are internal plumbing — you rarely query them directly. The `search_classes()` algorithm penalizes them (−3 score) so they do not crowd out the canonical objects in search results.
+These are internal plumbing — you rarely query them directly. The `search_classes()` algorithm applies a structural penalty to Rs/Rt classes (−8, applied after the text score) so they do not crowd out the canonical objects in search results — see [internals/search-algorithm.md](../internals/search-algorithm.md).
 
 ---
 
@@ -123,7 +123,7 @@ The ACI object model is extremely granular:
 - Relation objects (`Rs`/`Rt`) double the count for every relationship
 - Monitoring, fault, and audit objects exist for every configurable class
 
-Of the 15 000+ classes, only a few hundred correspond to objects a network engineer would directly create or modify. The `isConfigurable` field in `get_schema()` identifies them.
+Of the 15 000+ classes, only about 3,010 (~20%) correspond to objects a network engineer would directly create or modify. The `isConfigurable` field in `get_schema()` identifies them.
 
 ---
 
@@ -134,3 +134,5 @@ Of the 15 000+ classes, only a few hundred correspond to objects a network engin
 | `search_classes(keyword)` | The ACI class namespace is opaque — `fvBD` is not obvious from "bridge domain". This tool bridges plain English to exact class names. |
 | `get_schema(class_name)` | Before querying, you need to know: what attributes exist? what identifies an object? what is the parent? The schema answers all of this without hitting the APIC. |
 | `query(class_name, ...)` | Executes the actual APIC query with correct filters, scope, and pagination. |
+| `get_by_dn(dn)` | Fetches a single object directly when you already hold its exact DN — skips the discovery sequence. |
+| `count(class_name, ...)` | Tallies objects of a class without transferring them — for "how many X?" questions. |

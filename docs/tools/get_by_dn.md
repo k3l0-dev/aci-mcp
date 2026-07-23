@@ -100,6 +100,14 @@ if obj.get("found") is False:
 
 ---
 
+## Raises
+
+| Exception | Condition |
+|---|---|
+| `ApicRequestError` | APIC returned a non-2xx, non-auth response — e.g. 400 for a malformed DN string, or a transient 5xx that never recovered. Carries the HTTP status and, when present, the APIC error text. Note: a DN that is well-formed but points to nothing does **not** raise — it returns `{"found": False, ...}` (see [Return value](#return-value)). |
+
+---
+
 ## Related
 
 - [`query`](query.md) — class-scoped queries when you do not have a DN

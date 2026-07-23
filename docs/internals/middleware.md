@@ -41,7 +41,7 @@ Any HTTP request to `/health` receives:
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
-Content-Length: 15
+Content-Length: 16
 
 {"status": "ok"}
 ```
@@ -177,7 +177,7 @@ def _is_valid(token: str, keys: frozenset[str]) -> bool:
     return any(hmac.compare_digest(token_bytes, k.encode()) for k in keys)
 ```
 
-The function always iterates over all keys regardless of where the match is found, so the total comparison time is proportional to the key count — not to the position of the matching key.
+`any()` short-circuits on the first match, so the loop is **not** position-independent — a valid token matching an early key returns faster than one matching a late key. For an invalid token (the brute-force-guessing case this guards against), every key is compared every time, so timing is constant across guesses. The property that actually matters — resisting byte-by-byte key discovery — comes from `hmac.compare_digest` itself, not from loop-level uniformity. See [internals/auth.md](auth.md) for the full explanation.
 
 ### 401 response
 

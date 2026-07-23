@@ -14,15 +14,20 @@ It exposes a **small set of generic tools**. For discovery, the LLM calls the th
 graph TD
     subgraph repo["aci-mcp (monorepo)"]
         mcp["mcp/\nFastMCP server"]
+        collector["schema-collector/\nAPIC schema pipeline"]
         data["data/\nshared artifacts"]
         env[".env\nshared credentials"]
+        docs["docs/\nreference documentation"]
+        scripts["scripts/\nbundle download helpers"]
     end
 
+    collector -->|"produces"| data
     mcp -->|"reads at startup"| data
     mcp -->|"reads credentials"| env
+    scripts -->|"fetches release bundle into"| data
 ```
 
-`mcp/` reads `data/` (schema bundle) and `.env` (APIC credentials) at the repo root.
+`mcp/` reads `data/` (schema bundle) and `.env` (APIC credentials) at the repo root. `data/` is produced independently by `schema-collector/` (or downloaded as a release bundle via `scripts/download-schemas.sh`) — `mcp/` never generates it.
 
 ---
 
@@ -44,6 +49,8 @@ graph TB
             t1["search_classes"]
             t2["get_schema"]
             t3["query"]
+            t4["get_by_dn"]
+            t5["count"]
             subgraph registry["Registry (in-memory / on-disk)"]
                 desc["descriptions index\n15k+ classes"]
                 schema["jsonmeta loader\nlazy, per-class"]
@@ -59,7 +66,7 @@ graph TB
 
     subgraph datastore["data/ (shared)"]
         json["class-descriptions.json"]
-        schemas_dir["schemas/{version}/*.json\n15k+ jsonmeta files"]
+        schemas_dir["schemas/*.json\n15k+ jsonmeta files (flat)"]
     end
 
     llm -->|"MCP JSON-RPC"| caddy
@@ -70,10 +77,15 @@ graph TB
     fm --> t1
     fm --> t2
     fm --> t3
+    fm --> t4
+    fm --> t5
     t1 --> desc
     t2 --> schema
     t3 --> filt
     t3 --> apic_client
+    t4 --> apic_client
+    t5 --> filt
+    t5 --> apic_client
     desc -->|"loaded at startup"| json
     schema -->|"read on demand"| schemas_dir
     apic_client -->|"HTTPS"| rest
@@ -108,7 +120,7 @@ Three middleware layers wrap FastMCP, outermost first:
 | 7 | Tool | Reads registry or calls APIC |
 | 8 | `ApicClient` | Builds URL + filter params, sends HTTPS GET to APIC |
 | 9 | APIC | Returns `imdata` JSON array |
-| 10 | Tool | Flattens objects, adds `_class` key, returns list |
+| 10 | Tool | Shapes the response per tool: `query` flattens objects (each gets a `_class` key) into an envelope — `{"results", "returned", "total_available", "truncated", "next_page", "complete", "note"}`; `count` returns `{"class_name", "count", "scope_dn", "filters"}`; `get_by_dn` returns the flattened object directly (or a `{"found": False, ...}` dict) |
 | 11 | FastMCP | Serialises response as MCP JSON-RPC result |
 
 ---
@@ -131,9 +143,10 @@ sequenceDiagram
     server->>server: start FastMCP lifespan
 
     Note over server: inside app_lifespan()
-    server->>server: validate APIC_HOST, APIC_PASSWORD
     server->>registry: load_descriptions(class-descriptions.json)
     registry-->>server: 15k-class dict (in-memory)
+    server->>server: resolve_schemas_dir() — resolve versioned/flat schema dir once
+    server->>server: validate APIC_HOST, APIC_PASSWORD
     server->>apic: POST /api/aaaLogin.json
     apic-->>server: APIC-cookie token
     server->>server: start HTTP on MCP_PORT
@@ -150,7 +163,7 @@ sequenceDiagram
 
 ### Class validation before APIC
 
-`query()` checks `class_name` against the in-memory `descriptions` dict before forwarding to `ApicClient`. The APIC silently returns `[]` for unknown classes. This pre-check returns a typed `UnknownClassError` with nearest matches so the LLM can self-correct without an extra `search_classes()` round-trip.
+`query()` and `count()` check `class_name` against the in-memory `descriptions` dict before forwarding to `ApicClient`. The APIC silently returns `[]` for unknown classes. This pre-check returns a typed `UnknownClassError` with nearest matches so the LLM can self-correct without an extra `search_classes()` round-trip. A class absent from `descriptions` but still resolvable to a real schema file (the `schemas/` collection runs ~300 classes ahead of `class-descriptions.json`) is let through with a logged warning instead of being rejected — the two collections are allowed to disagree slightly on "known".
 
 ### Stateless HTTP
 

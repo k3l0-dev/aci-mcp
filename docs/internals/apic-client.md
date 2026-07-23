@@ -8,21 +8,32 @@
 
 ```mermaid
 classDiagram
+    class QueryResult {
+        +list objects
+        +int total_available
+        +bool complete
+    }
+
     class ApicClient {
         -str _host
         -str _user
         -str _password
         -str _base
         -AsyncClient _client
+        -int _retry_attempts
 
-        +__init__(host, user, password, verify_ssl, timeout)
+        +__init__(host, user, password, verify_ssl, timeout, retry_attempts=3)
         +authenticate() None
-        +query_class(class_name, filters, scope_dn, ...) list
+        +query_class(class_name, filters, scope_dn, ...) QueryResult
+        +get_by_dn(dn, config_only, include_children) dict | None
+        +count_class(class_name, filters, scope_dn, filter_expr) int
         +close() None
     }
+
+    ApicClient ..> QueryResult : query_class() returns
 ```
 
-A single `ApicClient` instance is created at server startup in `app_lifespan()` and shared across all tool invocations via the FastMCP lifespan context. It is **never** instantiated per-request.
+`query_class()` returns a `QueryResult` dataclass — **not** a bare list — so callers can distinguish a partial page from the whole matching set (`objects`, the APIC-reported `total_available`, and `complete`). A single `ApicClient` instance is created at server startup in `app_lifespan()` and shared across all tool invocations via the FastMCP lifespan context. It is **never** instantiated per-request.
 
 ---
 
@@ -77,8 +88,10 @@ sequenceDiagram
 
     apic-->>client: {imdata: [...]}
     client->>client: flatten imdata → [{attrs, _class}, ...]
-    client-->>tool: list of attribute dicts
+    client-->>tool: QueryResult(objects=[...], total_available, complete)
 ```
+
+Note: the diagram above shows only the re-auth path. Independently of re-auth, every request also goes through a bounded retry loop for connection errors and transient HTTP statuses (404/500/502/503/504) — see "Exception mapping" below.
 
 ---
 
@@ -125,31 +138,44 @@ APIC returns objects in this structure:
 }
 ```
 
-`query_class()` flattens this to a plain list:
+`query_class()` flattens this into `QueryResult.objects`:
 
 ```python
-[
-  {
-    "dn": "uni/tn-OT/BD-servers",
-    "name": "servers",
-    "_class": "fvBD",
-    "_children": [
-      { "ip": "10.0.1.1/24", "_class": "fvSubnet" }
-    ]
-  }
-]
+QueryResult(
+    objects=[
+        {
+            "dn": "uni/tn-OT/BD-servers",
+            "name": "servers",
+            "_class": "fvBD",
+            "_children": [
+                { "ip": "10.0.1.1/24", "_class": "fvSubnet" }
+            ],
+        }
+    ],
+    total_available=1,
+    complete=True,
+)
 ```
 
 Children are only included when `include_children` is set.
 
 ---
 
+## Retry and backoff
+
+`query_class()`, `get_by_dn()`, and `count_class()` all funnel through one shared method, `_request_json()` — the single transport path for every read this client makes. It retries up to `retry_attempts` total attempts (default 3) with exponential backoff (`_backoff_delay`: `base × 2^(attempt-1)`, capped at 2.0 s) for:
+
+- Connection-level errors (`httpx.TimeoutException`, `httpx.ConnectError`)
+- HTTP statuses in `_TRANSIENT_STATUSES` = `{404, 500, 502, 503, 504}` — 404 is deliberately included here: nothing in this client ever reaches the backend with a genuinely-unverified class name or treats a missing object as a 404 (see the constant's docstring in `client.py`), so an observed 404 is presumed to be infrastructure noise, not a real "not found"
+
+A **permanent** error — e.g. HTTP 400 from a malformed `filter_expr` — is raised immediately on the first attempt; retrying it would only add latency to a failure that can never succeed. The 401/403 re-authenticate-and-retry flow (`_send()`) is a separate, one-shot step nested inside each attempt and is not part of this retry budget.
+
 ## Exception mapping
 
-| httpx exception | aci-mcp exception |
+| httpx exception / condition | aci-mcp exception |
 |---|---|
-| `httpx.TimeoutException` | `ApicConnectionError` |
-| `httpx.ConnectError` | `ApicConnectionError` |
+| `httpx.TimeoutException` / `httpx.ConnectError` | `ApicConnectionError`, once the retry budget is exhausted |
 | `resp.status_code in (401, 403)` | triggers re-auth; then `ApicAuthError` if still failing |
+| `resp.status_code` non-2xx, non-401/403 (e.g. 400, or transient 404/500/502/503/504 that never recovered) | `ApicRequestError` — carries the HTTP status and, when present, the APIC-supplied error text |
 | `resp.json()` raises `ValueError` | `ApicResponseError` |
 | `"imdata"` missing from body | `ApicResponseError` |

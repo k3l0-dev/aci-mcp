@@ -139,7 +139,7 @@ flowchart TD
 ```python
 # 1. Get the tenant dn
 tenants = await query("fvTenant", filters={"name": "OT"})
-scope = tenants[0]["dn"]  # "uni/tn-OT"
+scope = tenants["results"][0]["dn"]  # "uni/tn-OT"
 
 # 2. Use it as scope_dn
 bds = await query("fvBD", scope_dn=scope)
@@ -162,8 +162,8 @@ bds = await query("fvBD", scope_dn=scope)
 
 ```python
 # include the relation object as a child
-results = await query("fvBD", include_children=["fvRsCtx"])
-for bd in results:
+result = await query("fvBD", include_children=["fvRsCtx"])
+for bd in result["results"]:
     for child in bd.get("_children", []):
         if child["_class"] == "fvRsCtx":
             print(bd["name"], "→", child["tnFvCtxName"])
@@ -178,3 +178,11 @@ The schema file for the class is not in the local `data/schemas/` collection. Th
 - `data/schemas/` was never populated (run `./scripts/download-schemas.sh`)
 - The class was added in a newer APIC version than the one in the downloaded bundle
 - The class name is wrong (use `search_classes` to verify)
+
+---
+
+## Raises
+
+| Exception | Condition |
+|---|---|
+| `SchemaLoadError` | A schema file exists on disk for this class but could not be parsed — malformed or empty JSON. Indicates a corrupted or manually edited file in `data/schemas/`, not a missing class (a missing class returns `{}` instead, see above). Carries `.class_name` and `.path`. |

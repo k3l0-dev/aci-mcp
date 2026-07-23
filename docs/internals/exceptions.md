@@ -45,7 +45,7 @@ classDiagram
         +list~str~ suggestions
         +int registry_size
         Class not in descriptions index
-        Raised by query()
+        Raised by query() and count()
     }
 
     class FilterError {
@@ -74,7 +74,15 @@ classDiagram
     class ApicResponseError {
         +str url
         Response not JSON or missing imdata
-        Raised by query_class()
+        Raised by the shared _request_json() path
+    }
+
+    class ApicRequestError {
+        +str url
+        +int status
+        +str apic_text
+        Non-2xx, non-auth status (400, or exhausted-retry 404/500/502/503/504)
+        Raised by the shared _request_json() path
     }
 
     AciMcpError <|-- ConfigurationError
@@ -90,6 +98,7 @@ classDiagram
     ApicError <|-- ApicAuthError
     ApicError <|-- ApicConnectionError
     ApicError <|-- ApicResponseError
+    ApicError <|-- ApicRequestError
 ```
 
 ---
@@ -102,11 +111,12 @@ classDiagram
 | `AuthenticationError` | `middleware/auth.py` `_authenticate()` | Token absent or does not match any key — caught in `dispatch()` and converted to HTTP 401 |
 | `DescriptionsLoadError` | `registry/descriptions.py` | `class-descriptions.json` not found, unreadable, or not valid JSON |
 | `SchemaLoadError` | `registry/schema.py` | jsonmeta file exists but contains malformed JSON, or is empty |
-| `UnknownClassError` | `main.py` `query()` tool | `class_name` not in the 15k-class descriptions index |
+| `UnknownClassError` | `main.py` `query()` and `count()` tools | `class_name` not in the 15k-class descriptions index (and no schema file resolves for it either) |
 | `FilterError` | `registry/filter.py` | Class name or attribute key contains characters outside `^[A-Za-z][A-Za-z0-9]*$` |
-| `ApicAuthError` | `apic/client.py` | APIC returns non-2xx on login; or still 401/403 after re-authentication |
-| `ApicConnectionError` | `apic/client.py` | `httpx.TimeoutException` or `httpx.ConnectError` on any request |
-| `ApicResponseError` | `apic/client.py` | Response body is not valid JSON; or `imdata` key absent from body |
+| `ApicAuthError` | `apic/client.py` | APIC returns non-2xx on login; or still 401/403 after re-authentication — from `authenticate()`, and from the shared request path (which also backs `query_class()`, `get_by_dn()`, `count_class()`) when re-auth-and-retry still fails |
+| `ApicConnectionError` | `apic/client.py` | `httpx.TimeoutException` or `httpx.ConnectError` on any request, once the retry budget (`retry_attempts`, default 3, exponential backoff) is exhausted — shared by `query_class()`, `get_by_dn()`, `count_class()` |
+| `ApicResponseError` | `apic/client.py` | Response body is not valid JSON; or `imdata` key absent from body — shared by `query_class()`, `get_by_dn()`, `count_class()` |
+| `ApicRequestError` | `apic/client.py` | APIC returns a non-2xx, non-auth status — e.g. 400 for a malformed `filter_expr`/DN, or a transient 404/500/502/503/504 that never recovered within the retry budget — shared by `query_class()`, `get_by_dn()`, `count_class()` |
 
 ---
 

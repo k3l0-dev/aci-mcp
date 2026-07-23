@@ -96,7 +96,7 @@ Whitespace around commas is stripped. Empty segments are ignored. Comparison is 
 
 ### No-op mode (development)
 
-When `MCP_API_KEYS` is empty or unset, the `ApiKeyMiddleware` is not attached and all requests pass through. A warning is logged at startup:
+The `ApiKeyMiddleware` is always attached, regardless of `MCP_API_KEYS`. When the key store is empty (`MCP_API_KEYS` empty or unset), the middleware no-ops internally — it lets every request through instead of checking a key. A warning is logged at startup:
 
 ```
 WARNING  aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication.
@@ -114,10 +114,9 @@ WARNING  aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authenti
 
 ## Precedence
 
-Variables are loaded in this order (later values win):
+`.env` at the monorepo root is loaded via `python-dotenv` with `override=False` (the library default): it only fills in variables that aren't already set in the process environment. **The system environment wins, not `.env`.** If you export `APIC_HOST` (or any other variable) in your shell, editing `.env` has no effect until you unset the shell variable or start a fresh shell.
 
-1. System environment
-2. `.env` at monorepo root (loaded via `python-dotenv`)
+The one exception is the SIGHUP hot-reload path, which explicitly calls `load_dotenv(ENV_FILE, override=True)` — a running server that receives SIGHUP re-reads `.env` and lets it override the current process environment.
 
 If `.env` does not exist, system environment variables are used directly. This is the normal behaviour inside Docker containers.
 

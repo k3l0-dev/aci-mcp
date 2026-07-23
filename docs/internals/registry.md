@@ -16,7 +16,7 @@ graph TD
 
     subgraph data["data/"]
         json["class-descriptions.json\n15k+ entries (in-memory at startup)"]
-        schemas_dir["schemas/{version}/*.json\none file per class (lazy, on-disk)"]
+        schemas_dir["schemas/*.json (resolved dir)\none file per class (lazy, on-disk)"]
     end
 
     main["main.py\napp_lifespan + query() tool"]
@@ -51,65 +51,72 @@ flowchart LR
 
 ### `search(keyword, descriptions, limit)`
 
-O(n) linear scan with relevance scoring. For the full algorithm rationale, measured gains, and evolution history see [search-algorithm.md](search-algorithm.md).
+O(n) linear scan with relevance scoring. This is the **v2** algorithm — tokenized matching plus structural priors, not the older substring-scoring scheme. For the full rationale, measured gains, and evolution history (including the retired v1 scheme) see [search-algorithm.md](search-algorithm.md), which is the source of truth for this section.
 
-**Scoring rules (applied in order):**
+**Scoring, in order of confidence (all fields tokenized camelCase-aware, via the same tokenizer as the query):**
+
+| Signal | Weight |
+|---|---|
+| Exact match against label or curated jargon phrase | +20 / +18 |
+| Exact match against class name (query squashed, no separators) | +25 |
+| Query phrase substring of label/jargon phrase | +6 |
+| Token coverage of label/class name (squared) | up to +8 / +5 |
+| Query phrase substring of joined property-label haystack | +6 |
+| Token coverage of property labels/comment (squared) | up to +2 / +1 |
+| Curated synonym hit | up to +3 × coverage |
+
+**Structural priors, applied after the text score, only when it's already positive:**
 
 ```python
-score = 0
-if keyword in class_name.lower():  score += 3   # class name match
-if keyword in label.lower():       score += 2   # label match
-if keyword in comment.lower():     score += 1   # comment match
-
-# Fallback: scan prop_labels only when no match above
-if score == 0:
-    for pl in meta.get("prop_labels", ()):
-        if keyword in pl.lower():
-            score = 1
-            break   # no accumulation across multiple prop_labels
-
-# Rs/Rt relation classes are penalised — internal plumbing, never the primary target
-if score > 0 and _RS_RT_RE.match(class_name):
-    score -= 3
+if isConfigurable:               score += 6
+if isAbstract:                   score -= 6
+if stats/telemetry suffix match: score -= 10   # e.g. "5min", "15min", "1h"
+if _RS_RT_RE.match(class_name):  score -= 8    # internal plumbing, never the primary target
 ```
+
+**Tie-breaking:** fewer class-name tokens → shorter class name → alphabetical — deterministic, no dependency on JSON insertion order.
 
 **Edge cases:**
 
 - Empty keyword → returns `[]` immediately (no scan)
 - Missing `label`, `comment`, or `prop_labels` → safe default via `.get()`
-- Rs/Rt class whose penalised score reaches 0 → excluded from results
+- A class with zero textual signal never surfaces on structural priors alone
+- A curated synonym boost is capped so it can never override a genuine exact match on its own
 
 ---
 
 ## schema.py
 
-### `load_schema(class_name, schemas_dir)`
+### `load_schema(class_name, schemas_dir, include_property_details=False, properties_filter=None)`
 
-Lazy per-class loader. No in-memory cache — the OS page cache handles repeated reads efficiently.
+Lazy per-class loader. No in-memory cache — the OS page cache handles repeated reads efficiently. This is the **hot path** — called on every `get_schema()` invocation — so it does a single direct file stat/open, **no wildcard scanning**: `schemas_dir` must already be the *resolved* directory (see "Schema file lookup" below), and this function never searches subdirectories itself.
 
 ```mermaid
 flowchart TD
     CALL["load_schema('fvBD', schemas_dir)"]
-    CALL --> EXISTS{"schemas_dir/fvBD.json\nexists?"}
-    EXISTS -->|"no — try versioned subdir"| GLOB["glob schemas_dir/*/fvBD.json"]
-    GLOB -->|"not found"| EMPTY["return {}"]
+    CALL --> EXISTS{"schemas_dir/fvBD.json\nexists? (schemas_dir already resolved)"}
+    EXISTS -->|"no"| EMPTY["return {}"]
     EXISTS -->|"yes"| READ["read + json.loads()"]
-    GLOB -->|"found (first match)"| READ
-    READ --> VALIDATE{"file empty?"}
+    READ --> VALIDATE{"file empty or unparseable?"}
     VALIDATE -->|"yes"| ERR["raise SchemaLoadError"]
     VALIDATE -->|"no"| EXTRACT["extract query-planning fields only"]
-    EXTRACT --> NORM["normalise containedBy dict → list\nnormalise relationTo / relationFrom"]
+    EXTRACT --> NORM["normalise containedBy dict → list\nnormalise relationTo / relationFrom\nproject contains → sorted flat class-name list"]
     NORM --> PROPS["properties = sorted(keys of raw properties dict)"]
-    PROPS --> RETURN["return dict"]
+    PROPS --> DETAILS{"include_property_details\nor properties_filter set?"}
+    DETAILS -->|"yes"| PD["property_details = compact per-property\nconstraints (type, access, options, ...)"]
+    DETAILS -->|"no"| RETURN
+    PD --> RETURN["return dict"]
 ```
 
 ### Extracted fields
 
 Only these fields are kept — heavy fields are discarded to keep tool responses token-efficient:
 
-**Kept:** `identifiedBy`, `rnFormat`, `containedBy`, `dnFormats`, `relationTo`, `relationFrom`, `properties` (names only), `isAbstract`, `isConfigurable`, `className`, `classPkg`, `label`
+**Kept (always, when present in the schema):** `identifiedBy`, `rnFormat`, `containedBy`, `contains` (child classes, flat notation), `dnFormats`, `relationTo`, `relationFrom`, `properties` (names only), `isAbstract`, `isConfigurable`, `className`, `classPkg`, `label`
 
-**Discarded:** `writeAccess`, `events`, `stats`, `faults`, full property metadata (type, validators, etc.)
+**Kept (opt-in only, token economy):** `property_details` — compact per-property constraints (`type`, `access`, `naming`, `mandatory`, `default`, `options`, `comment`), added only when `include_property_details=True` or `properties_filter` is given. `properties_filter` restricts the dump to named properties and is the preferred, cheaper path; `include_property_details` dumps every property.
+
+**Discarded:** `writeAccess`, `events`, `stats`, `faults`, full raw property metadata (~25 fields per property, most irrelevant to an agent)
 
 ### containedBy normalisation
 
@@ -127,14 +134,16 @@ In raw jsonmeta, `containedBy` is a dict with class names as keys:
 
 ### Schema file lookup
 
-The server supports two layouts for `data/schemas/`:
+`resolve_schemas_dir(schemas_dir)` runs **once, at server startup** (`main.app_lifespan`), never per call — walking a 15k+-file tree on every `get_schema()` invocation would be far too slow. It resolves whichever layout is actually on disk:
 
-| Layout | Path tried | Used when |
+| Layout | Resolves to | Used when |
 |---|---|---|
-| Flat | `schemas_dir/fvBD.json` | Schemas collected without versioning |
-| Versioned | `schemas_dir/{version}/fvBD.json` | Default — schemas are stored under `schemas/{apic_version}/` |
+| Flat | `schemas_dir` itself | `data/schemas/*.json` exist directly (the default today — see [quickstart](../getting-started/quickstart.md)) |
+| Single versioned subdir | `schemas_dir/{version}/` | Exactly one immediate subdirectory holds `*.json` files |
+| Multiple versioned subdirs | The lexicographically last subdirectory | `schema-collector` has run against more than one APIC version; this is a naming heuristic (`mo-apic-v{version}`), not semantic-version comparison |
+| Nothing found | `schemas_dir` unchanged | Every subsequent `get_schema()` reports the class as not found |
 
-`load_schema()` tries the flat path first, then falls back to a glob for the first versioned match.
+The *resolved* directory is then passed to every `load_schema()` call for the life of the process — that function itself does one direct stat, never a glob.
 
 ---
 
