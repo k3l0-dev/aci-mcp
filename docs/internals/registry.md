@@ -62,7 +62,9 @@ O(n) linear scan with relevance scoring. This is the **v2** algorithm — tokeni
 | Query phrase substring of label/jargon phrase | +6 |
 | Token coverage of label/class name (squared) | up to +8 / +5 |
 | Query phrase substring of joined property-label haystack | +6 |
-| Token coverage of property labels/comment (squared) | up to +2 / +1 |
+| Query phrase substring of comment | +2 |
+| Token coverage of property labels (squared), when no substring hit | up to +2 |
+| Token coverage of comment (squared), when no substring hit | up to +1 |
 | Curated synonym hit | up to +3 × coverage |
 
 **Structural priors, applied after the text score, only when it's already positive:**

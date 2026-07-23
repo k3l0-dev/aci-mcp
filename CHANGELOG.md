@@ -52,6 +52,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
     the quickstart, and quantitative errors in the object-model doc
     ("hundreds" vs. the real low-thousands counts for abstract/relation/
     configurable classes).
+  - `registry/descriptions.py`'s own module docstring mislabeled the
+    intermediate "Rs/Rt-penalty-only" measurements (Recall@1 28.2%) as
+    "v1" — the real final v1 state (after the prop_labels axis was added)
+    scored 30.8%, matching `search-algorithm.md`'s own numbers. The v2
+    comparison in the docstring now uses the correct baseline.
+  - The scoring tables in `search-algorithm.md` and `registry.md` folded
+    the comment field's direct-substring-match branch (+2) into the same
+    row as its squared-coverage fallback (+1) — split into two rows,
+    matching how the property-label branch was already documented.
 
 ## [1.2.0] - 2026-07-20
 
