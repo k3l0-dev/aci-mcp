@@ -12,6 +12,7 @@ and verify the actual parsing logic rather than just "does the file exist".
 import json
 
 import pytest
+
 from exceptions import SchemaLoadError
 from registry.schema import class_exists, load_schema, resolve_schemas_dir
 

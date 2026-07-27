@@ -30,6 +30,7 @@ thing the real APIC would receive.
 from pathlib import Path
 
 import pytest
+
 from apic.client import ApicClient
 from exceptions import FilterError
 from tests.conftest import MINIMAL_DESCRIPTIONS, apic_response, make_ctx

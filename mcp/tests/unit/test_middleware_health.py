@@ -11,7 +11,8 @@ path (lines 35-39) and the pass-through path.
 import json
 
 import pytest
-from middleware.health import HealthMiddleware, _HEALTH_BODY, _HEALTH_HEADERS
+
+from middleware.health import _HEALTH_BODY, _HEALTH_HEADERS, HealthMiddleware
 
 
 async def _call(mw: HealthMiddleware, scope: dict) -> list[dict]:

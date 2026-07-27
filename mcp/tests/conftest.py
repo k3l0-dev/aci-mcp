@@ -24,6 +24,7 @@ from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
+
 from apic.client import QueryResult
 
 SCHEMAS_DIR = Path(__file__).parent.parent.parent / "data" / "schemas"

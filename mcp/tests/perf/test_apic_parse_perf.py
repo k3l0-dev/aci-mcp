@@ -11,7 +11,7 @@ Simulates what happens when the APIC returns large result sets:
 
 Thresholds:
   parse 1 000 flat objects          < 50 ms
-  parse 200 objects × 5 children    < 50 ms
+  parse 200 objects x 5 children    < 50 ms
   50 concurrent queries             < 500 ms total wall time
 """
 
@@ -20,10 +20,10 @@ import time
 
 import httpx
 import pytest
+
 from apic.client import ApicClient
 from tests.conftest import apic_response
 from tests.perf.conftest import generate_imdata
-
 
 # ── Fake transport (reused from unit/test_client.py concept) ──────────────────
 
@@ -116,7 +116,7 @@ async def test_parse_200_objects_with_5_children_each():
     assert len(result.objects) == 200
     assert all(len(r["_children"]) == 5 for r in result.objects)
     assert elapsed < 0.050, (
-        f"Parsing 200 objects × 5 children took {elapsed * 1000:.1f}ms — must be < 50ms"
+        f"Parsing 200 objects x 5 children took {elapsed * 1000:.1f}ms — must be < 50ms"
     )
 
 

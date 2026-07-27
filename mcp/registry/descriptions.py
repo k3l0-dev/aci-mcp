@@ -14,8 +14,8 @@ lifespan context.
 
 Search strategy history
 ------------------------
-v1: weighted substring match over three fields (class name ×3, label ×2,
-comment ×1), with a -3 penalty for ACI relation classes (Rs/Rt naming
+v1: weighted substring match over three fields (class name x3, label x2,
+comment x1), with a -3 penalty for ACI relation classes (Rs/Rt naming
 pattern, e.g. fvRsCtx), plus a prop_labels fallback (+1, no accumulation)
 for classes that score 0 on the three main fields — the final v1 state
 this module was rewritten from, and the baseline for the numbers below

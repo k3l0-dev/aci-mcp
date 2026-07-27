@@ -3,13 +3,12 @@
 
 """Unit tests for middleware.auth — ApiKeyMiddleware, KeyStore, RateLimiter, helpers."""
 
+import pytest
 from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
-
-import pytest
 
 from exceptions import AuthenticationError
 from middleware.auth import (
@@ -21,7 +20,6 @@ from middleware.auth import (
     _is_valid,
     load_api_keys,
 )
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

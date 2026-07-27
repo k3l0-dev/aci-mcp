@@ -11,7 +11,7 @@ cache them in the page cache after the first read.
 Thresholds:
   cold load of a single schema   < 5 ms
   200 distinct cold schema loads < 500 ms total
-  re-reading the same file 100×  < 100 ms (page cache warm)
+  re-reading the same file 100x  < 100 ms (page cache warm)
 """
 
 import time

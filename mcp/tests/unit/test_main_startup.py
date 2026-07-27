@@ -17,7 +17,6 @@ import pytest
 import main
 from exceptions import ConfigurationError
 
-
 # ── _serve() — port validation ────────────────────────────────────────────────
 
 
@@ -44,11 +43,13 @@ async def test_serve_logs_warning_when_no_api_keys(monkeypatch, caplog):
 
     # Patch load_dotenv so the real .env doesn't override our controlled env vars,
     # and patch load_api_keys to return empty list directly.
-    with patch("main.load_dotenv"), \
-         patch("main.load_api_keys", return_value=[]), \
-         patch.object(main.mcp, "run_http_async", new_callable=AsyncMock):
-        with caplog.at_level(logging.DEBUG):
-            await main._serve()
+    with (
+        patch("main.load_dotenv"),
+        patch("main.load_api_keys", return_value=[]),
+        patch.object(main.mcp, "run_http_async", new_callable=AsyncMock),
+        caplog.at_level(logging.DEBUG),
+    ):
+        await main._serve()
 
     assert "WITHOUT authentication" in caplog.text
 
@@ -58,11 +59,13 @@ async def test_serve_logs_key_count_when_api_keys_set(monkeypatch, caplog):
     """_serve() logs the number of loaded keys when MCP_API_KEYS is set."""
     monkeypatch.setenv("MCP_PORT", "8000")
 
-    with patch("main.load_dotenv"), \
-         patch("main.load_api_keys", return_value=["key-a", "key-b"]), \
-         patch.object(main.mcp, "run_http_async", new_callable=AsyncMock):
-        with caplog.at_level(logging.DEBUG):
-            await main._serve()
+    with (
+        patch("main.load_dotenv"),
+        patch("main.load_api_keys", return_value=["key-a", "key-b"]),
+        patch.object(main.mcp, "run_http_async", new_callable=AsyncMock),
+        caplog.at_level(logging.DEBUG),
+    ):
+        await main._serve()
 
     assert "2 key(s)" in caplog.text
 
@@ -77,10 +80,13 @@ async def test_lifespan_raises_when_apic_host_missing(monkeypatch):
     monkeypatch.setenv("APIC_PASSWORD", "secret")
 
     # load_dotenv must be patched so the real .env cannot supply APIC_HOST.
-    with patch("main.load_dotenv"), patch("main.load_descriptions", return_value={}):
-        with pytest.raises(ConfigurationError, match="APIC_HOST"):
-            async with main.app_lifespan(MagicMock()):
-                pass
+    with (
+        patch("main.load_dotenv"),
+        patch("main.load_descriptions", return_value={}),
+        pytest.raises(ConfigurationError, match="APIC_HOST"),
+    ):
+        async with main.app_lifespan(MagicMock()):
+            pass
 
 
 @pytest.mark.asyncio
@@ -89,10 +95,13 @@ async def test_lifespan_raises_when_apic_host_blank(monkeypatch):
     monkeypatch.setenv("APIC_HOST", "   ")
     monkeypatch.setenv("APIC_PASSWORD", "secret")
 
-    with patch("main.load_dotenv"), patch("main.load_descriptions", return_value={}):
-        with pytest.raises(ConfigurationError, match="APIC_HOST"):
-            async with main.app_lifespan(MagicMock()):
-                pass
+    with (
+        patch("main.load_dotenv"),
+        patch("main.load_descriptions", return_value={}),
+        pytest.raises(ConfigurationError, match="APIC_HOST"),
+    ):
+        async with main.app_lifespan(MagicMock()):
+            pass
 
 
 @pytest.mark.asyncio
@@ -101,10 +110,13 @@ async def test_lifespan_raises_when_apic_password_missing(monkeypatch):
     monkeypatch.setenv("APIC_HOST", "10.0.0.1")
     monkeypatch.setenv("APIC_PASSWORD", "")
 
-    with patch("main.load_dotenv"), patch("main.load_descriptions", return_value={}):
-        with pytest.raises(ConfigurationError, match="APIC_PASSWORD"):
-            async with main.app_lifespan(MagicMock()):
-                pass
+    with (
+        patch("main.load_dotenv"),
+        patch("main.load_descriptions", return_value={}),
+        pytest.raises(ConfigurationError, match="APIC_PASSWORD"),
+    ):
+        async with main.app_lifespan(MagicMock()):
+            pass
 
 
 # ── app_lifespan() — APIC_HOST prefix stripping ───────────────────────────────

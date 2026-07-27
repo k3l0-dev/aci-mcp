@@ -54,7 +54,7 @@ def test_empty_filter_is_fastest():
         build_filter("fvBD", {"name": "x"})
     t_one = time.perf_counter() - t_one
 
-    # Empty should be at most 2× slower than one-filter — both are trivially fast
+    # Empty should be at most 2x slower than one-filter — both are trivially fast
     assert t_empty < 0.200
     assert t_one < 0.500
 

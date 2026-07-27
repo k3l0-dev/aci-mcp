@@ -22,6 +22,7 @@ them. Run explicitly with:
 """
 
 import pytest
+
 from exceptions import ApicRequestError
 
 # `live` keeps this suite out of the default run (see pyproject.toml

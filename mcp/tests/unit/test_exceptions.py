@@ -4,6 +4,7 @@
 """Unit tests for mcp/exceptions.py — hierarchy, messages, and attributes."""
 
 import pytest
+
 from exceptions import (
     AciMcpError,
     ApicAuthError,
@@ -19,7 +20,6 @@ from exceptions import (
     SchemaLoadError,
     UnknownClassError,
 )
-
 
 # ── Hierarchy ─────────────────────────────────────────────────────────────────
 

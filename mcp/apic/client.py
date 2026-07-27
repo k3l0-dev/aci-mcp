@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import httpx
+
 from exceptions import (
     ApicAuthError,
     ApicConnectionError,
@@ -149,7 +150,7 @@ class ApicClient:
     def _backoff_delay(self, attempt: int) -> float:
         """Delay before retry attempt `attempt` (1-based), exponential and capped.
 
-        attempt=1 → base, attempt=2 → 2×base, ... capped at 2.0s so a run of
+        attempt=1 → base, attempt=2 → 2xbase, ... capped at 2.0s so a run of
         transient failures can't turn a single tool call into a multi-second
         stall for the LLM agent waiting on it.
         """
