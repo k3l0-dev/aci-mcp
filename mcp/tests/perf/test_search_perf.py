@@ -64,7 +64,7 @@ class TestSearchPerf:
             search("fabric", large_descriptions, limit=10)
         t_hit = time.perf_counter() - t_hit
 
-        # Miss should be in the same ballpark — not more than 3× slower
+        # Miss should be in the same ballpark — not more than 3x slower
         assert t_miss < t_hit * 3 + 0.1, (
             f"No-match search ({t_miss:.3f}s) is disproportionately slower than "
             f"matching search ({t_hit:.3f}s)"

@@ -75,15 +75,16 @@ import signal
 from pathlib import Path
 from typing import Annotated, Any
 
-from apic.client import ApicClient
 from dotenv import load_dotenv
-from exceptions import ConfigurationError, UnknownClassError
 from fastmcp import Context, FastMCP
 from fastmcp.server.lifespan import lifespan
+from pydantic import BeforeValidator
+
+from apic.client import ApicClient
+from exceptions import ConfigurationError, UnknownClassError
 from middleware.auth import ApiKeyMiddleware, KeyStore, load_api_keys
 from middleware.health import HealthMiddleware
 from middleware.oauth import OAuthDiscoveryMiddleware
-from pydantic import BeforeValidator
 from registry.descriptions import load_descriptions
 from registry.descriptions import search as desc_search
 from registry.schema import class_exists, load_schema, resolve_schemas_dir
@@ -771,7 +772,7 @@ async def _serve() -> None:
 
     # SIGHUP reloads MCP_API_KEYS from .env without restarting the server.
     # Send with: kill -HUP <pid>  or  kill -HUP $(cat .lab.pid)
-    def _handle_sighup(signum, frame):  # noqa: ARG001
+    def _handle_sighup(_signum, _frame):
         load_dotenv(ENV_FILE, override=True)
         new_keys = load_api_keys()
         key_store.reload(new_keys)

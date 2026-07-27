@@ -12,9 +12,9 @@ import json
 from pathlib import Path
 
 import pytest
+
 from exceptions import UnknownClassError
 from tests.conftest import MINIMAL_DESCRIPTIONS, StubBackend, make_ctx
-
 
 # ── Tool context helpers ──────────────────────────────────────────────────────
 

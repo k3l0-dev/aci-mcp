@@ -4,9 +4,9 @@
 """Unit tests for registry.filter.build_filter."""
 
 import pytest
+
 from exceptions import FilterError
 from registry.filter import build_filter
-
 
 # ── Happy path ────────────────────────────────────────────────────────────────
 

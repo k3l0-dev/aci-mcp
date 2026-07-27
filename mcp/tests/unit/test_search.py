@@ -6,6 +6,7 @@
 import json
 
 import pytest
+
 from exceptions import DescriptionsLoadError
 from registry.descriptions import load_descriptions, search
 

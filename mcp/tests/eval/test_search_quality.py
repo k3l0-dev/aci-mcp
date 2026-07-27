@@ -24,8 +24,9 @@ import pytest
 # one directory up from this test — make its evaluate() importable.
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from eval_search import GOLDEN_FILE, evaluate  # noqa: E402
-from registry.descriptions import load_descriptions  # noqa: E402
+from eval_search import GOLDEN_FILE, evaluate
+
+from registry.descriptions import load_descriptions
 
 DESCRIPTIONS_FILE = Path(__file__).parent.parent.parent.parent / "data" / "class-descriptions.json"
 

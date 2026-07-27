@@ -13,7 +13,7 @@ from starlette.responses import PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from middleware.oauth import OAuthDiscoveryMiddleware, _PROTECTED_RESOURCE_PATHS
+from middleware.oauth import _PROTECTED_RESOURCE_PATHS, OAuthDiscoveryMiddleware
 
 
 def _make_client() -> TestClient:

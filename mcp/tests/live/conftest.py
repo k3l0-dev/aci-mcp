@@ -23,8 +23,9 @@ from pathlib import Path
 import httpx
 import pytest
 import pytest_asyncio
-from apic.client import ApicClient
 from dotenv import load_dotenv
+
+from apic.client import ApicClient
 from exceptions import ApicAuthError, ApicConnectionError
 
 # tests/live/conftest.py -> tests/live -> tests -> mcp -> repo root

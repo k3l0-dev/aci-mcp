@@ -13,6 +13,7 @@ from unittest.mock import MagicMock
 
 import httpx
 import pytest
+
 from apic.client import _MAX_OBJECTS, _MAX_PAGES, ApicClient
 from exceptions import (
     ApicAuthError,
@@ -22,7 +23,6 @@ from exceptions import (
     ApicResponseError,
 )
 from tests.conftest import apic_login_response, apic_response, make_imdata_objects
-
 
 # ── Fake HTTP transport ───────────────────────────────────────────────────────
 
