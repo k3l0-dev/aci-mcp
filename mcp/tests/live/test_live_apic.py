@@ -21,6 +21,8 @@ them. Run explicitly with:
     uv run pytest tests/live/ -m live
 """
 
+from collections import Counter
+
 import pytest
 
 from exceptions import ApicRequestError
@@ -40,7 +42,7 @@ async def test_query_class_fvtenant_returns_real_objects(live_client):
     """fvTenant always has at least one instance on a live APIC (uni/tn-common
     at minimum) — assert real objects with the real 'uni/tn-<name>' DN format
     come back, not a StubBackend-shaped approximation."""
-    tenants = await live_client.query_class("fvTenant", {}, limit=20)
+    tenants = (await live_client.query_class("fvTenant", {}, limit=20)).objects
     assert len(tenants) > 0
     for t in tenants:
         assert t["_class"] == "fvTenant"
@@ -50,7 +52,7 @@ async def test_query_class_fvtenant_returns_real_objects(live_client):
 
 async def test_query_class_fvbd_returns_real_objects(live_client):
     """fvBD objects on the lab fabric — real dn format is 'uni/tn-X/BD-Y'."""
-    bds = await live_client.query_class("fvBD", {}, limit=20)
+    bds = (await live_client.query_class("fvBD", {}, limit=20)).objects
     assert len(bds) > 0
     for bd in bds:
         assert bd["_class"] == "fvBD"
@@ -62,13 +64,15 @@ async def test_query_class_config_only_returns_fewer_attributes(live_client):
     attribute keys the full response carries, for the *same* real object —
     filtered by name to guarantee both requests hit the identical instance
     rather than comparing two arbitrary limit=1 picks."""
-    full = await live_client.query_class("fvBD", {}, limit=1)
+    full = (await live_client.query_class("fvBD", {}, limit=1)).objects
     assert full, "no fvBD objects on the lab fabric to test against"
     name = full[0]["name"]
 
-    config = await live_client.query_class(
-        "fvBD", {"name": name}, limit=1, config_only=True
-    )
+    config = (
+        await live_client.query_class(
+            "fvBD", {"name": name}, limit=1, config_only=True
+        )
+    ).objects
     assert config
     assert len(config[0]) < len(full[0])
     assert set(config[0]) <= set(full[0])
@@ -80,7 +84,7 @@ async def test_query_class_config_only_returns_fewer_attributes(live_client):
 async def test_get_by_dn_found_matches_query_result(live_client):
     """Fetch a real DN from a query_class() result, then re-fetch it
     directly via get_by_dn() — the found case."""
-    bds = await live_client.query_class("fvBD", {}, limit=1)
+    bds = (await live_client.query_class("fvBD", {}, limit=1)).objects
     assert bds, "no fvBD objects on the lab fabric to test against"
     dn = bds[0]["dn"]
 
@@ -102,14 +106,71 @@ async def test_get_by_dn_not_found_returns_none(live_client):
 # ── count_class() ──────────────────────────────────────────────────────────────
 
 
-async def test_count_class_fvbd_returns_plausible_int(live_client):
-    """count_class() must return a plausible non-negative int for fvBD, from
-    an actual APIC rsp-subtree-include=count response — not StubBackend's
-    len() shortcut, which cannot verify the real moCount/childCount parsing
-    path in ApicClient._extract_count()."""
-    total = await live_client.count_class("fvBD", {})
-    assert isinstance(total, int)
-    assert total >= 0
+async def test_count_class_agrees_with_query_total_available(live_client):
+    """count_class() and query_class() must report the same size for the same
+    result set.
+
+    This is the invariant the previous version of this test missed. It only
+    asserted `total >= 0`, which a broken count satisfies trivially — and the
+    count did break: the APIC `rsp-subtree-include=count` mechanism this
+    client relied on returned a `moCount` that disagreed with reality by
+    nearly 2x fabric-wide (203 vs. 403 fvBD). Comparing the two tools against
+    each other catches that on any fabric without hardcoding instance counts
+    that differ per lab.
+    """
+    counted = await live_client.count_class("fvBD", {})
+    queried = await live_client.query_class("fvBD", {}, limit=1)
+    assert counted == queried.total_available
+    assert counted > 0, "no fvBD objects on the lab fabric to test against"
+
+
+async def test_count_class_scoped_to_a_tenant_is_not_silently_zero(live_client):
+    """A count scoped to a subtree must report that subtree's real size.
+
+    Pins the sharpest edge of the old bug: a scoped count came back as 0
+    against tenants holding up to 192 bridge domains. Zero is the one wrong
+    answer an agent will not question — it reads as "none configured in this
+    tenant" rather than as a failed lookup.
+
+    The tenant is the *busiest* one on the fabric, not an arbitrary first
+    pick. That matters, because the old idiom failed on only 5 of the 28
+    tenants holding bridge domains here: a test scoped to whichever tenant
+    happened to come back first passed against the broken code on this very
+    lab. Targeting the largest subtree maximises the chance of landing on a
+    real discrepancy instead of relying on luck of the draw — it is still a
+    sampling test, not a proof, which is why the unit-level guard above pins
+    the request shape directly.
+    """
+    bds = (await live_client.query_class("fvBD", {}, limit=200)).objects
+    assert bds, "no fvBD objects on the lab fabric to test against"
+
+    per_tenant = Counter("/".join(bd["dn"].split("/")[:2]) for bd in bds)
+    tenant_dn, expected_at_least = per_tenant.most_common(1)[0]
+
+    counted = await live_client.count_class("fvBD", {}, scope_dn=tenant_dn)
+    queried = await live_client.query_class("fvBD", {}, scope_dn=tenant_dn, limit=1)
+    assert counted == queried.total_available
+    assert counted >= expected_at_least, (
+        f"scoped count returned {counted} for {tenant_dn}, but at least "
+        f"{expected_at_least} fvBD were already seen under it"
+    )
+
+
+async def test_count_class_with_filter_agrees_with_query(live_client):
+    """A filtered count must match the filtered query's totalCount.
+
+    The filtered case was wrong too, and less obviously so than the scoped
+    one — it returned a plausible-looking number that was simply not the
+    right one (99 against a real 203).
+    """
+    bds = (await live_client.query_class("fvBD", {}, limit=1)).objects
+    assert bds, "no fvBD objects on the lab fabric to test against"
+    name = bds[0]["name"]
+
+    counted = await live_client.count_class("fvBD", {"name": name})
+    queried = await live_client.query_class("fvBD", {"name": name}, limit=1)
+    assert counted == queried.total_available
+    assert counted > 0
 
 
 # ── error handling — real APIC error-response shape ──────────────────────────
