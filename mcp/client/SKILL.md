@@ -306,9 +306,23 @@ See section 8 for how to traverse it.
 
 Note the key keeps its colon notation (`fv:RtCtx`), unlike `contains`, which is flattened.
 
-Reverse lookups: which objects of `sourceClass` point to this one.
-Traverse the same way as `relationTo` but query the `sourceClass` scoped to
-the source object's DN.
+Reverse lookups: which objects of `sourceClass` point to this one. This is the
+equivalent of the APIC UI's **Show Usage** — the APIC materialises an Rt object
+as a *child of the target*, one per referring object, and each Rt's `tDn` is
+the DN of the source that refers to it. So "who uses this BD?" is answered by
+listing the BD's Rt children:
+
+```python
+get_by_dn("uni/tn-OT/BD-servers", include_children=["fvRtBd"])
+# each _children entry's tDn is a source object's DN, e.g. an fvAEPg
+```
+
+**Rt objects carry no `state`.** Their attributes are `tDn`, `tCl`, `dn`, `rn`,
+`status`, `lcOwn`, `modTs` — no `state`, no `stateQual`. Relation health exists
+only on the *outgoing* (Rs) side, so `relationTo` and `relationFrom` are not
+symmetric: you can ask "is my reference to X healthy?" but not "is the
+reference to me healthy?" from this side. To judge that, fetch the source's own
+Rs object and read its `state` (section 8).
 
 ### `isAbstract`
 
@@ -542,6 +556,96 @@ Relations in ACI are **first-class objects**, not inline attributes.
 To answer "what VRF does this BD use?" or "what contracts does this EPG consume?",
 you must traverse the relation chain.
 
+### The rule that governs this whole section
+
+> **Never report what an object points to without reading the relation's
+> `state`.** An Rs object records the target that was *configured*. That
+> record survives the target being deleted, renamed, or never created — so
+> the target's name being present is not evidence that the target exists.
+> `state` is the APIC's own verdict on whether the reference actually
+> resolved, and it is the only field that carries that verdict.
+
+This is not a theoretical edge case. Observed on a live fabric:
+
+```
+spanRsSrcGrpToFilterGrp   state = missing-target
+                          tDn   = uni/infra/filtergrp-niwaki-it-fg
+
+get_by_dn("uni/infra/filtergrp-niwaki-it-fg")
+  → returns 1 object, class spanFilterGrp
+```
+
+The `tDn` is not empty, and fetching it **returns a real object**. An agent
+that "double-checks" by resolving the target concludes everything is fine,
+while the APIC is saying the relation never formed. No sequence of follow-up
+queries substitutes for reading `state`.
+
+### Reading `state` and `stateQual`
+
+Every Rs class inherits these two from the abstract `relnTo`. They are
+orthogonal — read `state` first, then let `stateQual` qualify it:
+
+| `state` | Meaning |
+|---|---|
+| `formed` | Resolved. The reference points at a real object. |
+| `missing-target` | **Not resolved.** The configured target was not found. |
+| `invalid-target` | **Not resolved.** The target exists but is not valid here. |
+| `cardinality-violation` | **Not resolved.** Too many/few targets for this relation. |
+| `unformed` | **Ambiguous — do not report as a fault on its own.** It is the property's default value, and it is also what many internal/system relations sit at permanently. |
+
+`missing-target`, `invalid-target` and `cardinality-violation` are definite:
+the APIC tried and failed. `unformed` is not. Sweeping all 48 tenants of the
+lab fabric — 4753 relations — only 24 were not `formed`, and **22 of those
+were `unformed`**, most with a `tDn` that resolves perfectly well:
+
+```
+vzRsRFltPOwner    state=unformed  tDn=uni/tn-mgmt/flt-...   → resolves (vzFilter)
+mgmtRsInBStNode   state=unformed  tDn=topology/pod-1/node-101 → resolves (fabricNode)
+```
+
+Calling those "broken" would be a false positive. What distinguishes a real
+problem is the target *not* existing:
+
+```
+fvRsPathAtt  state=unformed  tDn=topology/pod-1/paths-999/pathep-[eth1/99]
+             → get_by_dn(tDn) returns 0 objects   ← configured against a path
+                                                    that does not exist
+```
+
+So for `unformed`, report "not resolved / not confirmed" and check whether
+the target exists before calling it a fault. Never report it as a healthy,
+configured target either.
+
+| `stateQual` | Meaning |
+|---|---|
+| `none` | Nothing to add. |
+| `default-target` | Resolved to an **inherited default policy**, not to anything configured on this object. |
+| `mismatch-target` | Resolved, but not to the kind of target expected. Suspect. |
+
+`default-target` matters more than it looks: on the lab fabric **2220 of
+4753 tenant relations — 47% — resolve that way**. Reporting "this BD uses
+IGMP snooping policy `default`" as a design decision is wrong there — nobody
+chose it, it was inherited. Say "inherited default" or do not mention it.
+
+A relation with `state` absent (an Rt object, or a `config_only` response)
+is **unknown**, never healthy. Do not infer "fine" from a missing field.
+
+### Finding the target: `tDn` first, `tn*Name` only sometimes
+
+`tDn` is the canonical field. It holds the resolved DN of the target and is
+present on every Rs class.
+
+`tn{TargetClass}Name` — e.g. `fvRsCtx` → `tnFvCtxName` — exists **only on
+relations the model declares as `named`: 310 of the 1531 Rs classes, about
+20%.** The other 1189 are `explicit` and carry no `tn*Name` at all. Reading
+`tnFvCtxName` off one of those returns nothing, which is easy to mistake for
+"not configured".
+
+So: read `tDn`. Fall back to a `tn*Name` only when `tDn` is empty and you
+have confirmed the attribute exists in `get_schema().properties`. A handful
+of classes carry two (`fvRsBDToProfile` has `tnL3extOutName` **and**
+`tnRtctrlProfileName`), so do not assume there is exactly one.
+
 **General pattern:**
 
 ```
@@ -549,13 +653,13 @@ get_schema(ClassA)
 → relationTo: {RsXxx: {targetClass: "pkg:ClassB"}}
 
 query("RsXxx", scope_dn=<objectA_dn>, limit=1)
-→ results[0] attributes contain "tn{ClassB}Name": "<target_identifier>"
+→ results[0]: read state FIRST.
+    state != "formed"  → stop. Report it as unresolved. Do not resolve tDn
+                         and do not present the configured name as the target.
+    state == "formed"  → tDn holds the target's DN; check stateQual for
+                         "default-target" before calling it a configured choice.
 
-get_schema("pkgClassB")          ← to find containedBy for scope_dn
-→ containedBy: [...]
-
-query("pkgClassB", scope_dn=<parent_dn>, filters={"name": "<target_identifier>"})
-→ the target object
+get_by_dn(<tDn>)                 ← the target object, in one call
 ```
 
 **Shortcut with `include_children`:** when you need Rs objects alongside their
@@ -564,12 +668,32 @@ parent in one call, list the Rs class in `include_children`:
 ```python
 query("fvBD", scope_dn="uni/tn-OT",
       include_children=["fvRsCtx", "fvRsBDToOut"])
-# Each BD's _children will contain fvRsCtx (VRF) and fvRsBDToOut (L3Out)
+# Each BD's _children will contain fvRsCtx (VRF) and fvRsBDToOut (L3Out),
+# each with its own state/stateQual/tDn — read them.
 ```
 
-The `tn{ClassName}Name` attribute naming convention: the Rs object's attribute
-that holds the target's name is `tn` + `TargetClass` (CamelCase) + `Name`.
-Example: `fvRsCtx` → attribute `tnFvCtxName` holds the VRF name.
+### Two traps, both measured on a real fabric
+
+**Do not filter on relation properties.** `filter_expr` predicates against
+`state`, `stateQual`, `tDn` or `tn*Name` come back **HTTP 200 with zero
+results**, even when matching objects demonstrably exist:
+
+```python
+# Subtree really holds 192 fvRsCtx, all of them state="formed":
+query("fvRsCtx", scope_dn="uni/tn-X",
+      filter_expr='eq(fvRsCtx.state,"formed")')   # → 0 results. Not an error.
+query("fvRsCtx", scope_dn="uni/tn-X",
+      filter_expr='ne(fvRsCtx.state,"formed")')   # → 0 results. Also not an error.
+```
+
+Both directions return nothing, so neither result can be believed. Fetch the
+relation objects unfiltered and inspect `state` locally instead.
+
+**Do not sweep relations fabric-wide.** A subtree query for `relnTo` over
+`uni` returns a handful of objects rather than the real population, with no
+error and no `truncated` signal — the count is simply wrong. Scope relation
+work to one tenant (or one object) at a time, and never conclude "there are
+no broken relations" from a wide sweep.
 
 ---
 
@@ -639,6 +763,11 @@ to use in `filters` and `filter_expr` — guessing the wrong casing returns `[]`
 | any          | `adminSt` | `enabled` · `disabled` |
 | `fvBD`       | `unicastRoute` | `yes` · `no` |
 | `fvBD`       | `arpFlood` | `yes` · `no` |
+| any Rs relation | `state` | `formed` · `missing-target` · `invalid-target` · `cardinality-violation` · `unformed` |
+| any Rs relation | `stateQual` | `none` · `default-target` · `mismatch-target` |
+
+`state` and `stateQual` are readable but **not filterable** — a `filter_expr`
+against either returns zero results without erroring. See section 8.
 
 For any other class, call `get_schema` and read `properties` — then query
 a sample object without filters to observe the actual values in context.
@@ -693,7 +822,10 @@ a sample object without filters to observe the actual values in context.
 
 5. Navigate further if needed:
         - Children: query child class with scope_dn = result dn
-        - Relations: follow Rs pattern (section 8), or use include_children
+        - Relations: follow Rs pattern (section 8), or use include_children.
+          Read `state` on every Rs object before reporting what it points
+          to — a configured target name outlives the target itself.
+        - Who uses this object: list its Rt children (section 4)
         - Siblings: query same class with scope_dn = parent dn
 
 6. Synthesize and answer:
@@ -725,6 +857,11 @@ a sample object without filters to observe the actual values in context.
 | `_children` is empty despite `include_children` | Children don't exist under that parent, or wrong child class name | Query child class directly with scope_dn to verify |
 | `get_by_dn` returns `{"found": false, ...}` | DN is stale, mistyped, or the object was deleted | Re-derive the DN from a fresh `query` result — never reconstruct it from memory |
 | `count` disagrees with a follow-up `query` | Read taken mid-materialisation after a config push | Wait for stabilisation and re-read (eventual consistency, section 7) |
+| An Rs relation is `missing-target` / `invalid-target` / `cardinality-violation` | The reference is configured but the APIC tried and failed to resolve it | Report the relation as unresolved. Do **not** resolve the name or DN and present the result as the object's target: a `missing-target` DN can still answer `get_by_dn` (section 8) |
+| An Rs relation is `state: unformed` | Ambiguous — the property's default value, and also the permanent resting state of many internal relations | Report "not resolved", not "broken". Check whether `tDn` resolves before calling it a fault; most observed `unformed` relations had targets that exist |
+| An Rs relation is `state: formed` with `stateQual: default-target` | Resolved to an inherited default policy, not to anything configured here | Say "inherited default", or leave it out. Do not present it as a design decision — 43% of tenant relations resolve this way |
+| An Rs relation has no `state` field at all | It is an Rt object (Rt carries no health), or the response was `config_only` | Treat as unknown, never as healthy. Re-fetch without `config_only`, or read the source's own Rs object |
+| A `filter_expr` on `state`/`stateQual`/`tDn` returns `[]` | Relation properties are not filterable server-side — both `eq` and `ne` return zero without erroring | Fetch the relation objects unfiltered and inspect `state` locally. Never read this `[]` as "nothing is broken" |
 
 ---
 
@@ -744,9 +881,16 @@ a sample object without filters to observe the actual values in context.
 4. query("fvBD", scope_dn="uni/tn-OT", filters={"name": "servers"},
          include_children=["fvRsCtx"])
    → results[0]._children[0] = {"_class": "fvRsCtx",
+                                 "state": "formed", "stateQual": "none",
+                                 "tDn": "uni/tn-OT/ctx-ot.main.vrf",
                                  "tnFvCtxName": "ot.main.vrf", ...}
 
-5. Synthesize: "BD `servers` in tenant OT uses VRF `ot.main.vrf`."
+5. Read state BEFORE concluding.
+   state == "formed" and stateQual == "none"
+   → the reference really resolved, to a target nobody inherited.
+
+6. Synthesize: "BD `servers` in tenant OT uses VRF `ot.main.vrf`
+   (uni/tn-OT/ctx-ot.main.vrf)."
 ```
 
 Step 4 combines the relation lookup with the parent fetch via
@@ -754,5 +898,39 @@ Step 4 combines the relation lookup with the parent fetch via
 (query the `fvRsCtx` object directly, scoped under the BD) is in section 8
 and is only needed when you must inspect the Rs object itself — its own DN
 or other attributes — not just the target's identifier.
+
+### The same example when the relation is broken
+
+Step 4 returns a child that looks almost identical:
+
+```
+results[0]._children[0] = {"_class": "fvRsCtx",
+                            "state": "missing-target", "stateQual": "none",
+                            "tDn": "uni/tn-OT/ctx-ot.main.vrf",
+                            "tnFvCtxName": "ot.main.vrf", ...}
+```
+
+Only `state` changed. `tnFvCtxName` still says `ot.main.vrf` and `tDn` still
+holds a full DN, because both record what was *configured* — they outlive the
+VRF they name. Answering "BD `servers` uses VRF `ot.main.vrf`" from this
+response is wrong: the BD has **no** VRF, and that is very likely the
+operational problem being investigated.
+
+> This particular response is illustrative — the shape is what matters. The
+> mechanism behind it is real and measured: see the `spanRsSrcGrpToFilterGrp`
+> case in section 8, where a `missing-target` relation's `tDn` not only
+> persists but successfully resolves to a live object.
+
+The correct answer names the fault, not the ghost target:
+
+> BD `servers` in tenant OT has **no resolved VRF**. Its `fvRsCtx` relation
+> is in `state=missing-target`, still configured to point at
+> `ot.main.vrf`, which the APIC cannot resolve — the VRF is missing or was
+> deleted.
+
+Whenever `state` is not `formed`, report the unresolved relation. Do not
+resolve the name yourself and present the result as the object's target;
+see the `spanRsSrcToPathEp` case in section 8, where the DN behind a
+`missing-target` relation still answers a direct fetch.
 
 ---

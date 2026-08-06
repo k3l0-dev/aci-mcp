@@ -7,6 +7,76 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-08-06
+
+Documentation-only release. No code path changes, no API change — but the
+guidance an LLM client actually reads was wrong in ways that produce
+confident, incorrect answers about relations, so the effect on behaviour is
+not cosmetic.
+
+### Fixed
+
+- **`SKILL.md` §8 taught a traversal convention that covers a fifth of the
+  model.** It presented `tn{TargetClass}Name` as *the* way to read a
+  relation's target. Measured against the schema collection: that attribute
+  exists on **310 of the 1531 relation-source classes (20%)**. The other
+  1189 are `explicit` and carry no `tn*Name` at all, so an agent following
+  the documented pattern reads a nonexistent attribute, gets nothing, and
+  improvises. The canonical field is `tDn`; §8 now leads with it and treats
+  `tn*Name` as the narrower case it is, including the classes that carry two
+  of them.
+
+- **Nothing in the guidance mentioned `state`.** An Rs object records the
+  target that was *configured*, and that record survives the target being
+  deleted — so a populated name or DN is not evidence the target exists.
+  Only `state` carries the APIC's verdict. §8 now opens with that rule and
+  documents both enumerations (`state`, `stateQual`), grounded in a case
+  observed on a live fabric: a `spanRsSrcGrpToFilterGrp` in
+  `state=missing-target` whose `tDn` nonetheless resolves to a live
+  `spanFilterGrp`. An agent "verifying" by fetching that DN concludes the
+  relation is healthy while the APIC says it never formed.
+
+- **§12's worked example was itself the bug.** It read `tnFvCtxName` and
+  concluded "BD `servers` uses VRF `ot.main.vrf`" without ever looking at
+  `state`. Rewritten to read `state` before concluding, and paired with the
+  same example in its broken form to show that only `state` distinguishes
+  the two responses.
+
+- **`stateQual: default-target` was undocumented.** Sweeping all 48 tenants
+  of the test fabric, **2220 of 4753 relations (47%) resolve to an inherited
+  default policy** rather than to anything configured on the object.
+  Reporting those as design decisions is wrong for nearly half of all
+  relations.
+
+- **`unformed` is now documented as ambiguous rather than broken.** Across
+  the same 4753 relations only 24 were not `formed`, and 22 of those were
+  `unformed` — most with targets that resolve perfectly well
+  (`vzRsRFltPOwner`, `mgmtRsInBStNode`). It is the property's default and
+  the resting state of many internal relations. Only `missing-target`,
+  `invalid-target` and `cardinality-violation` are definite failures. An
+  earlier draft of this guidance would have flagged all 22 as faults.
+
+- **Two silent-failure traps are now documented**, both measured:
+  `filter_expr` predicates against relation properties (`state`,
+  `stateQual`, `tDn`) return **HTTP 200 with zero results in both
+  directions**, so neither `eq` nor `ne` can be believed; and a fabric-wide
+  subtree sweep of relation classes returns a small fraction of the real
+  population with no error and no `truncated` signal.
+
+### Added
+
+- `SKILL.md` §4 now documents the **Show Usage** equivalent: the APIC
+  materialises an Rt object under the *target*, one per referring source,
+  each carrying that source's DN in `tDn` — the way to answer "what would
+  break if I deleted this?". It also records that Rt objects carry **no**
+  `state`, so relation health exists only on the outgoing side and the two
+  directions are not symmetric.
+
+- A `RELATION INTEGRITY` section in the FastMCP server `instructions`, so
+  the rule reaches clients that never load the skill file, plus the two
+  enumerations in §10's common-values table and four new rows in the
+  error-handling table.
+
 ## [1.2.1] - 2026-08-06
 
 ### Added
@@ -464,7 +534,8 @@ First public open-source release.
 
 ---
 
-[Unreleased]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.0.0...v1.1.0

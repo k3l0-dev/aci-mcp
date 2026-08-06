@@ -3,7 +3,7 @@
 """
 main.py
 
-Schema-driven FastMCP server for Cisco ACI APIC — v1.2.1.
+Schema-driven FastMCP server for Cisco ACI APIC — v1.2.2.
 
 Architecture
 ------------
@@ -243,6 +243,41 @@ FULL-FABRIC AGGREGATION — a single default query() page is NOT the whole
     the matching set regardless of how much was fetched; if complete=false
     even after fetch_all=True, the safety cap was hit — narrow the query
     (e.g. by tenant scope_dn) and combine results across narrower calls.
+
+RELATION INTEGRITY — never report what an object points to without reading
+    the relation's `state`.
+    Relations in ACI are objects, not attributes: an Rs object under the
+    source holds the reference.  It records the target that was CONFIGURED,
+    and that record outlives the target being deleted or renamed.  So a
+    populated `tnFvCtxName` / `tDn` is not evidence that the target exists —
+    only `state` is.
+      state: formed | missing-target | invalid-target |
+             cardinality-violation | unformed
+      stateQual: none | default-target | mismatch-target
+    `missing-target`, `invalid-target` and `cardinality-violation` are
+    definite failures — the APIC tried and could not resolve.  Report the
+    relation as unresolved, and do NOT fetch the configured DN and present
+    the result as the object's target: a missing-target DN can still answer
+    get_by_dn() with a live object.
+    `unformed` is ambiguous, not a fault on its own — it is the property's
+    default and the resting state of many internal relations, most of which
+    have targets that do exist.  Report it as "not resolved" and check
+    whether the target exists before calling it broken.
+    `formed` + `default-target` means it resolved to an INHERITED default
+    policy, not to a configured choice; say so or omit it.
+    A relation with no `state` at all (an Rt object, or a config_only
+    response) is unknown, never healthy.
+    Two measured traps: `state`/`stateQual` are not filterable — a
+    filter_expr against them returns zero results without erroring, in both
+    directions — and a fabric-wide sweep of relation classes silently
+    returns a fraction of the real population.  Inspect relations per object
+    or per tenant and filter locally.
+    Read them with include_children (query) or get_by_dn(dn,
+    include_children=[...]).  The APIC also materialises the reverse
+    direction: an Rt object under the TARGET, one per referring source, each
+    carrying that source's DN in `tDn` — that is the equivalent of the APIC
+    UI's "Show Usage", and it is how you answer "what would break if I
+    deleted this?".
 
 CLEAN CONFIG — pass config_only=True to query() or get_by_dn() to drop the ~40
     operational/internal attributes and keep only the intended configuration,
