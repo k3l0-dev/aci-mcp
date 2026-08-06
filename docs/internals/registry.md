@@ -10,7 +10,7 @@ Three modules under `mcp/registry/` that work together to serve `search_classes`
 graph TD
     subgraph registry["mcp/registry/"]
         desc["descriptions.py\nload_descriptions()\nsearch()"]
-        schema["schema.py\nload_schema()"]
+        schema["schema.py\nload_schema()\nresolve_schemas_dir()\nclass_exists()"]
         filt["filter.py\nbuild_filter()"]
     end
 
@@ -146,6 +146,26 @@ In raw jsonmeta, `containedBy` is a dict with class names as keys:
 | Nothing found | `schemas_dir` unchanged | Every subsequent `get_schema()` reports the class as not found |
 
 The *resolved* directory is then passed to every `load_schema()` call for the life of the process — that function itself does one direct stat, never a glob.
+
+### `class_exists(class_name, schemas_dir)`
+
+Returns `True` only when a schema file resolves for `class_name` **and** its
+`classPkg` + `className` reconstruct to exactly that string.
+
+This is the fallback that `query()` and `count()` consult when a class is
+absent from `class-descriptions.json`. The two collections do not line up
+perfectly — roughly 213 classes have a schema file but no descriptions entry,
+because `schema-collector` builds them in separate passes — and those classes
+are perfectly valid and queryable. Rejecting them would be wrong, so the tools
+let them through with a logged warning rather than raising `UnknownClassError`.
+
+The second half of the check is not redundant. `load_schema()` alone is unsafe
+as an existence test on case-insensitive filesystems, which is the default on
+macOS (APFS) and Windows (NTFS): there, `schemas_dir / "fvBd.json"` happily
+resolves to the real `fvBD.json`, so a typo would be accepted as a valid class
+— defeating the entire point of validating before hitting the APIC. The
+`className`/`classPkg` fields come from the file's contents rather than its
+path, so comparing them in Python is case-sensitive on every OS.
 
 ---
 

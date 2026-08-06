@@ -39,6 +39,10 @@ Environment variables (read from .env at startup)
   APIC_PASSWORD    APIC password
   APIC_VERIFY_SSL  "true" to enforce TLS verification (default: false)
   MCP_PORT         HTTP port the server listens on (default: 8000)
+  MCP_API_KEYS     Comma-separated bearer tokens accepted by ApiKeyMiddleware.
+                   Unset means the server runs with NO authentication (logged
+                   as a warning at startup).  Reloadable at runtime with
+                   SIGHUP, without restarting the process.
 
 query() parameters
 ------------------
