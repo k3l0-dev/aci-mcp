@@ -229,8 +229,7 @@ async def test_query_class_total_available_parses_total_count():
 @pytest.mark.asyncio
 async def test_query_class_total_available_falls_back_to_object_count():
     """A missing/non-numeric totalCount falls back to the number of objects
-    actually parsed, rather than raising — same defensive pattern as
-    _extract_count()."""
+    actually parsed, rather than raising."""
     objects = make_imdata_objects(
         "fvBD", [{"dn": "uni/tn-OT/BD-servers", "name": "servers"}]
     )
@@ -820,10 +819,49 @@ async def test_get_by_dn_re_authenticates_on_401():
 
 
 @pytest.mark.asyncio
-async def test_count_class_extracts_mo_count():
-    body = {"imdata": [{"moCount": {"attributes": {"childCount": "42"}}}]}
+async def test_count_class_reads_total_count():
+    objects = make_imdata_objects("fvBD", [{"dn": "uni/tn-OT/BD-servers"}])
+    body = {"imdata": objects, "totalCount": "42"}
     client = _make_client(_MockResponse(200, body))
     assert await client.count_class("fvBD", {}) == 42
+
+
+@pytest.mark.asyncio
+async def test_count_class_asks_for_a_one_object_page_not_the_count_subtree():
+    """Regression guard for the count idiom itself.
+
+    count_class() must request a 1-object page and read `totalCount`. It must
+    NOT send `rsp-subtree-include=count`: that mechanism's `moCount` tally was
+    measured wrong on APIC 6.0(9c), reporting 0 for scoped counts against real
+    subtrees holding up to 192 objects — which reads as a legitimate answer
+    ("none in this tenant") rather than as a failure. See the count_class()
+    docstring for the full measurements.
+    """
+    objects = make_imdata_objects("fvBD", [{"dn": "uni/tn-OT/BD-servers"}])
+    body = {"imdata": objects, "totalCount": "192"}
+    client = _make_client(_MockResponse(200, body))
+
+    assert await client.count_class("fvBD", {}, scope_dn="uni/tn-OT") == 192
+
+    params = client._client.requests[0]["params"]
+    assert params["page-size"] == "1"
+    assert "rsp-subtree-include" not in params
+
+
+@pytest.mark.asyncio
+async def test_count_class_prefers_total_count_over_a_mo_count_body():
+    """`totalCount` wins even if a `moCount` object is present in the body.
+
+    The two disagreed by nearly 2x on a live fabric (moCount 203 vs. the real
+    403 fvBD); totalCount was the exact one. This pins which field is
+    authoritative, so restoring the old parser can never pass silently.
+    """
+    body = {
+        "imdata": [{"moCount": {"attributes": {"count": "203"}}}],
+        "totalCount": "403",
+    }
+    client = _make_client(_MockResponse(200, body))
+    assert await client.count_class("fvBD", {}) == 403
 
 
 @pytest.mark.asyncio
@@ -837,7 +875,8 @@ async def test_count_class_500_raises_apic_request_error():
 
 @pytest.mark.asyncio
 async def test_count_class_retries_on_500_then_succeeds():
-    body = {"imdata": [{"moCount": {"attributes": {"childCount": "7"}}}]}
+    objects = make_imdata_objects("fvBD", [{"dn": "uni/tn-OT/BD-servers"}])
+    body = {"imdata": objects, "totalCount": "7"}
     client = _make_client(_MockResponse(500, {}), _MockResponse(200, body))
     assert await client.count_class("fvBD", {}) == 7
     assert len(client._client.requests) == 2

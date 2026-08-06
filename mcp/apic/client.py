@@ -267,8 +267,11 @@ class ApicClient:
     def _parse_total_available(body: dict[str, Any], fallback: int) -> int:
         """Coerce the APIC-reported totalCount, defensively.
 
-        Mirrors the try/except int-coercion in _extract_count(): a missing or
-        non-numeric totalCount falls back to `fallback` rather than raising.
+        A missing or non-numeric totalCount falls back to `fallback` rather
+        than raising.  Shared by query_class() (where `fallback` is the number
+        of objects parsed from the page) and count_class() (where it is the
+        number of objects in imdata), so both report the size of a result set
+        from the same field and can never disagree about it.
         """
         try:
             return int(body.get("totalCount", fallback))
@@ -609,11 +612,51 @@ class ApicClient:
     ) -> int:
         """Count ACI objects of a class without transferring their attributes.
 
-        Uses the APIC `rsp-subtree-include=count` mechanism: the response carries
-        a single `moCount` managed object whose attribute holds the tally, so a
-        "how many BDs/EPGs/subnets?" question costs one small request instead of
-        fetching every object.  Filtering and scoping work exactly as in
-        query_class().
+        Issues the same class or subtree query as query_class() with a page size
+        of 1, then reads the APIC-reported `totalCount` from the response
+        envelope — the true size of the matching set, independent of how many
+        objects were actually fetched.  Exactly one object comes back instead of
+        none; every other match stays on the APIC, so this is still far cheaper
+        than fetching a whole result set just to measure it.  Filtering and
+        scoping behave exactly as in query_class().
+
+        This deliberately does NOT use the APIC `rsp-subtree-include=count`
+        mechanism, even though that is the obvious idiom for a count and is what
+        this method used until the tally it produces was measured against
+        reality.  On APIC 6.0(9c) the returned `moCount` disagrees with the
+        actual size of the result set, without ever erroring, so a caller
+        cannot tell a wrong tally from a right one:
+
+          count("fvBD")                        moCount 203   actual 403
+          count("fvTenant")                    moCount  36   actual  48
+          count("fvBD", filters={arpFlood:no}) moCount  99   actual 203
+          count("faultInst")                   moCount 420   actual 420  (right)
+          count("fvBD", scope_dn=<tenant A>)   moCount   0   actual 192
+          count("fvBD", scope_dn=<tenant B>)   moCount 128   actual 128  (right)
+
+        The failure is data-dependent, not systematic: sweeping every tenant on
+        the lab fabric, 5 of the 28 holding bridge domains reported a scoped
+        count of 0 while the subtree really held 1 to 192 of them; the other 23
+        were exact.  It is however perfectly deterministic — six consecutive
+        calls returned the same wrong 0 for the same tenant, and the same right
+        answer for its neighbour — so it cannot be papered over with a retry.
+
+        A wrong-but-plausible tally is bad; the 0 is worse.  Zero is the one
+        answer a caller will not question, because it reads as a legitimate
+        finding ("this tenant has no bridge domains") rather than as a failed
+        lookup, which is exactly the error-as-answer failure mode the tool
+        layer works to prevent everywhere else.
+
+        `totalCount` was exact in every case measured, and is already the number
+        query_class() reports as `total_available`, so count() and query() can
+        no longer disagree about the size of the same result set.
+
+        Measured on an APIC 6.0(9c) simulator; the `moCount` behaviour has not
+        been re-confirmed against hardware.  That does not weaken the choice
+        here — `totalCount` is exact on both, and is the mechanism this client
+        already relies on everywhere else.  The root cause of the `moCount`
+        discrepancy was not determined and is not needed: the field is simply
+        not used any more.
 
         Args:
             class_name:  ACI class to count, e.g. "fvBD".
@@ -628,7 +671,7 @@ class ApicClient:
             ApicConnectionError / ApicAuthError / ApicRequestError / ApicResponseError on
             or protocol failures (see _request_json).
         """
-        params: dict[str, str] = {"rsp-subtree-include": "count"}
+        params: dict[str, str] = {"page-size": "1"}
         if scope_dn:
             url = f"{self._base}/api/mo/{scope_dn}.json"
             params["query-target"] = "subtree"
@@ -645,38 +688,9 @@ class ApicClient:
             params["query-target-filter"] = eq_filter
 
         body = await self._request_json(url, params)
-        count = self._extract_count(body)
+        count = self._parse_total_available(body, len(body.get("imdata", [])))
         logger.debug("count_class(%s) → %d", class_name, count)
         return count
-
-    @staticmethod
-    def _extract_count(body: dict[str, Any]) -> int:
-        """Extract the integer tally from an APIC count response.
-
-        The APIC returns a single `moCount` object whose attributes carry the
-        total under `childCount` (or `count` on some builds).  When no moCount
-        object is present the top-level `totalCount` is used as a fallback.
-
-        Args:
-            body: The decoded APIC response body from a count query.
-
-        Returns:
-            The tally as an int, or 0 when it cannot be determined.
-        """
-        for item in body.get("imdata", []):
-            mo = item.get("moCount")
-            if mo:
-                attrs = mo.get("attributes", {})
-                for key in ("childCount", "count"):
-                    if key in attrs:
-                        try:
-                            return int(attrs[key])
-                        except (TypeError, ValueError):
-                            pass
-        try:
-            return int(body.get("totalCount"))
-        except (TypeError, ValueError):
-            return 0
 
     async def close(self) -> None:
         """Release the underlying HTTP connection pool."""

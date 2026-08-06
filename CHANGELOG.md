@@ -7,6 +7,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-08-06
+
 ### Added
 
 - `.github/dependabot.yml` schedules weekly version-update checks for the
@@ -16,6 +18,56 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   manual audit.
 
 ### Fixed
+
+- `count()` reported a tally that did not match the number of objects it was
+  counting. The tool used the APIC `rsp-subtree-include=count` mechanism and
+  returned the `moCount` it carries; measured against reality on APIC
+  6.0(9c), that value disagrees with the true size of the result set — and
+  does so silently, since the request itself succeeds:
+
+  | call | reported | actual |
+  | --- | --- | --- |
+  | `count("fvBD")` | 203 | 403 |
+  | `count("fvTenant")` | 36 | 48 |
+  | `count("fvBD", filters={"arpFlood": "no"})` | 99 | 203 |
+  | `count("fvBD", scope_dn=<tenant A>)` | **0** | 192 |
+  | `count("fvBD", scope_dn=<tenant B>)` | 128 | 128 |
+
+  The failure is data-dependent rather than systematic: sweeping every tenant
+  on the test fabric, 5 of the 28 holding bridge domains reported a scoped
+  count of `0` while the subtree really held between 1 and 192 of them; the
+  other 23 were exact. It is deterministic — repeated calls return the same
+  wrong value for the same scope — so it cannot be mistaken for transient
+  noise or absorbed by the client's retry budget.
+
+  A `0` is the most damaging shape this can take. It reads as a legitimate
+  finding ("this tenant has no bridge domains") rather than as a failed
+  lookup, which is precisely the error-as-answer failure mode the tool layer
+  guards against elsewhere.
+
+  `count()` now issues the same class or subtree request as `query()` with a
+  page size of 1 and reads the APIC-reported `totalCount`, which was exact in
+  every case measured. That is the same field `query()` already reports as
+  `total_available`, so the two tools can no longer disagree about the size
+  of the same result set. One object is transferred instead of none; every
+  other match stays on the APIC, so counting remains far cheaper than
+  fetching a result set to measure it.
+
+  Measured on an APIC 6.0(9c) simulator; the `moCount` behaviour has not been
+  re-confirmed against hardware. The fix does not depend on that: `totalCount`
+  is exact on both, and is the mechanism the client already relies on
+  everywhere else.
+
+- The live test suite (`tests/live/`, excluded from the default run) had gone
+  stale against the `QueryResult` envelope introduced in 1.2.0 — it still
+  indexed `query_class()`'s return value as a list, so every test touching it
+  would have errored. Repaired, and now passing against a real fabric.
+
+- The live `count_class()` test asserted only that the tally was a
+  non-negative `int`, a condition the broken count satisfied trivially by
+  returning `0`. Replaced with three tests that pin the real invariant —
+  `count()` must agree with `query()`'s `total_available`, fabric-wide,
+  scoped to the busiest tenant, and filtered.
 
 - Documentation across `README.md` and `docs/` had drifted from the
   current implementation (mostly predating the `get_by_dn`/`count` tools,
@@ -412,7 +464,8 @@ First public open-source release.
 
 ---
 
-[Unreleased]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.3.0...v1.0.0
