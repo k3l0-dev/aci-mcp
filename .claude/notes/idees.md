@@ -29,6 +29,15 @@ couche de correspondance jargon→terme réel dès le départ, sinon même éche
 Voir le fichier dédié [`paper-mcp-agent-usage.md`](./paper-mcp-agent-usage.md)
 — assez développé pour mériter son propre document plutôt qu'une ligne ici.
 
+## agent-eval — publication et refonte de la méthode de test
+
+Voir le fichier dédié `agent-eval-methodology.md` (note locale, non versionnée)
+— brainstorm du 23/07 sur la publication "pro/scientifique" du harness,
+reproductibilité (backup APIC comme fixture dédiée plutôt que fabric
+partagée), et une nouvelle piste de scénarios de panne injectée + diagnostic
+autonome. Signal explicite du mainteneur : refonte complète de l'approche de
+test (juge) à venir — ce fichier est la base à relire avant de la commencer.
+
 ## opencode + modèle local comme deuxième piste de test formelle
 
 Aujourd'hui (20/07) on a testé en direct, à la main, en copiant-collant les
