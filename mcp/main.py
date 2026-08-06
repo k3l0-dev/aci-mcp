@@ -366,7 +366,13 @@ async def get_schema(
                         pass to get_schema(), query(), or include_children
       dnFormats      — complete DN pattern examples for this class
       relationTo     — outgoing Rs relations: {relClass: {targetClass, cardinality}}
-      relationFrom   — incoming Rt relations: {relClass: {sourceClass}}
+                        Keys and targetClass keep their "pkg:Class" colon
+                        notation — unlike `contains`, they are NOT flattened,
+                        so strip the colon before querying.  `cardinality` is
+                        empty for every entry on the current schema bundle;
+                        the real value lives on the relation class itself.
+      relationFrom   — incoming Rt relations: {relClass: {sourceClass}}, also
+                        in colon notation
       properties     — sorted list of all available attribute names
       property_details — compact per-property constraints; present ONLY when
                         include_property_details=True or properties_filter is set

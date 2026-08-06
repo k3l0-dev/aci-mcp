@@ -204,8 +204,18 @@ def load_schema(
                       flat notation ready to feed to get_schema/query/
                       include_children, e.g. ["fvSubnet", "fvRsCtx", "tagTag"]
       dnFormats     — list of full DN pattern strings
-      relationTo    — {relClass: {targetClass, cardinality}} for outgoing Rs relations
-      relationFrom  — {relClass: {sourceClass}} for incoming Rt relations
+      relationTo    — {relClass: {targetClass, cardinality}} for outgoing Rs
+                      relations.  Keys and targetClass keep the raw "pkg:Class"
+                      colon notation — they are deliberately NOT flattened the
+                      way `contains` is, because the jsonmeta uses that form and
+                      round-tripping it is lossy for packages whose name already
+                      contains a capital.  `cardinality` is "" for every entry
+                      on the current bundle: the raw value is a plain string
+                      (the target class), so the dict branch below never fires.
+                      The real cardinality lives on the relation class itself,
+                      under its own relationInfo.
+      relationFrom  — {relClass: {sourceClass}} for incoming Rt relations, also
+                      in colon notation
       properties    — sorted list of attribute names available on the class
       property_details — compact per-property constraints, present ONLY when
                       include_property_details or properties_filter is supplied
