@@ -19,7 +19,8 @@ entire ACI object model without any hardcoded class knowledge:
 
 All ACI domain knowledge lives in:
   ../data/schemas/                 15 k+ jsonmeta files from the APIC /doc/jsonmeta/ endpoint
-  ../data/class-descriptions.json  label + comment index built by schema-collector/gen_descriptions.py
+  ../data/class-descriptions.json  label + comment index, built by the collector's
+                                   descriptions step (aci-collect run --from descriptions)
 
 Typical LLM workflow
 --------------------
