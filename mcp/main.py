@@ -3,7 +3,7 @@
 """
 main.py
 
-Schema-driven FastMCP server for Cisco ACI APIC — v1.2.0.
+Schema-driven FastMCP server for Cisco ACI APIC — v1.2.1.
 
 Architecture
 ------------
@@ -673,9 +673,10 @@ async def count(
     (and its filter attributes with get_schema()) before calling this tool.
 
     The most frequent verification need — "how many BDs / EPGs / subnets?" —
-    answered in a single cheap request via the APIC rsp-subtree-include=count
-    mechanism, instead of fetching every object just to measure the set.
-    Filtering and scoping behave exactly as in query().
+    answered in a single cheap request that transfers one object instead of the
+    whole matching set. Filtering and scoping behave exactly as in query(), and
+    the tally is the same `total_available` query() reports, so the two tools
+    can never disagree about the size of the same result set.
 
     Args:
         class_name:  Exact ACI class name verified via search_classes().

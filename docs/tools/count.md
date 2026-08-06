@@ -28,7 +28,11 @@ count(
 
 ## How it works
 
-Uses the APIC `rsp-subtree-include=count` mechanism: the response carries a single `moCount` managed object whose attribute holds the tally. No object attributes are transferred, so a count is far cheaper than a full `query` on a large result set. Filtering and scoping behave exactly as in `query`.
+Issues the same class or subtree request as `query`, with a page size of 1, and reads the APIC-reported `totalCount` — the true size of the matching set, independent of how many objects were fetched. Exactly one object comes back instead of the whole set, so a count stays far cheaper than a full `query` on a large result set. Filtering and scoping behave exactly as in `query`.
+
+Because the tally is the very same `total_available` that `query` reports, the two tools can never disagree about the size of the same result set.
+
+> **Why not `rsp-subtree-include=count`?** That is the obvious idiom for a count, and it is what this tool used until v1.2.1. Its `moCount` tally was measured against reality on APIC 6.0(9c) and found to disagree — silently, and depending on the data: fabric-wide it reported 203 `fvBD` against a real 403, and for 5 of the 28 tenants holding bridge domains it reported a scoped count of **0** against subtrees really holding 1 to 192. The behaviour is deterministic rather than flaky, so a retry does not help. See [`CHANGELOG.md`](../../CHANGELOG.md) and the `count_class()` docstring for the full measurements.
 
 ---
 
