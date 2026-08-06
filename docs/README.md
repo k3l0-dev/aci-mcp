@@ -97,6 +97,6 @@ See [data flow](architecture/data-flow.md) for the complete sequence diagrams.
 
 ## Version
 
-Current release: **v1.2.1**
+Current release: **v1.2.2**
 
 Full history: [CHANGELOG.md](../CHANGELOG.md)
