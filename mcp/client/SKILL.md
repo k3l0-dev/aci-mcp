@@ -758,11 +758,11 @@ to use in `filters` and `filter_expr` — guessing the wrong casing returns `[]`
 
 | Class | Attribute | Values |
 |---|---|---|
-| `faultInst` | `severity` | `critical` · `major` · `minor` · `warning` · `cleared` |
-| `fabricNode` | `role` | `spine` · `leaf` · `controller` |
-| `fabricNode` | `fabricSt` | `active` · `inactive` · `discovering` |
+| `faultInst` | `severity` | `critical` · `major` · `minor` · `warning` · `info` · `cleared` |
+| `fabricNode` | `role` | `spine` · `leaf` · `controller` · `vleaf` · `vip` · `protection-chain` · `unsupported` |
+| `fabricNode` | `fabricSt` | `active` · `inactive` · `discovering` · `undiscovered` · `disabled` · `decommissioned` · `maintenance` · `unknown` · `unsupported` |
 | `topSystem`  | `state` | `in-service` · `out-of-service` · `downloading-boot-script` · `downloading-firmware` · `invalid-ver` · `requesting-tep` |
-| any          | `adminSt` | `enabled` · `disabled` |
+| many classes | `adminSt` | `enabled` · `disabled` on ~390 classes, but **not universal** — 81 use `start`/`stop`/`suspend`/`prepare`/`unknown`, 25 use `up`/`down`, 24 use `triggered`/`untriggered`. Check `get_schema(class, properties_filter=["adminSt"])` before filtering. |
 | `fvBD`       | `unicastRoute` | `yes` · `no` |
 | `fvBD`       | `arpFlood` | `yes` · `no` |
 | any Rs relation | `state` | `formed` · `missing-target` · `invalid-target` · `cardinality-violation` · `unformed` |
