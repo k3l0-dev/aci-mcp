@@ -89,7 +89,7 @@ from exceptions import DescriptionsLoadError
 
 # Splits a camelCase / PascalCase / ACRONYM-mixed identifier into lowercase
 # tokens: "fvBD" -> ["fv", "bd"], "l3extRtVrfValidationPol" ->
-# ["l3", "ext", "rt", "vrf", "validation", "pol"], "IPv6Multicast" ->
+# ["l3ext", "rt", "vrf", "validation", "pol"], "IPv6Multicast" ->
 # ["i", "pv6", "multicast"] (acronym runs are split before a trailing
 # Titlecase word). Also used on natural-language queries and labels/comments,
 # where it degrades gracefully to simple whitespace/punctuation splitting.

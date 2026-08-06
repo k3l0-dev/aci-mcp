@@ -111,7 +111,7 @@ sequenceDiagram
         end
     end
 
-    apic-->>tool: [{"dn": ..., "name": ..., "_class": "fvBD"}]
+    apic-->>tool: QueryResult(objects=[{"dn": ..., "_class": "fvBD"}],<br/>total_available, complete) — NOT a bare list
     tool-->>LLM: envelope dict — {"results": [...], "returned",<br/>"total_available", "truncated", "next_page",<br/>"complete", "note"} — NOT a bare list
 ```
 
