@@ -873,7 +873,8 @@ a sample object without filters to observe the actual values in context.
 
 2. get_schema("fvBD")
    → identifiedBy=["name"], containedBy=["fv:Tenant"],
-     relationTo={"fvRsCtx": {"targetClass": "fv:Ctx", ...}}
+     relationTo={"fv:RsCtx": {"targetClass": "fv:Ctx", "cardinality": ""}}
+     (colon notation on both — strip it to query: fv:RsCtx → fvRsCtx)
 
 3. query("fvTenant", filters={"name": "OT"})
    → results[0].dn = "uni/tn-OT"
