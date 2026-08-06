@@ -70,8 +70,13 @@ The bundle ships with schemas from APIC **6.0(9c)**. The script extracts them in
 ```text
 data/
   class-descriptions.json   ← keyword-searchable class index
-  schemas/{version}/        ← full jsonmeta files, one per class
+  schemas/*.json            ← full jsonmeta files, one per class (flat)
 ```
+
+The tarball carries a version-named top directory, which the script strips on
+extraction — so the files land directly in `data/schemas/`. The server handles
+either layout: `resolve_schemas_dir()` also accepts a `schemas/{version}/`
+subdirectory, which is what a local collector run produces.
 
 ---
 
