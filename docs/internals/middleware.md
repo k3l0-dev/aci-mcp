@@ -225,7 +225,7 @@ In-flight requests that already called `KeyStore.get()` continue with the snapsh
 The server registers a `SIGHUP` signal handler that reloads `MCP_API_KEYS` from `.env` without restarting:
 
 ```python
-def _handle_sighup(signum, frame):  # noqa: ARG001
+def _handle_sighup(_signum, _frame):
     load_dotenv(ENV_FILE, override=True)
     new_keys = load_api_keys()
     key_store.reload(new_keys)
