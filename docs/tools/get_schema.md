@@ -33,8 +33,8 @@ A dict with the following fields (all optional — only present when the schema 
 | `containedBy` | `list[str]` | Parent class names in `pkg:Class` notation — use a parent object's `dn` as `scope_dn` |
 | `contains` | `list[str]` | Sorted child class names this object may hold, in **flat** notation (e.g. `"fvSubnet"`, `"tagTag"`) — ready to pass to `get_schema`, `query`, or `include_children` |
 | `dnFormats` | `list[str]` | Full DN pattern examples |
-| `relationTo` | `dict` | Outgoing Rs relations: `{relClass: {targetClass, cardinality}}` |
-| `relationFrom` | `dict` | Incoming Rt relations: `{relClass: {sourceClass}}` |
+| `relationTo` | `dict` | Outgoing Rs relations: `{relClass: {targetClass, cardinality}}`. Keys and `targetClass` keep `pkg:Class` colon notation (unlike `contains`); `cardinality` is empty on the current bundle — see [Reading relationTo](#reading-relationto) |
+| `relationFrom` | `dict` | Incoming Rt relations: `{relClass: {sourceClass}}`, also in colon notation |
 | `properties` | `list[str]` | Sorted list of all attribute names available on the class |
 | `property_details` | `dict` | Compact per-property constraints — **present only** when `include_property_details=True` or `properties_filter` is set |
 | `isAbstract` | `bool` | `true` when the class cannot be directly instantiated |
@@ -99,9 +99,9 @@ Use `include_property_details=True` to dump every property at once — only when
   "contains": ["fvRsBDToOut", "fvRsCtx", "fvSubnet", "tagTag"],
   "dnFormats": ["uni/tn-{name}/BD-{name}"],
   "relationTo": {
-    "fvRsCtx": {
-      "targetClass": "fvCtx",
-      "cardinality": "One"
+    "fv:RsCtx": {
+      "targetClass": "fv:Ctx",
+      "cardinality": ""
     }
   },
   "properties": ["arpFlood", "descr", "dn", "epMoveDetectMode", "ipLearning",
@@ -151,12 +151,23 @@ bds = await query("fvBD", scope_dn=scope)
 
 ```json
 "relationTo": {
-  "fvRsCtx": {
-    "targetClass": "fvCtx",
-    "cardinality": "One"
+  "fv:RsCtx": {
+    "targetClass": "fv:Ctx",
+    "cardinality": ""
   }
 }
 ```
+
+Two things to note before using this, because both differ from `contains`:
+
+- **The keys and `targetClass` keep their `pkg:Class` colon notation.** Unlike
+  `contains`, which is flattened for you, these are not. Drop the colon to get
+  the queryable class name: `fv:RsCtx` → `fvRsCtx`, `fv:Ctx` → `fvCtx`.
+- **`cardinality` is empty.** On the current schema bundle it is `""` for all
+  2,992 `relationTo` entries, so do not branch on it. The real cardinality
+  lives on the relation class itself — `get_schema("fvRsCtx")` with
+  `include_property_details` exposes the source jsonmeta, where `fvRsCtx`
+  records `n-to-1`.
 
 `fvBD` has an outgoing relation to `fvCtx` (VRF) via the relation class `fvRsCtx`. To find which VRF a BD is associated with:
 
