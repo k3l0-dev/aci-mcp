@@ -31,8 +31,8 @@ not cosmetic.
 - **`SKILL.md` §8 taught a traversal convention that covers a fifth of the
   model.** It presented `tn{TargetClass}Name` as *the* way to read a
   relation's target. Measured against the schema collection: that attribute
-  exists on **310 of the 1531 relation-source classes (20%)**. The other
-  1189 are `explicit` and carry no `tn*Name` at all, so an agent following
+  exists on **310 of the 1499 concrete relation-source classes (20%)**. The
+  other 1189 are `explicit` and carry no `tn*Name` at all, so an agent following
   the documented pattern reads a nonexistent attribute, gets nothing, and
   improvises. The canonical field is `tDn`; §8 now leads with it and treats
   `tn*Name` as the narrower case it is, including the classes that carry two
