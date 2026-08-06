@@ -320,7 +320,7 @@ async def test_count_scope_dn_and_filters_reach_real_apic_request(schemas_dir):
     subtree endpoint plus a query-target-filter, exactly like query()."""
     from main import count
 
-    body = {"imdata": [{"moCount": {"attributes": {"childCount": "2"}}}]}
+    body = {"imdata": [], "totalCount": "2"}
     client = _real_client(_MockResponse(200, body))
     ctx = _tool_ctx(client, schemas_dir)
 
@@ -330,7 +330,8 @@ async def test_count_scope_dn_and_filters_reach_real_apic_request(schemas_dir):
     assert "/api/mo/uni/tn-OT.json" in req["url"]
     params = req["params"]
     assert params.get("query-target") == "subtree"
-    assert params.get("rsp-subtree-include") == "count"
+    assert params.get("page-size") == "1"
+    assert "rsp-subtree-include" not in params
     assert 'eq(fvBD.arpFlood,"no")' in params.get("query-target-filter", "")
     assert result["count"] == 2
 
@@ -341,7 +342,7 @@ async def test_count_filter_expr_combines_with_filters_in_real_request(schemas_d
     request exactly as query()'s do — same ApicClient code path."""
     from main import count
 
-    body = {"imdata": [{"moCount": {"attributes": {"childCount": "0"}}}]}
+    body = {"imdata": [], "totalCount": "0"}
     client = _real_client(_MockResponse(200, body))
     ctx = _tool_ctx(client, schemas_dir)
 
