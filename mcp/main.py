@@ -56,6 +56,8 @@ query() parameters
                        Equivalent to rsp-subtree=children&rsp-subtree-class=X,Y
   filter_expr          Raw APIC filter: wcard, ne, gt, and/or compositions
                        e.g. 'wcard(fvBD.dn,"uni/tn-OT")'
+  config_only          Return only user-configurable attributes, dropping the
+                       ~40 operational/internal ones
   rsp_subtree_include  Inline subtrees: "faults", "health", "audit-logs",
                        "faults,required", "faults,no-scoped"
   time_range           Log record window: "24h", "1week", "2026-01-01|2026-01-31"
