@@ -636,8 +636,10 @@ is **unknown**, never healthy. Do not infer "fine" from a missing field.
 present on every Rs class.
 
 `tn{TargetClass}Name` — e.g. `fvRsCtx` → `tnFvCtxName` — exists **only on
-relations the model declares as `named`: 310 of the 1531 Rs classes, about
-20%.** The other 1189 are `explicit` and carry no `tn*Name` at all. Reading
+relations the model declares as `named`: 310 of the 1499 concrete relation
+classes, about 20%.** The other 1189 are `explicit` and carry no `tn*Name`
+at all. (1531 classes inherit from `reln:To`; the 32-class difference is
+abstract bases that are never instantiated.) Reading
 `tnFvCtxName` off one of those returns nothing, which is easy to mistake for
 "not configured".
 
@@ -756,11 +758,11 @@ to use in `filters` and `filter_expr` — guessing the wrong casing returns `[]`
 
 | Class | Attribute | Values |
 |---|---|---|
-| `faultInst` | `severity` | `critical` · `major` · `minor` · `warning` · `cleared` |
-| `fabricNode` | `role` | `spine` · `leaf` · `controller` |
-| `fabricNode` | `fabricSt` | `active` · `inactive` · `discovering` |
+| `faultInst` | `severity` | `critical` · `major` · `minor` · `warning` · `info` · `cleared` |
+| `fabricNode` | `role` | `spine` · `leaf` · `controller` · `vleaf` · `vip` · `protection-chain` · `unsupported` |
+| `fabricNode` | `fabricSt` | `active` · `inactive` · `discovering` · `undiscovered` · `disabled` · `decommissioned` · `maintenance` · `unknown` · `unsupported` |
 | `topSystem`  | `state` | `in-service` · `out-of-service` · `downloading-boot-script` · `downloading-firmware` · `invalid-ver` · `requesting-tep` |
-| any          | `adminSt` | `enabled` · `disabled` |
+| many classes | `adminSt` | `enabled` · `disabled` on ~390 classes, but **not universal** — 81 use `start`/`stop`/`suspend`/`prepare`/`unknown`, 25 use `up`/`down`, 24 use `triggered`/`untriggered`. Check `get_schema(class, properties_filter=["adminSt"])` before filtering. |
 | `fvBD`       | `unicastRoute` | `yes` · `no` |
 | `fvBD`       | `arpFlood` | `yes` · `no` |
 | any Rs relation | `state` | `formed` · `missing-target` · `invalid-target` · `cardinality-violation` · `unformed` |
@@ -859,7 +861,7 @@ a sample object without filters to observe the actual values in context.
 | `count` disagrees with a follow-up `query` | Read taken mid-materialisation after a config push | Wait for stabilisation and re-read (eventual consistency, section 7) |
 | An Rs relation is `missing-target` / `invalid-target` / `cardinality-violation` | The reference is configured but the APIC tried and failed to resolve it | Report the relation as unresolved. Do **not** resolve the name or DN and present the result as the object's target: a `missing-target` DN can still answer `get_by_dn` (section 8) |
 | An Rs relation is `state: unformed` | Ambiguous — the property's default value, and also the permanent resting state of many internal relations | Report "not resolved", not "broken". Check whether `tDn` resolves before calling it a fault; most observed `unformed` relations had targets that exist |
-| An Rs relation is `state: formed` with `stateQual: default-target` | Resolved to an inherited default policy, not to anything configured here | Say "inherited default", or leave it out. Do not present it as a design decision — 43% of tenant relations resolve this way |
+| An Rs relation is `state: formed` with `stateQual: default-target` | Resolved to an inherited default policy, not to anything configured here | Say "inherited default", or leave it out. Do not present it as a design decision — 47% of tenant relations resolve this way |
 | An Rs relation has no `state` field at all | It is an Rt object (Rt carries no health), or the response was `config_only` | Treat as unknown, never as healthy. Re-fetch without `config_only`, or read the source's own Rs object |
 | A `filter_expr` on `state`/`stateQual`/`tDn` returns `[]` | Relation properties are not filterable server-side — both `eq` and `ne` return zero without erroring | Fetch the relation objects unfiltered and inspect `state` locally. Never read this `[]` as "nothing is broken" |
 
@@ -873,7 +875,8 @@ a sample object without filters to observe the actual values in context.
 
 2. get_schema("fvBD")
    → identifiedBy=["name"], containedBy=["fv:Tenant"],
-     relationTo={"fvRsCtx": {"targetClass": "fv:Ctx", ...}}
+     relationTo={"fv:RsCtx": {"targetClass": "fv:Ctx", "cardinality": ""}}
+     (colon notation on both — strip it to query: fv:RsCtx → fvRsCtx)
 
 3. query("fvTenant", filters={"name": "OT"})
    → results[0].dn = "uni/tn-OT"
@@ -930,7 +933,7 @@ The correct answer names the fault, not the ghost target:
 
 Whenever `state` is not `formed`, report the unresolved relation. Do not
 resolve the name yourself and present the result as the object's target;
-see the `spanRsSrcToPathEp` case in section 8, where the DN behind a
+see the `spanRsSrcGrpToFilterGrp` case in section 8, where the DN behind a
 `missing-target` relation still answers a direct fetch.
 
 ---

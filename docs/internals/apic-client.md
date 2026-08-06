@@ -22,7 +22,7 @@ classDiagram
         -AsyncClient _client
         -int _retry_attempts
 
-        +__init__(host, user, password, verify_ssl, timeout, retry_attempts=3)
+        +__init__(host, user, password, verify_ssl, timeout, retry_attempts=3, retry_backoff_base=0.2)
         +authenticate() None
         +query_class(class_name, filters, scope_dn, ...) QueryResult
         +get_by_dn(dn, config_only, include_children) dict | None

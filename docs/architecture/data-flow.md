@@ -77,6 +77,7 @@ sequenceDiagram
     participant LLM
     participant tool as query()
     participant desc as descriptions dict
+    participant schema as registry.class_exists()
     participant apic as ApicClient
     participant filter as filter.build_filter()
     participant cisco as Cisco APIC
@@ -84,9 +85,16 @@ sequenceDiagram
     LLM->>tool: query("fvBD", filters={"name":"srv"}, scope_dn="uni/tn-OT")
 
     tool->>desc: "fvBD" in descriptions?
-    alt unknown class
+    alt not in descriptions
         desc-->>tool: not found
-        tool-->>LLM: UnknownClassError + nearest suggestions
+        tool->>schema: class_exists("fvBD", schemas_dir)?
+        alt a schema file resolves
+            schema-->>tool: yes — allow, log a warning
+            Note over tool,schema: ~213 classes have a schema file but no<br/>descriptions entry; they are valid and queryable.
+        else no schema file either
+            schema-->>tool: no
+            tool-->>LLM: UnknownClassError + nearest suggestions
+        end
     end
 
     tool->>apic: query_class("fvBD", filters={"name":"srv"}, ...)
@@ -111,7 +119,7 @@ sequenceDiagram
         end
     end
 
-    apic-->>tool: [{"dn": ..., "name": ..., "_class": "fvBD"}]
+    apic-->>tool: QueryResult(objects=[{"dn": ..., "_class": "fvBD"}],<br/>total_available, complete) — NOT a bare list
     tool-->>LLM: envelope dict — {"results": [...], "returned",<br/>"total_available", "truncated", "next_page",<br/>"complete", "note"} — NOT a bare list
 ```
 

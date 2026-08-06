@@ -6,7 +6,7 @@ tests/eval_search.py
 
 Offline evaluation script for search_classes search quality.
 
-Measures Recall@1, Recall@5, MRR and per-tier breakdown against the 39-query
+Measures Recall@1, Recall@5, MRR and per-tier breakdown against the 74-query
 golden set in tests/fixtures/search_golden.json (4 tiers of increasing
 difficulty: direct label, camelCase tokenization, prop_labels, synonyms).
 
@@ -15,7 +15,7 @@ Run from mcp/:
     python tests/eval_search.py --limit 5     # restrict result window
     python tests/eval_search.py --verbose     # show misses and near-misses
 
-Reference results — APIC mo-apic-v6.0_9c, 15 152 classes
+Reference results — APIC mo-apic-v6.0_9c, 15 239 classes
 ──────────────────────────────────────────────────────────
 Strategy                        R@1     R@5     MRR    Avg ms
 ──────────────────────────────  ──────  ──────  ─────  ──────

@@ -19,7 +19,8 @@ entire ACI object model without any hardcoded class knowledge:
 
 All ACI domain knowledge lives in:
   ../data/schemas/                 15 k+ jsonmeta files from the APIC /doc/jsonmeta/ endpoint
-  ../data/class-descriptions.json  label + comment index built by schema-collector/gen_descriptions.py
+  ../data/class-descriptions.json  label + comment index, built by the collector's
+                                   descriptions step (aci-collect run --from descriptions)
 
 Typical LLM workflow
 --------------------
@@ -38,6 +39,10 @@ Environment variables (read from .env at startup)
   APIC_PASSWORD    APIC password
   APIC_VERIFY_SSL  "true" to enforce TLS verification (default: false)
   MCP_PORT         HTTP port the server listens on (default: 8000)
+  MCP_API_KEYS     Comma-separated bearer tokens accepted by ApiKeyMiddleware.
+                   Unset means the server runs with NO authentication (logged
+                   as a warning at startup).  Reloadable at runtime with
+                   SIGHUP, without restarting the process.
 
 query() parameters
 ------------------
@@ -51,6 +56,8 @@ query() parameters
                        Equivalent to rsp-subtree=children&rsp-subtree-class=X,Y
   filter_expr          Raw APIC filter: wcard, ne, gt, and/or compositions
                        e.g. 'wcard(fvBD.dn,"uni/tn-OT")'
+  config_only          Return only user-configurable attributes, dropping the
+                       ~40 operational/internal ones
   rsp_subtree_include  Inline subtrees: "faults", "health", "audit-logs",
                        "faults,required", "faults,no-scoped"
   time_range           Log record window: "24h", "1week", "2026-01-01|2026-01-31"
@@ -366,7 +373,13 @@ async def get_schema(
                         pass to get_schema(), query(), or include_children
       dnFormats      — complete DN pattern examples for this class
       relationTo     — outgoing Rs relations: {relClass: {targetClass, cardinality}}
-      relationFrom   — incoming Rt relations: {relClass: {sourceClass}}
+                        Keys and targetClass keep their "pkg:Class" colon
+                        notation — unlike `contains`, they are NOT flattened,
+                        so strip the colon before querying.  `cardinality` is
+                        empty for every entry on the current schema bundle;
+                        the real value lives on the relation class itself.
+      relationFrom   — incoming Rt relations: {relClass: {sourceClass}}, also
+                        in colon notation
       properties     — sorted list of all available attribute names
       property_details — compact per-property constraints; present ONLY when
                         include_property_details=True or properties_filter is set

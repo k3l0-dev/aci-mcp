@@ -12,22 +12,27 @@ It exposes a **small set of generic tools**. For discovery, the LLM calls the th
 
 ```mermaid
 graph TD
-    subgraph repo["aci-mcp (monorepo)"]
+    subgraph repo["aci-mcp (this repository)"]
         mcp["mcp/\nFastMCP server"]
-        collector["schema-collector/\nAPIC schema pipeline"]
         data["data/\nshared artifacts"]
         env[".env\nshared credentials"]
         docs["docs/\nreference documentation"]
         scripts["scripts/\nbundle download helpers"]
     end
 
-    collector -->|"produces"| data
+    collector["schema-collector\n(private tooling,\nnot in this repository)"]
+    release["GitHub release asset\nschemas-mo-apic.tar.gz"]
+
+    collector -->|"produces"| release
+    scripts -->|"downloads and extracts into"| data
+    release --> scripts
     mcp -->|"reads at startup"| data
     mcp -->|"reads credentials"| env
-    scripts -->|"fetches release bundle into"| data
 ```
 
-`mcp/` reads `data/` (schema bundle) and `.env` (APIC credentials) at the repo root. `data/` is produced independently by `schema-collector/` (or downloaded as a release bundle via `scripts/download-schemas.sh`) — `mcp/` never generates it.
+`mcp/` reads `data/` (schema bundle) and `.env` (APIC credentials) at the repo root — it never generates either.
+
+`data/` is not checked in. Get it with `scripts/download-schemas.sh`, which fetches the schema bundle published as a GitHub release asset. That bundle is produced by `schema-collector`, a separate private tool that is **not part of this repository**: the collection methodology against a live APIC is not published. You never need it to run the server.
 
 ---
 

@@ -74,7 +74,7 @@ query(
 
 | Parameter | Type | Description |
 |---|---|---|
-| `time_range` | `str` | For log record classes (`faultRecord`, `aaaModLR`, `eventRecord`). Examples: `"24h"`, `"1week"`, `"2026-01-01\|2026-01-31"`. |
+| `time_range` | `str` | For log record classes (`faultRecord`, `aaaModLR`, `eventRecord`, `healthRecord`). Examples: `"24h"`, `"1week"`, `"2026-01-01\|2026-01-31"`. |
 
 ---
 
