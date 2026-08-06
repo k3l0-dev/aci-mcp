@@ -7,6 +7,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+### Fixed
+
+- The README described the project as "the first open-source MCP server for
+  Cisco ACI". It is neither: at least eight other ACI/APIC MCP servers predate
+  it, the earliest by a year and one of them published by CiscoDevNet, and
+  PolyForm Noncommercial is source-available rather than OSI-approved. The
+  tagline now states what actually distinguishes the project — it reads the
+  fabric's own object model rather than a fixed list of endpoints — which is a
+  description of the architecture rather than a claim of primacy, and so cannot
+  be falsified by a project neither of us has seen. The GitHub repository
+  description was also still advertising three tools; there are five.
+
 ## [1.2.2] - 2026-08-06
 
 Documentation-only release. No code path changes, no API change — but the

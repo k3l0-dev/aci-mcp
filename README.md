@@ -8,8 +8,9 @@
 
 <h3>Your agent can now literally talk to your datacenter.</h3>
 
-<p>The first open-source MCP server for Cisco ACI —<br/>
-give any LLM instant, schema-aware access to your APIC fabric.</p>
+<p>The schema-driven MCP server for Cisco ACI —<br/>
+it reads your fabric's own object model instead of a fixed list of endpoints,<br/>
+so any LLM can reach all 15,000+ classes with no hardcoded class knowledge.</p>
 
 <br/>
 
