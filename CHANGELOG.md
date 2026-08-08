@@ -7,7 +7,62 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+Work in progress towards **2.0.0** — replacing the data layer with niwaki's
+embedded catalogue. Landing on `feature/niwaki-core-2.0`, one commit per
+iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
+
+### Added
+
+- **A behavioural baseline, recorded before any 2.0 change was made.** The five
+  tools keep their signatures across this migration, so a defect in the swap
+  would be silent — a changed field shape, a drifted ranking, a truncated list —
+  and every pre-existing test would still pass. `mcp/tests/baseline/` now
+  records what the implementation does and asserts *equality* against it: the
+  whole descriptions index by digest, `get_schema()` for 38 stratified classes,
+  and the exact top-5 of all 74 golden queries. Two gaps made this necessary:
+  the search floors sat at 60 % / 85 % while the implementation delivers
+  78.4 % / 94.6 %, so a regression to 61 % was a green build; and nothing
+  anywhere pinned the output of `get_schema()`. The net was mutation-tested
+  before being committed — five separate sabotages each fail exactly one test.
+- **Explicit, overridable path resolution** via `ACI_MCP_DATA_DIR` and
+  `ACI_MCP_ENV_FILE`, with ten tests pinning the behaviour.
+
+### Changed
+
+- **BREAKING — the distribution is now `niwashi-mcp` and the import package is
+  `niwashi_mcp`.** The code moved from a flat `mcp/` layout to
+  `mcp/src/niwashi_mcp/`, which is what makes the server installable — and so
+  what makes `uvx` possible, the whole point of 2.0. Publishing the flat layout
+  would have claimed `exceptions`, `main`, `registry`, `middleware` and `apic`
+  as top-level PyPI modules; a test now proves none of them is importable from
+  an installed environment. `python main.py` still works through a deprecation
+  shim scheduled for removal in 3.0.
+
+  On the name: `cisco-aci-mcp` was the earlier plan and is dropped — Cisco's
+  published trademark policy forbids using its marks "as or as part of a
+  product name". `aci-mcp-server` is no better: Cisco does not own "ACI" alone,
+  but ACI Worldwide does, live in classes 9 and 42, and enforces it. `niwashi`
+  (庭師, the gardener) carries no third-party mark in any register searched and
+  matches the existing `niwaki` family. Compatibility with Cisco ACI is stated
+  in the summary, keywords and README — the construction trademark owners
+  themselves publish as acceptable.
+
 ### Fixed
+
+- **Path resolution no longer breaks when the package is installed.** The data
+  and `.env` locations were derived from `__file__`, which only worked from a
+  git checkout; installed, that arithmetic walked out of `site-packages` onto a
+  meaningless directory. Because a missing `.env` is not an error and a missing
+  schema directory merely yields empty results, the failure was silent. A
+  checkout is now *verified* by its layout rather than assumed, and an
+  invariant test asserts no resolved path may ever point inside
+  `site-packages`.
+- The container looked for the data bundle in `/app/data/` while the image
+  copies it to `/data/`, which would have broken startup. The image now also
+  installs the package rather than copying modules one by one, so it runs
+  exactly what a wheel produces.
+
+### Fixed (1.x)
 
 - The README described the project as "the first open-source MCP server for
   Cisco ACI". It is neither: at least eight other ACI/APIC MCP servers predate
