@@ -16,7 +16,7 @@ Why the wall-clock budgets were wrong
 -------------------------------------
 Until 2.0 these thresholds were calibrated "on a modern laptop", and the CI
 workflow excluded `tests/perf` entirely, so they had never run on CI hardware.
-The release pipeline runs the full suite, and a shared 2-core runner is 2–4x
+The release pipeline runs the full suite, and a shared 2-core runner is 2-4x
 slower: the single-search assertion measured 0.426 s against a 200 ms budget.
 
 Worse, that test measured the *cold* path — the first call, which builds the
