@@ -12,16 +12,26 @@ WORKDIR /app
 # Install uv for fast, reproducible dependency installation
 RUN pip install --no-cache-dir uv
 
+# pyproject declares `readme = "../README.md"`, so the README must be in place
+# before any build step reads the metadata — including `uv sync`.
+COPY README.md /README.md
+
 # Install dependencies before copying source to leverage Docker layer cache
 COPY mcp/pyproject.toml mcp/uv.lock ./
 RUN uv sync --frozen --no-dev
 
 # Copy application source and shared data
-COPY mcp/main.py mcp/exceptions.py ./
-COPY mcp/apic/ ./apic/
-COPY mcp/middleware/ ./middleware/
-COPY mcp/registry/ ./registry/
+# The package is installed rather than copied file-by-file, so the image runs
+# exactly what a `pip install` produces — no drift between container and wheel.
+COPY mcp/src/ ./src/
+RUN uv pip install --no-deps .
 COPY data/ /data/
+
+# The data bundle lives outside the app directory, so point the server at it
+# explicitly rather than relying on path inference from the working directory.
+# Iteration 5 removes this entirely: the catalogue ships inside the niwaki
+# dependency and there is no data volume left to locate.
+ENV ACI_MCP_DATA_DIR=/data
 
 # Run as non-root
 RUN groupadd --system app && useradd --system --gid app app
@@ -30,4 +40,4 @@ USER app
 
 EXPOSE 8000
 
-CMD ["python", "main.py"]
+CMD ["niwashi-mcp"]

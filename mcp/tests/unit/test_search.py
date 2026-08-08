@@ -7,8 +7,8 @@ import json
 
 import pytest
 
-from exceptions import DescriptionsLoadError
-from registry.descriptions import load_descriptions, search
+from niwashi_mcp.exceptions import DescriptionsLoadError
+from niwashi_mcp.registry.descriptions import load_descriptions, search
 
 _DESCRIPTIONS = {
     "fvBD": {

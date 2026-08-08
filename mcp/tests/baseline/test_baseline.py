@@ -56,7 +56,7 @@ def repo_root() -> Path:
 
 @pytest.fixture(scope="module")
 def descriptions(repo_root: Path) -> dict:
-    from registry.descriptions import load_descriptions
+    from niwashi_mcp.registry.descriptions import load_descriptions
 
     path = repo_root / "data" / "class-descriptions.json"
     if not path.exists():
@@ -66,7 +66,7 @@ def descriptions(repo_root: Path) -> dict:
 
 @pytest.fixture(scope="module")
 def schemas_dir(repo_root: Path) -> Path:
-    from registry.schema import resolve_schemas_dir
+    from niwashi_mcp.registry.schema import resolve_schemas_dir
 
     resolved = resolve_schemas_dir(repo_root / "data" / "schemas")
     if not resolved.is_dir() or not any(resolved.iterdir()):
@@ -142,7 +142,7 @@ def test_absent_class_still_returns_empty_dict(recorded, schemas_dir):
     determined (file lookup → SQL lookup), and an exception thrown instead of an
     empty dict would be a contract break an agent cannot recover from.
     """
-    from registry.schema import class_exists, load_schema
+    from niwashi_mcp.registry.schema import class_exists, load_schema
 
     absent = [c for c, r in recorded["schemas"].items() if not r["exists"]]
     assert absent, "baseline has no absent-class case — the contract is unpinned"
@@ -158,7 +158,7 @@ def test_dn_formats_not_truncated(recorded, schemas_dir):
     storage or serialisation change that silently caps a list would be invisible
     in aggregate but would make the anti-hallucination anchor in SKILL.md lie.
     """
-    from registry.schema import load_schema
+    from niwashi_mcp.registry.schema import load_schema
 
     checked = 0
     for cls, ref in recorded["schemas"].items():

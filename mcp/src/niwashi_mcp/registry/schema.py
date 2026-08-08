@@ -19,7 +19,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from exceptions import SchemaLoadError
+from niwashi_mcp.exceptions import SchemaLoadError
 
 logger = logging.getLogger("aci-mcp.registry")
 

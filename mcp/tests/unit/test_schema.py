@@ -13,8 +13,8 @@ import json
 
 import pytest
 
-from exceptions import SchemaLoadError
-from registry.schema import class_exists, load_schema, resolve_schemas_dir
+from niwashi_mcp.exceptions import SchemaLoadError
+from niwashi_mcp.registry.schema import class_exists, load_schema, resolve_schemas_dir
 
 # ── Synthetic schema fixtures ─────────────────────────────────────────────────
 
@@ -404,7 +404,7 @@ def test_class_exists_false_for_case_mismatch_even_if_load_schema_resolves(
     # the requested "fvBd".
     real_load_schema = load_schema
     monkeypatch.setattr(
-        "registry.schema.load_schema",
+        "niwashi_mcp.registry.schema.load_schema",
         lambda class_name, schemas_dir: real_load_schema("fvBD", schemas_dir),
     )
     assert class_exists("fvBd", schema_dir) is False

@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 
-from exceptions import UnknownClassError
+from niwashi_mcp.exceptions import UnknownClassError
 from tests.conftest import MINIMAL_DESCRIPTIONS, StubBackend, make_ctx
 
 # ── Tool context helpers ──────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ def _stub_ctx(sample_imdata, schemas_dir, descriptions=None):
 
 @pytest.mark.asyncio
 async def test_search_classes_returns_results(tool_ctx):
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     results = await search_classes("bridge", tool_ctx)
     assert isinstance(results, list)
@@ -45,7 +45,7 @@ async def test_search_classes_returns_results(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_search_classes_result_shape(tool_ctx):
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     results = await search_classes("tenant", tool_ctx)
     for r in results:
@@ -56,7 +56,7 @@ async def test_search_classes_result_shape(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_search_classes_limit_capped_at_50(tool_ctx):
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     # Requesting 999 — must be capped at 50
     results = await search_classes("a", tool_ctx, limit=999)
@@ -65,7 +65,7 @@ async def test_search_classes_limit_capped_at_50(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_search_classes_limit_respected(tool_ctx):
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     results = await search_classes("a", tool_ctx, limit=2)
     assert len(results) <= 2
@@ -77,7 +77,7 @@ async def test_search_classes_limit_respected(tool_ctx):
 @pytest.mark.asyncio
 async def test_search_classes_limit_zero_clamped_to_one(tool_ctx):
     """A limit of 0 is clamped to 1, not passed through to a [:0] slice."""
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     results = await search_classes("a", tool_ctx, limit=0)
     assert len(results) == 1
@@ -86,7 +86,7 @@ async def test_search_classes_limit_zero_clamped_to_one(tool_ctx):
 @pytest.mark.asyncio
 async def test_search_classes_limit_negative_clamped_to_one(tool_ctx):
     """A negative limit is clamped to 1 rather than mis-slicing results."""
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     results = await search_classes("a", tool_ctx, limit=-1)
     assert len(results) == 1
@@ -94,7 +94,7 @@ async def test_search_classes_limit_negative_clamped_to_one(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_search_classes_limit_one_returns_exactly_one(tool_ctx):
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     results = await search_classes("a", tool_ctx, limit=1)
     assert len(results) == 1
@@ -102,7 +102,7 @@ async def test_search_classes_limit_one_returns_exactly_one(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_search_classes_limit_at_cap_50_respected(tool_ctx):
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     results = await search_classes("a", tool_ctx, limit=50)
     assert len(results) <= 50
@@ -110,7 +110,7 @@ async def test_search_classes_limit_at_cap_50_respected(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_search_classes_limit_cap_plus_one_still_capped_at_50(tool_ctx):
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     results = await search_classes("a", tool_ctx, limit=51)
     assert len(results) <= 50
@@ -118,7 +118,7 @@ async def test_search_classes_limit_cap_plus_one_still_capped_at_50(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_search_classes_no_match_returns_empty(tool_ctx):
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     results = await search_classes("zzz_nonexistent_xyz_abc", tool_ctx)
     assert results == []
@@ -126,7 +126,7 @@ async def test_search_classes_no_match_returns_empty(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_search_classes_logs_result_count(tool_ctx):
-    from main import search_classes
+    from niwashi_mcp.main import search_classes
 
     await search_classes("bridge", tool_ctx)
     tool_ctx.info.assert_called_once()
@@ -139,7 +139,7 @@ async def test_search_classes_logs_result_count(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_get_schema_unknown_class_returns_empty(tool_ctx):
-    from main import get_schema
+    from niwashi_mcp.main import get_schema
 
     schema = await get_schema("nonExistentClassXYZ", tool_ctx)
     assert schema == {}
@@ -147,7 +147,7 @@ async def test_get_schema_unknown_class_returns_empty(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_get_schema_unknown_class_logs_warning(tool_ctx):
-    from main import get_schema
+    from niwashi_mcp.main import get_schema
 
     await get_schema("nonExistentClassXYZ", tool_ctx)
     tool_ctx.warning.assert_called_once()
@@ -159,7 +159,7 @@ async def test_get_schema_unknown_class_logs_warning(tool_ctx):
     reason="schemas/ collection not available",
 )
 async def test_get_schema_known_class_returns_required_fields(tool_ctx):
-    from main import get_schema
+    from niwashi_mcp.main import get_schema
 
     schema = await get_schema("fvBD", tool_ctx)
     assert schema != {}
@@ -172,7 +172,7 @@ async def test_get_schema_known_class_returns_required_fields(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_returns_envelope(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvTenant", tool_ctx)
     assert isinstance(envelope, dict)
@@ -186,7 +186,7 @@ async def test_query_returns_envelope(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_result_has_class_key(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx)
     results = envelope["results"]
@@ -196,7 +196,7 @@ async def test_query_result_has_class_key(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_with_equality_filter(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, filters={"name": "servers"})
     results = envelope["results"]
@@ -206,7 +206,7 @@ async def test_query_with_equality_filter(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_with_scope_dn_restricts_results(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, scope_dn="uni/tn-OT")
     results = envelope["results"]
@@ -216,7 +216,7 @@ async def test_query_with_scope_dn_restricts_results(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_limit_capped_at_200(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=9999)
     assert len(envelope["results"]) <= 200
@@ -224,7 +224,7 @@ async def test_query_limit_capped_at_200(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_limit_applied(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=1)
     assert len(envelope["results"]) == 1
@@ -236,7 +236,7 @@ async def test_query_limit_applied(tool_ctx):
 @pytest.mark.asyncio
 async def test_query_limit_zero_clamped_to_one(tool_ctx):
     """A limit of 0 is clamped to 1, not forwarded to APIC as page-size=0."""
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=0)
     assert len(envelope["results"]) == 1
@@ -245,7 +245,7 @@ async def test_query_limit_zero_clamped_to_one(tool_ctx):
 @pytest.mark.asyncio
 async def test_query_limit_negative_clamped_to_one(tool_ctx):
     """A negative limit is clamped to 1, not forwarded to APIC as page-size=-1."""
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=-1)
     assert len(envelope["results"]) == 1
@@ -257,7 +257,7 @@ async def test_query_limit_negative_reaches_backend_as_clamped_value(
 ):
     """The clamped value — not the raw negative input — is what the backend
     actually receives, so a negative limit never reaches the real APIC."""
-    from main import query
+    from niwashi_mcp.main import query
 
     ctx = _stub_ctx(sample_imdata, schemas_dir)
     await query("fvBD", ctx, limit=-5)
@@ -267,7 +267,7 @@ async def test_query_limit_negative_reaches_backend_as_clamped_value(
 
 @pytest.mark.asyncio
 async def test_query_limit_one_returns_exactly_one(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=1)
     assert len(envelope["results"]) == 1
@@ -275,7 +275,7 @@ async def test_query_limit_one_returns_exactly_one(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_limit_at_cap_200_respected(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=200)
     assert len(envelope["results"]) <= 200
@@ -283,7 +283,7 @@ async def test_query_limit_at_cap_200_respected(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_limit_cap_plus_one_still_capped_at_200(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=201)
     assert len(envelope["results"]) <= 200
@@ -291,7 +291,7 @@ async def test_query_limit_cap_plus_one_still_capped_at_200(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_order_by_asc(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, order_by="fvBD.name|asc")
     names = [r["name"] for r in envelope["results"]]
@@ -300,7 +300,7 @@ async def test_query_order_by_asc(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_order_by_desc(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, order_by="fvBD.name|desc")
     names = [r["name"] for r in envelope["results"]]
@@ -309,7 +309,7 @@ async def test_query_order_by_desc(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_none_filters_equivalent_to_empty(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope_none = await query("fvTenant", tool_ctx, filters=None)
     envelope_empty = await query("fvTenant", tool_ctx, filters={})
@@ -318,7 +318,7 @@ async def test_query_none_filters_equivalent_to_empty(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_include_children_populates_children_key(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     # fvBD "mgmt" in sample_imdata has a fvSubnet child
     envelope = await query("fvBD", tool_ctx, include_children=["fvSubnet"])
@@ -335,7 +335,7 @@ async def test_query_include_children_populates_children_key(tool_ctx):
 async def test_query_truncated_false_when_returned_less_than_limit(tool_ctx):
     """Only 2 fvTenant objects exist in sample_imdata — well under the
     default limit=20 — so this is a natural end, not a partial page."""
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvTenant", tool_ctx)
     assert envelope["returned"] < 20
@@ -348,7 +348,7 @@ async def test_query_truncated_false_when_returned_less_than_limit(tool_ctx):
 @pytest.mark.asyncio
 async def test_query_truncated_true_reports_total_and_note(tool_ctx):
     """3 fvBD objects exist; limit=2 returns only a partial page."""
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=2)
     assert envelope["returned"] == 2
@@ -361,7 +361,7 @@ async def test_query_truncated_true_reports_total_and_note(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_fetch_all_returns_everything(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=2, fetch_all=True)
     assert envelope["returned"] == 3
@@ -425,7 +425,7 @@ def _argmax_bd_name(results: list[dict]) -> str:
 
 @pytest.mark.asyncio
 async def test_query_default_page_argmax_wrong_fetch_all_argmax_right(schemas_dir):
-    from main import query
+    from niwashi_mcp.main import query
 
     ctx = _stub_ctx(_build_large_bd_imdata(), schemas_dir)
     true_argmax = f"bd{_ARGMAX_BD_INDEX:04d}"
@@ -449,7 +449,7 @@ async def test_query_default_page_argmax_wrong_fetch_all_argmax_right(schemas_di
 
 @pytest.mark.asyncio
 async def test_query_unknown_class_raises_unknown_class_error(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     with pytest.raises(UnknownClassError) as exc_info:
         await query("xyzTotallyFakeClass99", tool_ctx)
@@ -460,7 +460,7 @@ async def test_query_unknown_class_raises_unknown_class_error(tool_ctx):
 async def test_query_unknown_class_error_includes_suggestions(
     sample_imdata, schemas_dir
 ):
-    from main import query
+    from niwashi_mcp.main import query
 
     # Use a registry that contains "fvBD" so "fvBd" (typo) gets a suggestion
     ctx = _stub_ctx(sample_imdata, schemas_dir, descriptions=dict(MINIMAL_DESCRIPTIONS))
@@ -472,7 +472,7 @@ async def test_query_unknown_class_error_includes_suggestions(
 
 @pytest.mark.asyncio
 async def test_query_unknown_class_logs_warning(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     with pytest.raises(UnknownClassError):
         await query("xyzFakeClass", tool_ctx)
@@ -481,7 +481,7 @@ async def test_query_unknown_class_logs_warning(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_unknown_class_error_carries_registry_size(tool_ctx):
-    from main import query
+    from niwashi_mcp.main import query
 
     with pytest.raises(UnknownClassError) as exc_info:
         await query("xyzFakeClass", tool_ctx)
@@ -518,7 +518,7 @@ async def test_query_allows_class_absent_from_descriptions_but_with_schema(
 ):
     """A class with a schema file but no class-descriptions entry is allowed
     through instead of raising UnknownClassError."""
-    from main import query
+    from niwashi_mcp.main import query
 
     (tmp_path / "aaaExtraOnlyClass.json").write_text(
         json.dumps(_EXTRA_ONLY_SCHEMA), encoding="utf-8"
@@ -535,7 +535,7 @@ async def test_query_allows_class_with_schema_logs_warning_not_error(
 ):
     """The schema-fallback path logs a warning (for observability) rather
     than silently allowing the query with no trace."""
-    from main import query
+    from niwashi_mcp.main import query
 
     (tmp_path / "aaaExtraOnlyClass.json").write_text(
         json.dumps(_EXTRA_ONLY_SCHEMA), encoding="utf-8"
@@ -553,7 +553,7 @@ async def test_query_rejects_class_with_neither_description_nor_schema(
 ):
     """A class with no descriptions entry AND no resolvable schema file is
     still rejected — the fallback only rescues genuinely known classes."""
-    from main import query
+    from niwashi_mcp.main import query
 
     # tmp_path is empty — no schema file for any class.
     ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
@@ -583,7 +583,7 @@ _CONFIG_IMDATA = [
 
 @pytest.mark.asyncio
 async def test_query_config_only_passed_through(sample_imdata, schemas_dir):
-    from main import query
+    from niwashi_mcp.main import query
 
     ctx = _stub_ctx(sample_imdata, schemas_dir)
     await query("fvBD", ctx, config_only=True)
@@ -593,7 +593,7 @@ async def test_query_config_only_passed_through(sample_imdata, schemas_dir):
 
 @pytest.mark.asyncio
 async def test_query_config_only_strips_operational_attrs(schemas_dir):
-    from main import query
+    from niwashi_mcp.main import query
 
     ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
     envelope = await query("fvBD", ctx, config_only=True)
@@ -605,7 +605,7 @@ async def test_query_config_only_strips_operational_attrs(schemas_dir):
 
 @pytest.mark.asyncio
 async def test_query_without_config_only_keeps_all_attrs(schemas_dir):
-    from main import query
+    from niwashi_mcp.main import query
 
     ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
     envelope = await query("fvBD", ctx)
@@ -617,7 +617,7 @@ async def test_query_without_config_only_keeps_all_attrs(schemas_dir):
 
 @pytest.mark.asyncio
 async def test_get_by_dn_found_returns_object(tool_ctx):
-    from main import get_by_dn
+    from niwashi_mcp.main import get_by_dn
 
     obj = await get_by_dn("uni/tn-OT/BD-servers", tool_ctx)
     assert obj["_class"] == "fvBD"
@@ -627,7 +627,7 @@ async def test_get_by_dn_found_returns_object(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_get_by_dn_not_found_returns_structured_error(tool_ctx):
-    from main import get_by_dn
+    from niwashi_mcp.main import get_by_dn
 
     result = await get_by_dn("uni/tn-OT/BD-doesNotExist", tool_ctx)
     assert result["found"] is False
@@ -637,7 +637,7 @@ async def test_get_by_dn_not_found_returns_structured_error(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_get_by_dn_not_found_logs_warning(tool_ctx):
-    from main import get_by_dn
+    from niwashi_mcp.main import get_by_dn
 
     await get_by_dn("uni/tn-OT/BD-doesNotExist", tool_ctx)
     tool_ctx.warning.assert_called_once()
@@ -645,7 +645,7 @@ async def test_get_by_dn_not_found_logs_warning(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_get_by_dn_config_only_strips_operational_attrs(schemas_dir):
-    from main import get_by_dn
+    from niwashi_mcp.main import get_by_dn
 
     ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
     obj = await get_by_dn("uni/tn-OT/BD-servers", ctx, config_only=True)
@@ -657,7 +657,7 @@ async def test_get_by_dn_config_only_strips_operational_attrs(schemas_dir):
 
 @pytest.mark.asyncio
 async def test_get_by_dn_include_children_embeds_children(tool_ctx):
-    from main import get_by_dn
+    from niwashi_mcp.main import get_by_dn
 
     # fvBD "mgmt" in sample_imdata carries a fvSubnet child
     obj = await get_by_dn("uni/tn-OT/BD-mgmt", tool_ctx, include_children=["fvSubnet"])
@@ -671,7 +671,7 @@ async def test_get_by_dn_include_children_embeds_children(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_count_plain_returns_total(tool_ctx):
-    from main import count
+    from niwashi_mcp.main import count
 
     result = await count("fvBD", tool_ctx)
     # sample_imdata carries three fvBD objects
@@ -683,7 +683,7 @@ async def test_count_plain_returns_total(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_count_filtered(tool_ctx):
-    from main import count
+    from niwashi_mcp.main import count
 
     # two of the three BDs have arpFlood=no (servers, mgmt)
     result = await count("fvBD", tool_ctx, filters={"arpFlood": "no"})
@@ -693,7 +693,7 @@ async def test_count_filtered(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_count_scoped(tool_ctx):
-    from main import count
+    from niwashi_mcp.main import count
 
     result = await count("fvBD", tool_ctx, scope_dn="uni/tn-OT")
     assert result["count"] == 3
@@ -702,7 +702,7 @@ async def test_count_scoped(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_count_unknown_class_raises_unknown_class_error(tool_ctx):
-    from main import count
+    from niwashi_mcp.main import count
 
     with pytest.raises(UnknownClassError) as exc_info:
         await count("xyzTotallyFakeClass99", tool_ctx)
@@ -711,7 +711,7 @@ async def test_count_unknown_class_raises_unknown_class_error(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_count_unknown_class_logs_warning(tool_ctx):
-    from main import count
+    from niwashi_mcp.main import count
 
     with pytest.raises(UnknownClassError):
         await count("xyzFakeClass", tool_ctx)
@@ -725,7 +725,7 @@ async def test_count_allows_class_absent_from_descriptions_but_with_schema(
     """count() must agree with query() on the registry/schema fallback — a
     class with a schema file but no class-descriptions entry is allowed
     through instead of raising UnknownClassError."""
-    from main import count
+    from niwashi_mcp.main import count
 
     (tmp_path / "aaaExtraOnlyClass.json").write_text(
         json.dumps(_EXTRA_ONLY_SCHEMA), encoding="utf-8"

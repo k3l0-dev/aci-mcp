@@ -25,7 +25,7 @@ from collections import Counter
 
 import pytest
 
-from exceptions import ApicRequestError
+from niwashi_mcp.exceptions import ApicRequestError
 
 # `live` keeps this suite out of the default run (see pyproject.toml
 # addopts). `asyncio(loop_scope="session")` binds every test in this module

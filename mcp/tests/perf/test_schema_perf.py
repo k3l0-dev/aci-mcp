@@ -16,7 +16,7 @@ Thresholds:
 
 import time
 
-from registry.schema import load_schema
+from niwashi_mcp.registry.schema import load_schema
 from tests.perf.conftest import _make_class_name
 
 

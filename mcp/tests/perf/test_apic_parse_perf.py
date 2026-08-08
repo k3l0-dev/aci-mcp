@@ -21,7 +21,7 @@ import time
 import httpx
 import pytest
 
-from apic.client import ApicClient
+from niwashi_mcp.apic.client import ApicClient
 from tests.conftest import apic_response
 from tests.perf.conftest import generate_imdata
 

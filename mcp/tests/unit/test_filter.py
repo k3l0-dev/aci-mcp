@@ -5,8 +5,8 @@
 
 import pytest
 
-from exceptions import FilterError
-from registry.filter import build_filter
+from niwashi_mcp.exceptions import FilterError
+from niwashi_mcp.registry.filter import build_filter
 
 # ── Happy path ────────────────────────────────────────────────────────────────
 

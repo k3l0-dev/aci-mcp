@@ -61,9 +61,9 @@ sys.path.insert(0, str(_MCP_ROOT))
 # ruff: noqa: E402 — the sys.path insert above must run before these imports,
 # because this module is also executed directly (`python -m tests.baseline.capture`)
 # from a tree that is not yet an installed package.
-from registry.descriptions import load_descriptions
-from registry.descriptions import search as desc_search
-from registry.schema import class_exists, load_schema, resolve_schemas_dir
+from niwashi_mcp.registry.descriptions import load_descriptions
+from niwashi_mcp.registry.descriptions import search as desc_search
+from niwashi_mcp.registry.schema import class_exists, load_schema, resolve_schemas_dir
 
 BASELINE_PATH = _HERE / "baseline.json"
 _REPO_ROOT = _MCP_ROOT.parent

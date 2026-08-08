@@ -41,7 +41,7 @@ from pathlib import Path
 # Make the mcp/ package importable without installation.
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from registry.descriptions import load_descriptions, search
+from niwashi_mcp.registry.descriptions import load_descriptions, search
 
 DESCRIPTIONS_FILE = Path(__file__).parent.parent.parent / "data" / "class-descriptions.json"
 GOLDEN_FILE = Path(__file__).parent / "fixtures" / "search_golden.json"

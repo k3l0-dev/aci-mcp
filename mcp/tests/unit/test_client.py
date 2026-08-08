@@ -14,8 +14,8 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 
-from apic.client import _MAX_OBJECTS, _MAX_PAGES, ApicClient
-from exceptions import (
+from niwashi_mcp.apic.client import _MAX_OBJECTS, _MAX_PAGES, ApicClient
+from niwashi_mcp.exceptions import (
     ApicAuthError,
     ApicConnectionError,
     ApicError,

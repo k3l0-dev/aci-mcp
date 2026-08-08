@@ -10,8 +10,8 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
-from exceptions import AuthenticationError
-from middleware.auth import (
+from niwashi_mcp.exceptions import AuthenticationError
+from niwashi_mcp.middleware.auth import (
     ApiKeyMiddleware,
     KeyStore,
     RateLimiter,
@@ -226,7 +226,7 @@ def test_authenticate_raises_for_empty_key_set():
 
 
 def test_authenticate_error_is_aci_mcp_error():
-    from exceptions import AciMcpError
+    from niwashi_mcp.exceptions import AciMcpError
 
     with pytest.raises(AciMcpError):
         _authenticate(None, frozenset({"k"}))

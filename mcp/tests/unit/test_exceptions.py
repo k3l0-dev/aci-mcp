@@ -5,7 +5,7 @@
 
 import pytest
 
-from exceptions import (
+from niwashi_mcp.exceptions import (
     AciMcpError,
     ApicAuthError,
     ApicConnectionError,

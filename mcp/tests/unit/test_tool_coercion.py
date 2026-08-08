@@ -12,7 +12,7 @@ the final type.
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from main import _coerce_json_str, _JsonDict, _JsonList
+from niwashi_mcp.main import _coerce_json_str, _JsonDict, _JsonList
 
 # ── _coerce_json_str (raw function) ──────────────────────────────────────────
 

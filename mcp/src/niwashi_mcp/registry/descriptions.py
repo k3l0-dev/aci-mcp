@@ -83,7 +83,7 @@ import json
 import re
 from pathlib import Path
 
-from exceptions import DescriptionsLoadError
+from niwashi_mcp.exceptions import DescriptionsLoadError
 
 # ── Tokenization ──────────────────────────────────────────────────────────────
 

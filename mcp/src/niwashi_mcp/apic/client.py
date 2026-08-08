@@ -27,13 +27,13 @@ from typing import Any
 
 import httpx
 
-from exceptions import (
+from niwashi_mcp.exceptions import (
     ApicAuthError,
     ApicConnectionError,
     ApicRequestError,
     ApicResponseError,
 )
-from registry.filter import build_filter
+from niwashi_mcp.registry.filter import build_filter
 
 logger = logging.getLogger("aci-mcp.apic")
 

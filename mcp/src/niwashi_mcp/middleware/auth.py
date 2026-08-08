@@ -37,7 +37,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from exceptions import AuthenticationError
+from niwashi_mcp.exceptions import AuthenticationError
 
 logger = logging.getLogger("aci-mcp.auth")
 

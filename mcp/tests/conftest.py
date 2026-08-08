@@ -25,7 +25,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from apic.client import QueryResult
+from niwashi_mcp.apic.client import QueryResult
 
 SCHEMAS_DIR = Path(__file__).parent.parent.parent / "data" / "schemas"
 
@@ -422,7 +422,7 @@ def schemas_dir() -> Path:
     the full data/ collection happens to be present (e.g. in this repo's own
     checkout, as opposed to a bare worktree without it).
     """
-    from registry.schema import resolve_schemas_dir
+    from niwashi_mcp.registry.schema import resolve_schemas_dir
 
     return resolve_schemas_dir(SCHEMAS_DIR)
 
@@ -436,7 +436,7 @@ def tool_ctx(sample_imdata, schemas_dir):
     """
     desc_file = Path(__file__).parent.parent.parent / "data" / "class-descriptions.json"
     if desc_file.exists():
-        from registry.descriptions import load_descriptions
+        from niwashi_mcp.registry.descriptions import load_descriptions
 
         descriptions = load_descriptions(desc_file)
     else:

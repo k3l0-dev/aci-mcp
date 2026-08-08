@@ -18,7 +18,7 @@ More complex predicates (gt, lt, wcard, ne) can be added as needed.
 
 import re
 
-from exceptions import FilterError
+from niwashi_mcp.exceptions import FilterError
 
 # Valid ACI identifiers: letters/digits only, must start with a letter.
 _IDENT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
