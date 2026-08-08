@@ -149,6 +149,19 @@ niwaki. The 1.x name carried a protected mark it had no licence to use.
 
 ### Fixed
 
+- **The latency tests had never run on CI hardware, and one measured the wrong
+  thing.** `ci.yml` excludes `tests/perf` and only the release pipeline runs the
+  full suite, so thresholds calibrated "on a modern laptop" met a shared 2-core
+  runner for the first time at the release candidate: a 200 ms budget measured
+  0.426 s. The budget was not the real defect. `test_single_search_15k_classes`
+  timed the *first* call — the one that builds the tokenised index — and called
+  it search latency; production builds that index once in the lifespan and never
+  pays it per query. The tests now measure the warm path, and the regression
+  actually worth catching — losing the single-slot index cache, which costs ~25x
+  — is pinned by a cold/warm ratio rather than a wall-clock constant, so it holds
+  on any machine. Verified by sabotage: disabling the cache fails both the ratio
+  assertion and the throughput ceiling, and takes the file from 3.0 s to 29.6 s.
+
 - **`query()` could never report the end of a result set.** `truncated`
   compared the total to the size of the page in hand rather than to the offset
   consumed, so it was permanently true: page 2 of 45 objects returned 5 and
