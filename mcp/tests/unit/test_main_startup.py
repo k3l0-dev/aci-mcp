@@ -82,7 +82,7 @@ async def test_lifespan_raises_when_apic_host_missing(monkeypatch):
     # load_dotenv must be patched so the real .env cannot supply APIC_HOST.
     with (
         patch("niwashi_mcp.main.load_dotenv"),
-        patch("niwashi_mcp.main.load_descriptions", return_value={}),
+        patch("niwashi_mcp.main.catalog.descriptions_index", return_value={}),
         pytest.raises(ConfigurationError, match="APIC_HOST"),
     ):
         async with main.app_lifespan(MagicMock()):
@@ -97,7 +97,7 @@ async def test_lifespan_raises_when_apic_host_blank(monkeypatch):
 
     with (
         patch("niwashi_mcp.main.load_dotenv"),
-        patch("niwashi_mcp.main.load_descriptions", return_value={}),
+        patch("niwashi_mcp.main.catalog.descriptions_index", return_value={}),
         pytest.raises(ConfigurationError, match="APIC_HOST"),
     ):
         async with main.app_lifespan(MagicMock()):
@@ -112,7 +112,7 @@ async def test_lifespan_raises_when_apic_password_missing(monkeypatch):
 
     with (
         patch("niwashi_mcp.main.load_dotenv"),
-        patch("niwashi_mcp.main.load_descriptions", return_value={}),
+        patch("niwashi_mcp.main.catalog.descriptions_index", return_value={}),
         pytest.raises(ConfigurationError, match="APIC_PASSWORD"),
     ):
         async with main.app_lifespan(MagicMock()):
@@ -136,7 +136,7 @@ async def test_lifespan_strips_https_prefix(monkeypatch):
         return mock_backend
 
     with patch("niwashi_mcp.main.load_dotenv"), \
-         patch("niwashi_mcp.main.load_descriptions", return_value={}), \
+         patch("niwashi_mcp.main.catalog.descriptions_index", return_value={}), \
          patch("niwashi_mcp.main.ApicClient", side_effect=_capture_host):
         async with main.app_lifespan(MagicMock()):
             pass
@@ -158,7 +158,7 @@ async def test_lifespan_strips_http_prefix(monkeypatch):
         return mock_backend
 
     with patch("niwashi_mcp.main.load_dotenv"), \
-         patch("niwashi_mcp.main.load_descriptions", return_value={}), \
+         patch("niwashi_mcp.main.catalog.descriptions_index", return_value={}), \
          patch("niwashi_mcp.main.ApicClient", side_effect=_capture_host):
         async with main.app_lifespan(MagicMock()):
             pass
@@ -179,7 +179,7 @@ async def test_lifespan_yields_expected_context_keys(monkeypatch):
     mock_backend = AsyncMock()
 
     with patch("niwashi_mcp.main.load_dotenv"), \
-         patch("niwashi_mcp.main.load_descriptions", return_value=fake_descs), \
+         patch("niwashi_mcp.main.catalog.descriptions_index", return_value=fake_descs), \
          patch("niwashi_mcp.main.ApicClient", return_value=mock_backend):
         async with main.app_lifespan(MagicMock()) as ctx:
             assert set(ctx.keys()) >= {"descriptions", "backend", "schemas_dir"}
@@ -196,7 +196,7 @@ async def test_lifespan_closes_backend_on_shutdown(monkeypatch):
     mock_backend = AsyncMock()
 
     with patch("niwashi_mcp.main.load_dotenv"), \
-         patch("niwashi_mcp.main.load_descriptions", return_value={}), \
+         patch("niwashi_mcp.main.catalog.descriptions_index", return_value={}), \
          patch("niwashi_mcp.main.ApicClient", return_value=mock_backend):
         async with main.app_lifespan(MagicMock()):
             pass

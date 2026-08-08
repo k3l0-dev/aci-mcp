@@ -48,6 +48,24 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
 
 ### Changed
 
+- **`search_classes` now runs on the catalogue-rebuilt index.** The server no
+  longer reads `data/class-descriptions.json` at startup; it rebuilds the index
+  from niwaki's catalogue instead. Because that index is byte-identical, search
+  quality is unchanged **exactly** — Recall@1 78.4 %, Recall@5 94.6 %,
+  MRR 0.846, and every one of the 74 golden queries returns the same top-5 in
+  the same order. Those are asserted as equalities, not floors: any movement is
+  a rebuild bug, not a scoring trade-off. The scorer itself — `_score`, the
+  curated synonym table, the structural priors — is untouched.
+
+  Startup now logs the APIC release the catalogue was built from. From 2.0 that
+  version is pinned by a dependency rather than chosen by the operator, so a
+  silent niwaki upgrade would otherwise change the object model an agent
+  reasons about with no trace.
+
+  Index construction costs ~440 ms once at startup, against ~34 ms to parse the
+  JSON file it replaces, inside a lifespan that already performs an APIC
+  authentication round trip. Steady-state search latency is unchanged (~14 ms).
+
 - **BREAKING — the distribution is now `niwashi-mcp` and the import package is
   `niwashi_mcp`.** The code moved from a flat `mcp/` layout to
   `mcp/src/niwashi_mcp/`, which is what makes the server installable — and so
