@@ -25,12 +25,14 @@ data bundle still runs the rest rather than failing for the wrong reason.
 
 from __future__ import annotations
 
+import json
 import random
 from pathlib import Path
 
 import pytest
 
-from niwashi_mcp.registry import catalog, descriptions, schema
+from niwashi_mcp.registry import catalog, descriptions
+from tests.fixtures import jsonmeta_oracle
 
 pytestmark = pytest.mark.catalog
 
@@ -53,12 +55,17 @@ AWKWARD_CLASSES = [
 
 
 @pytest.fixture(scope="module")
-def schemas_dir() -> Path:
-    """The jsonmeta corpus, or skip — CI has no data bundle."""
-    resolved = schema.resolve_schemas_dir(Path(__file__).resolve().parents[3] / "data" / "schemas")
-    if not resolved.is_dir() or not any(resolved.glob("*.json")):
-        pytest.skip("data/schemas is empty — jsonmeta corpus required for parity")
-    return resolved
+def frozen_classes() -> list[str]:
+    """Classes with a frozen jsonmeta file, from the fixture manifest.
+
+    Shipped in the repository (2.4 MB), so parity is verifiable in CI and stays
+    verifiable after `data/` is deleted — unlike the 1.7 GB corpus, which was
+    never in git and is gone from the tree in 2.0.
+    """
+    manifest = json.loads(
+        (jsonmeta_oracle.FIXTURE_DIR / "MANIFEST.json").read_text()
+    )
+    return manifest["classes"]
 
 
 @pytest.fixture(scope="module")
@@ -75,7 +82,7 @@ def _divergence(a: dict, b: dict) -> set[str]:
 
 
 class TestSchemaParity:
-    def test_awkward_shapes_match_exactly(self, schemas_dir):
+    def test_awkward_shapes_match_exactly(self, frozen_classes):
         """Every deliberately-chosen difficult class, with property details.
 
         ``actionAeSubj`` is excluded here and asserted separately: it carries a
@@ -83,27 +90,26 @@ class TestSchemaParity:
         """
         failures = []
         for cls in AWKWARD_CLASSES:
-            if cls == "actionAeSubj":
-                continue
-            old = schema.load_schema(cls, schemas_dir, include_property_details=True)
+            if cls not in frozen_classes:
+                continue  # monsters and mo:* registers are covered by baseline digests
+            old = jsonmeta_oracle.project(cls, include_property_details=True)
             new = catalog.load_schema(cls, include_property_details=True)
             if old != new:
                 failures.append(f"{cls}: {sorted(_divergence(old, new))}")
         assert not failures, "parity broken:\n  " + "\n  ".join(failures)
 
-    def test_random_sample_matches_or_diverges_only_on_mo_registers(
-        self, schemas_dir, all_class_names
-    ):
-        """800 random classes: identical, or different *only* on mo:* options.
+    def test_every_frozen_class_matches_the_oracle(self, frozen_classes):
+        """All 31 frozen classes, derived independently from the vendor's files.
 
-        Asserting the accepted divergence precisely — rather than allowlisting
-        ``property_details`` wholesale — is what stops a real regression from
-        hiding inside a known exception.
+        This is the strongest parity evidence that survives the deletion of
+        ``data/``: the expected value is *computed* from raw jsonmeta by the 1.x
+        projection, not read back from something this project recorded of
+        itself. A snapshot cannot catch an error made in both the recording and
+        the implementation; an independent derivation can.
         """
-        random.seed(20260808)
         unexpected = []
-        for cls in random.sample(all_class_names, 800):
-            old = schema.load_schema(cls, schemas_dir, include_property_details=True)
+        for cls in frozen_classes:
+            old = jsonmeta_oracle.project(cls, include_property_details=True)
             new = catalog.load_schema(cls, include_property_details=True)
             if old == new:
                 continue
@@ -136,7 +142,7 @@ class TestSchemaParity:
         result = catalog.load_schema("fvBD", properties_filter=["name", "notAProperty"])
         assert list(result["property_details"]) == ["name"]
 
-    def test_always_emitted_keys_are_present_even_when_empty(self, schemas_dir, all_class_names):
+    def test_always_emitted_keys_are_present_even_when_empty(self, all_class_names):
         """The nine scalar keys exist on every class, empty or not.
 
         The jsonmeta reader copied them whenever the source had the key, and the

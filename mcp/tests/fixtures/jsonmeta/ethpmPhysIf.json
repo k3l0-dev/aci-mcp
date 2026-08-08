@@ -1,0 +1,5059 @@
+{
+  "ethpm:PhysIf": {
+    "contains": {
+      "ethpm:DOMStats": "",
+      "ethpm:Fault": "",
+      "ethpm:Fcot": "",
+      "ethpm:FcotDD": "",
+      "ethpm:FcotX2": "",
+      "ethpm:PortCap": "",
+      "fault:Counts": "",
+      "fault:Inst": "",
+      "health:Inst": ""
+    },
+    "rnMap": {
+      "domstats": "ethpm:DOMStats",
+      "fault": "ethpm:Fault",
+      "fault-": "fault:Inst",
+      "fcot": "ethpm:Fcot",
+      "fcotdd": "ethpm:FcotDD",
+      "fcotx2": "ethpm:FcotX2",
+      "fltCnts": "fault:Counts",
+      "health": "health:Inst",
+      "portcap": "ethpm:PortCap"
+    },
+    "identifiedBy": [],
+    "rnFormat": "phys",
+    "containedBy": {
+      "l1:PhysIf": ""
+    },
+    "superClasses": [
+      "ethpm:If"
+    ],
+    "subClasses": {},
+    "relationFrom": {},
+    "relationTo": {},
+    "dnFormats": [
+      "topology/pod-{id}/node-{id}/sys/phys-[{id}]/phys",
+      "sys/phys-[{id}]/phys"
+    ],
+    "writeAccess": [],
+    "readAccess": [
+      "access-connectivity",
+      "admin"
+    ],
+    "faults": {},
+    "events": {
+      "E4205125": "state-transition|portup|ethpm:If",
+      "E4205126": "state-transition|portInfoDown|ethpm:If",
+      "E4215104": "state-transition|portNonDefaultFECMode|ethpm:If",
+      "E4215105": "state-transition|portSpeedMismatch|ethpm:If",
+      "E4215670": "state-transition|linkPortUp|ethpm:If",
+      "E4215671": "state-transition|linkPortDown|ethpm:If"
+    },
+    "stats": {},
+    "isAbstract": false,
+    "isConfigurable": false,
+    "isContextRoot": false,
+    "isNxosConverged": false,
+    "isDeprecated": false,
+    "isHidden": false,
+    "isEncrypted": false,
+    "isExportable": false,
+    "isPersistent": false,
+    "isSubjectToQuota": false,
+    "isObservable": true,
+    "hasStats": false,
+    "isStat": false,
+    "isFaultable": true,
+    "isDomainable": false,
+    "isHealthScorable": true,
+    "shouldCollectHealthStats": false,
+    "healthCollectionSource": "faults",
+    "hasEventRules": true,
+    "abstractionLayer": "concrete",
+    "apicNxProcessing": false,
+    "monitoringPolicySource": "Parent",
+    "isCreatableDeletable": "always",
+    "platformFlavors": [
+      "apic",
+      "nxos"
+    ],
+    "classId": "3641",
+    "className": "PhysIf",
+    "classPkg": "ethpm",
+    "featureTag": "",
+    "moCategory": "Regular",
+    "label": "Physical Interface Runtime State (ethpm)",
+    "comment": [
+      "Physical interface information holder"
+    ],
+    "properties": {
+      "accessVlan": {
+        "comment": [
+          "The VLAN port access state."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3810",
+        "propLocalId": "1773",
+        "label": "Access Vlan",
+        "baseType": "base:Encap",
+        "modelType": "base:Encap",
+        "needsPropDelimiters": true,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "allowedVlans": {
+        "comment": [
+          "allowed vlans"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3821",
+        "propLocalId": "1926",
+        "label": "Allowed Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "backplaneMac": {
+        "comment": [
+          "port backplane mac"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3805",
+        "propLocalId": "1914",
+        "label": "Backplane MAC",
+        "baseType": "address:MAC",
+        "modelType": "address:MAC",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bundleBupId": {
+        "comment": [
+          "bundle bringup id"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3829",
+        "propLocalId": "1934",
+        "label": "Bundle Bringup Id",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bundleIndex": {
+        "comment": [
+          "The interface bundle index. A bundle index is a table for a particular output primitive. It defines the workstation dependent aspects of the primitive."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3824",
+        "propLocalId": "1929",
+        "label": "Bundle Index",
+        "baseType": "base:IfIndex",
+        "modelType": "nw:IfId",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "cfgAccessVlan": {
+        "comment": [
+          "The port configuration access VLAN."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3813",
+        "propLocalId": "1920",
+        "label": "Port Config Access Vlan",
+        "baseType": "base:Encap",
+        "modelType": "base:Encap",
+        "needsPropDelimiters": true,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "cfgNativeVlan": {
+        "comment": [
+          "The port configuration native VLAN."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3812",
+        "propLocalId": "1919",
+        "label": "Port Config Native Vlan",
+        "baseType": "base:Encap",
+        "modelType": "base:Encap",
+        "needsPropDelimiters": true,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "childAction": {
+        "comment": [
+          "Delete or ignore. For internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "4",
+        "propLocalId": "5",
+        "label": "childAction",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationChildAction",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "16384",
+            "localName": "deleteAll",
+            "platformFlavors": [],
+            "label": "deleteAll "
+          },
+          {
+            "value": "8192",
+            "localName": "deleteNonPresent",
+            "platformFlavors": [],
+            "label": "deleteNonPresent "
+          },
+          {
+            "value": "4096",
+            "localName": "ignore",
+            "platformFlavors": [],
+            "label": "ignore "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "currErrIndex": {
+        "comment": [
+          "current error index"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3826",
+        "propLocalId": "1931",
+        "label": "Current Error Index",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "diags": {
+        "comment": [
+          "port diags type"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3833",
+        "propLocalId": "1938",
+        "label": "Port Diags Type",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:DiagsT",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "3",
+            "localName": "ddm",
+            "platformFlavors": [],
+            "label": "DDM "
+          },
+          {
+            "value": "none",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "2",
+            "localName": "dom",
+            "platformFlavors": [],
+            "label": "DOM "
+          },
+          {
+            "value": "1",
+            "localName": "none",
+            "platformFlavors": [],
+            "label": "None "
+          }
+        ],
+        "default": "none",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "dn": {
+        "comment": [
+          "A tag or metadata is a non-hierarchical keyword or term assigned to the fabric module."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "1",
+        "propLocalId": "2",
+        "label": "dn",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "encap": {
+        "comment": [
+          "port encap"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3819",
+        "propLocalId": "143",
+        "label": "Port Encap",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "errDisTimerRunning": {
+        "comment": [
+          "error disable recovery time running"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3828",
+        "propLocalId": "1933",
+        "label": "Error Disable Recovery Time Running",
+        "baseType": "scalar:Bool",
+        "modelType": "scalar:Bool",
+        "needsPropDelimiters": false,
+        "uitype": "boolean",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "false",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "false",
+            "localName": "no",
+            "platformFlavors": [],
+            "label": "No "
+          },
+          {
+            "value": "true",
+            "localName": "yes",
+            "platformFlavors": [],
+            "label": "Yes "
+          }
+        ],
+        "default": "false",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "errVlanStatusHt": {
+        "comment": [
+          "port per vlan error state"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3830",
+        "propLocalId": "1935",
+        "label": "Port Per Vlan Error State",
+        "baseType": "scalar:Uint32",
+        "modelType": "ethpm:ErrorVlanStatusList",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "errVlans": {
+        "comment": [
+          "errored vlans"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3823",
+        "propLocalId": "1928",
+        "label": "Errored Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "hwBdId": {
+        "comment": [
+          "hw bd id (allocated for l3 ports, port-channels)"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3840",
+        "propLocalId": "1945",
+        "label": "Hw Bd Id (allocated for L3 Ports, Port-channels)",
+        "baseType": "scalar:Uint32",
+        "modelType": "l2:DomId",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "hwResourceId": {
+        "comment": [
+          "Hardware resource identifier (allocated by eltm)"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "26237",
+        "propLocalId": "6222",
+        "label": "Hardware Resource Identifier",
+        "baseType": "scalar:Uint32",
+        "modelType": "l2:HwRsrcIdT",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "intfT": {
+        "comment": [
+          "interface type"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3832",
+        "propLocalId": "1937",
+        "label": "Interface Type",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:IntfT",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "phy",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "phy",
+            "platformFlavors": [],
+            "label": "Phy "
+          },
+          {
+            "value": "2",
+            "localName": "phy-shared",
+            "platformFlavors": [],
+            "label": "Phy Shared "
+          }
+        ],
+        "default": "phy",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "iod": {
+        "comment": [
+          "iod"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3820",
+        "propLocalId": "1925",
+        "label": "Iod",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "lastErrors": {
+        "comment": [
+          "last seen errors"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3827",
+        "propLocalId": "1932",
+        "label": "Last Seen Errors",
+        "baseType": "base:Uint32Array4",
+        "modelType": "ethpm:LastErrorsList",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "lastLinkStChg": {
+        "comment": [
+          "Last link state change"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3808",
+        "propLocalId": "1917",
+        "label": "Last Link State Change",
+        "baseType": "scalar:Date",
+        "modelType": "scalar:Date",
+        "needsPropDelimiters": false,
+        "uitype": "date",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "media": {
+        "comment": [
+          "port media"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3818",
+        "propLocalId": "1924",
+        "label": "Port Media",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "modTs": {
+        "comment": [
+          "The time when this object was last modified."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "7",
+        "propLocalId": "7",
+        "label": "modTs",
+        "baseType": "scalar:Date",
+        "modelType": "mo:TStamp",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "never",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "0",
+            "localName": "never",
+            "platformFlavors": [],
+            "label": "never "
+          }
+        ],
+        "default": "never",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "monPolDn": {
+        "comment": [
+          ""
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "14561",
+        "propLocalId": "228",
+        "label": "Monitoring policy",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "nativeVlan": {
+        "comment": [
+          "port native vlan"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3811",
+        "propLocalId": "1296",
+        "label": "Port Native Vlan",
+        "baseType": "base:Encap",
+        "modelType": "base:Encap",
+        "needsPropDelimiters": true,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "numOfSI": {
+        "comment": [
+          "number of sub-interfaces"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3838",
+        "propLocalId": "1943",
+        "label": "Number of Sub-interfaces",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operBitset": {
+        "comment": [
+          "port oper bitset"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3815",
+        "propLocalId": "1922",
+        "label": "Port Oper Bitset",
+        "baseType": "base:BitArray64",
+        "modelType": "ethpm:PortOperBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operDceMode": {
+        "comment": [
+          "Operational Dce Mode"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3831",
+        "propLocalId": "1936",
+        "label": "Operational Dce Mode",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:DceMode",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "3",
+            "localName": "auto",
+            "platformFlavors": [],
+            "label": "Auto "
+          },
+          {
+            "value": "1",
+            "localName": "core",
+            "platformFlavors": [],
+            "label": "Core "
+          },
+          {
+            "value": "off",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "2",
+            "localName": "edge",
+            "platformFlavors": [],
+            "label": "Edge "
+          },
+          {
+            "value": "4",
+            "localName": "off",
+            "platformFlavors": [],
+            "label": "Off "
+          }
+        ],
+        "default": "off",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operDuplex": {
+        "comment": [
+          "The operational duplex state."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3801",
+        "propLocalId": "1911",
+        "label": "Operational Duplex",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:Duplex",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "1",
+            "localName": "auto",
+            "platformFlavors": [],
+            "label": "Auto "
+          },
+          {
+            "value": "auto",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "2",
+            "localName": "full",
+            "platformFlavors": [],
+            "label": "Full "
+          },
+          {
+            "value": "3",
+            "localName": "half",
+            "platformFlavors": [],
+            "label": "Half "
+          }
+        ],
+        "default": "auto",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operEEERxWkTime": {
+        "comment": [
+          "Operational port EEE rx time"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3836",
+        "propLocalId": "1941",
+        "label": "Operational Port EEE Rx Time",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operEEEState": {
+        "comment": [
+          "Operational port EEE state"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3834",
+        "propLocalId": "1939",
+        "label": "Operational Port EEE State",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:EEEState",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "not-applicable",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "2",
+            "localName": "disable",
+            "platformFlavors": [],
+            "label": "Disable "
+          },
+          {
+            "value": "3",
+            "localName": "disagreed",
+            "platformFlavors": [],
+            "label": "Disagree "
+          },
+          {
+            "value": "1",
+            "localName": "enable",
+            "platformFlavors": [],
+            "label": "Enable "
+          },
+          {
+            "value": "4",
+            "localName": "not-applicable",
+            "platformFlavors": [],
+            "label": "Not Applicable "
+          }
+        ],
+        "default": "not-applicable",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operEEETxWkTime": {
+        "comment": [
+          "Operational port EEE tx time"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3835",
+        "propLocalId": "1940",
+        "label": "Operational Port EEE Tx Time",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operErrDisQual": {
+        "comment": [
+          "The operational port error disable reason code."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3798",
+        "propLocalId": "1908",
+        "label": "Operational Error Disable Qualifier",
+        "baseType": "scalar:Enum32",
+        "modelType": "l1:OperErrDisQual",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "44",
+            "localName": "admin-config-change",
+            "platformFlavors": [],
+            "label": "adminCfgChng "
+          },
+          {
+            "value": "2",
+            "localName": "admin-down",
+            "platformFlavors": [],
+            "comment": [
+              "This port is down because it is admin down"
+            ],
+            "label": "disabled "
+          },
+          {
+            "value": "54",
+            "localName": "auth-fail",
+            "platformFlavors": [],
+            "label": "xcvrAuthFailed "
+          },
+          {
+            "value": "55",
+            "localName": "auth-pending",
+            "platformFlavors": [],
+            "label": "authPending "
+          },
+          {
+            "value": "207",
+            "localName": "bfd-establishment",
+            "platformFlavors": [],
+            "label": "bfdEstablishment "
+          },
+          {
+            "value": "98",
+            "localName": "bit-err-rt-thres-exceeded",
+            "platformFlavors": [],
+            "label": "bitEThrshExc "
+          },
+          {
+            "value": "72",
+            "localName": "bpdu-guard-err-disable",
+            "platformFlavors": [],
+            "label": "BPDUGuard errDisable "
+          },
+          {
+            "value": "96",
+            "localName": "bundle-cfg-mismatch",
+            "platformFlavors": [],
+            "label": "bundleCfgMismatch "
+          },
+          {
+            "value": "99",
+            "localName": "bundle-miscfg",
+            "platformFlavors": [],
+            "label": "err-disabled "
+          },
+          {
+            "value": "49",
+            "localName": "cap-absent",
+            "platformFlavors": [],
+            "label": "capAbsent "
+          },
+          {
+            "value": "24",
+            "localName": "channel-admin-down",
+            "platformFlavors": [],
+            "label": "channelDown "
+          },
+          {
+            "value": "25",
+            "localName": "channel-err-disabled",
+            "platformFlavors": [],
+            "label": "Channel error-disabled-err-disabled "
+          },
+          {
+            "value": "28",
+            "localName": "channel-membership-update-in-progress",
+            "platformFlavors": [],
+            "label": "channelUpdate "
+          },
+          {
+            "value": "79",
+            "localName": "configuration-incomplete",
+            "platformFlavors": [],
+            "label": "incomplete config "
+          },
+          {
+            "value": "95",
+            "localName": "dcx-noack-in-100pdus",
+            "platformFlavors": [],
+            "label": "dcxNoACKin100PDUs "
+          },
+          {
+            "value": "admin-down",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "comment": [
+              "there are many more..please copy from \n                     global/constants/export/dcos/pm_globals.h"
+            ],
+            "label": " "
+          },
+          {
+            "value": "100",
+            "localName": "denied-due-to-port-binding",
+            "platformFlavors": [],
+            "label": "invldBndng "
+          },
+          {
+            "value": "86",
+            "localName": "diag-failure-errdisable",
+            "platformFlavors": [],
+            "label": "diag failure errDisable "
+          },
+          {
+            "value": "101",
+            "localName": "domain-addr-assign-failure-isolation",
+            "platformFlavors": [],
+            "label": "domAddrAssignFailIsolated "
+          },
+          {
+            "value": "102",
+            "localName": "domain-invalid-rcf-received",
+            "platformFlavors": [],
+            "label": "domInvlRcfRcvdIsolated "
+          },
+          {
+            "value": "103",
+            "localName": "domain-isolation-unknown-reason",
+            "platformFlavors": [],
+            "label": "domUnkwnRsnIsolated "
+          },
+          {
+            "value": "104",
+            "localName": "domain-manager-disabled",
+            "platformFlavors": [],
+            "label": "domMgrDisIsolated "
+          },
+          {
+            "value": "38",
+            "localName": "domain-max-retransmission-failure",
+            "platformFlavors": [],
+            "label": "domMaxRetransFailIsolated "
+          },
+          {
+            "value": "105",
+            "localName": "domain-not-allowed-isolation",
+            "platformFlavors": [],
+            "label": "domNtAllowedIsolated "
+          },
+          {
+            "value": "106",
+            "localName": "domain-other-side-eport-isolated",
+            "platformFlavors": [],
+            "label": "domOthrSideEprtIsolated "
+          },
+          {
+            "value": "107",
+            "localName": "domain-overlap-isolation",
+            "platformFlavors": [],
+            "label": "domOverlapIsolated "
+          },
+          {
+            "value": "94",
+            "localName": "dot1x-security-errdisable",
+            "platformFlavors": [],
+            "label": "dot1xSecurityErrDisable "
+          },
+          {
+            "value": "108",
+            "localName": "dpvm-vsan-not-found",
+            "platformFlavors": [],
+            "label": "dpvmVsanNtFndSuspended "
+          },
+          {
+            "value": "109",
+            "localName": "dpvm-vsan-suspended",
+            "platformFlavors": [],
+            "label": "dpvmVsanSuspended "
+          },
+          {
+            "value": "110",
+            "localName": "ec-suspended-for-loop",
+            "platformFlavors": [],
+            "label": "ecSuspendedForLoop "
+          },
+          {
+            "value": "111",
+            "localName": "elp-failure-all-zero-peer-wwn-rcvd",
+            "platformFlavors": [],
+            "label": "elpFailZPeer "
+          },
+          {
+            "value": "112",
+            "localName": "elp-failure-classf-param-err",
+            "platformFlavors": [],
+            "label": "elpFailClassfIsolated "
+          },
+          {
+            "value": "113",
+            "localName": "elp-failure-classn-param-err",
+            "platformFlavors": [],
+            "label": "elpFailClassnIsolated "
+          },
+          {
+            "value": "114",
+            "localName": "elp-failure-invalid-flow-ctl-param",
+            "platformFlavors": [],
+            "label": "elpFailInvlFlowCtlIsolated "
+          },
+          {
+            "value": "115",
+            "localName": "elp-failure-invalid-payload-size",
+            "platformFlavors": [],
+            "label": "elpFailInvlPayldSzIsolated "
+          },
+          {
+            "value": "116",
+            "localName": "elp-failure-invalid-port-name",
+            "platformFlavors": [],
+            "label": "elpFailInvlPrtNameIsolated "
+          },
+          {
+            "value": "117",
+            "localName": "elp-failure-invalid-switch-name",
+            "platformFlavors": [],
+            "label": "elpFailInvlSwNameIsolated "
+          },
+          {
+            "value": "118",
+            "localName": "elp-failure-invalid-tx-bbcredit",
+            "platformFlavors": [],
+            "label": "elpFailInvlTxBbcrIsolated "
+          },
+          {
+            "value": "119",
+            "localName": "elp-failure-isolation",
+            "platformFlavors": [],
+            "label": "elpFailIsolated "
+          },
+          {
+            "value": "120",
+            "localName": "elp-failure-loopback-detected",
+            "platformFlavors": [],
+            "label": "elpFailLoopDetectIsolated "
+          },
+          {
+            "value": "121",
+            "localName": "elp-failure-ratov-edtov-mismatch",
+            "platformFlavors": [],
+            "label": "elpFailRaEdTovIsolated "
+          },
+          {
+            "value": "122",
+            "localName": "elp-failure-revision-mismatch",
+            "platformFlavors": [],
+            "label": "elpFailRevMismatchIsolated "
+          },
+          {
+            "value": "123",
+            "localName": "elp-failure-unknown-flow-ctl-code",
+            "platformFlavors": [],
+            "label": "elpFailUnkwnFlowCtlIsolated "
+          },
+          {
+            "value": "76",
+            "localName": "epm-learn-err-disable",
+            "platformFlavors": [],
+            "label": "epmLearn errDisable "
+          },
+          {
+            "value": "124",
+            "localName": "eport-prohibited",
+            "platformFlavors": [],
+            "label": "ficonProhibit "
+          },
+          {
+            "value": "125",
+            "localName": "epp-failure",
+            "platformFlavors": [],
+            "label": "eppFail err-disabled "
+          },
+          {
+            "value": "9",
+            "localName": "err-disabled",
+            "platformFlavors": [],
+            "comment": [
+              "The port is in err disable mode"
+            ],
+            "label": "err-disabled "
+          },
+          {
+            "value": "18",
+            "localName": "err-disabled-ip-conflict",
+            "platformFlavors": [],
+            "label": "conflctErrDis "
+          },
+          {
+            "value": "204",
+            "localName": "err-disabled-link-flaps",
+            "platformFlavors": [],
+            "label": "err-disabled-link-flaps "
+          },
+          {
+            "value": "126",
+            "localName": "esc-failure-isolation",
+            "platformFlavors": [],
+            "label": "escFailIsolated "
+          },
+          {
+            "value": "43",
+            "localName": "ethernet-interface-down",
+            "platformFlavors": [],
+            "label": "interface-parentEthDown "
+          },
+          {
+            "value": "84",
+            "localName": "ethernet-invalid-binding",
+            "platformFlavors": [],
+            "label": "parentInvalidBinding "
+          },
+          {
+            "value": "42",
+            "localName": "ethernet-link-down",
+            "platformFlavors": [],
+            "label": "parentEthDown "
+          },
+          {
+            "value": "80",
+            "localName": "ethernet-vlan-down",
+            "platformFlavors": [],
+            "label": "parentVlanDown "
+          },
+          {
+            "value": "127",
+            "localName": "externally-disabled",
+            "platformFlavors": [],
+            "label": "extDisabled "
+          },
+          {
+            "value": "132",
+            "localName": "fabric-bind-failure",
+            "platformFlavors": [],
+            "label": "FabBindFailIsolated "
+          },
+          {
+            "value": "128",
+            "localName": "fabric-binding-database-mismatch",
+            "platformFlavors": [],
+            "label": "fabBindDbMismatchIsolated "
+          },
+          {
+            "value": "129",
+            "localName": "fabric-binding-domain-invalid",
+            "platformFlavors": [],
+            "label": "fabBindDomInvlIsolated "
+          },
+          {
+            "value": "130",
+            "localName": "fabric-binding-peer-not-responding",
+            "platformFlavors": [],
+            "label": "fabBindPeerNtRespIsolated "
+          },
+          {
+            "value": "131",
+            "localName": "fabric-binding-swwn-not-found",
+            "platformFlavors": [],
+            "label": "fabBindSwwnNtFoundIsolated "
+          },
+          {
+            "value": "78",
+            "localName": "fabric-track",
+            "platformFlavors": [],
+            "label": "fabricTrack "
+          },
+          {
+            "value": "4",
+            "localName": "fail",
+            "platformFlavors": [],
+            "comment": [
+              "The link is failed state"
+            ],
+            "label": "fail "
+          },
+          {
+            "value": "135",
+            "localName": "fc-redirect-isolation",
+            "platformFlavors": [],
+            "label": "fcReIsolated "
+          },
+          {
+            "value": "133",
+            "localName": "fcid-allocation-failed",
+            "platformFlavors": [],
+            "label": "fcidAllcFail "
+          },
+          {
+            "value": "67",
+            "localName": "fcot-chksum-err",
+            "platformFlavors": [],
+            "label": "SFP checksum error "
+          },
+          {
+            "value": "32",
+            "localName": "fcot-no-present",
+            "platformFlavors": [],
+            "comment": [
+              "fcotAbsent is more correct, but vsh uses sfpAbsent."
+            ],
+            "label": "sfpAbsent "
+          },
+          {
+            "value": "33",
+            "localName": "fcot-vendor-not-supported",
+            "platformFlavors": [],
+            "label": "SFP vendor not supported-err-disabled "
+          },
+          {
+            "value": "134",
+            "localName": "fcsp-authent-failure",
+            "platformFlavors": [],
+            "label": "fcspAuthFailIsolated "
+          },
+          {
+            "value": "60",
+            "localName": "fex-sfp-invalid",
+            "platformFlavors": [],
+            "label": "FEX-fabric sfp invalid "
+          },
+          {
+            "value": "136",
+            "localName": "ficon-being-enabled",
+            "platformFlavors": [],
+            "label": "ficonEnabled "
+          },
+          {
+            "value": "138",
+            "localName": "ficon-no-portnumber",
+            "platformFlavors": [],
+            "label": "noFiconPortNm "
+          },
+          {
+            "value": "137",
+            "localName": "ficon-not-enabled",
+            "platformFlavors": [],
+            "label": "ficonNtEn err-disabled "
+          },
+          {
+            "value": "139",
+            "localName": "ficon-vsan-down",
+            "platformFlavors": [],
+            "label": "ficonDown "
+          },
+          {
+            "value": "140",
+            "localName": "ficon-vsan-duplicate-portnum",
+            "platformFlavors": [],
+            "label": "dupPort "
+          },
+          {
+            "value": "74",
+            "localName": "handshake-fail-errdisable",
+            "platformFlavors": [],
+            "label": "intFailErrDis "
+          },
+          {
+            "value": "73",
+            "localName": "hot-standby-in-bundle",
+            "platformFlavors": [],
+            "label": "htStdbyInBndl "
+          },
+          {
+            "value": "209",
+            "localName": "hpo-blkd-by-macsec-sesns",
+            "platformFlavors": [],
+            "label": "hpoBlkdByMACsecSesns "
+          },
+          {
+            "value": "208",
+            "localName": "hpo-max-limit-exceeded",
+            "platformFlavors": [],
+            "label": "hpoMaxLimitExceeded "
+          },
+          {
+            "value": "93",
+            "localName": "hw-disabled",
+            "platformFlavors": [],
+            "label": "hwDisabled "
+          },
+          {
+            "value": "205",
+            "localName": "hw-disabled-by-bkout",
+            "platformFlavors": [],
+            "label": "hwDisabledByBkout "
+          },
+          {
+            "value": "206",
+            "localName": "hw-disbld-speed-mismatch",
+            "platformFlavors": [],
+            "label": "hwDisabledBySpeedMismatch "
+          },
+          {
+            "value": "7",
+            "localName": "hw-fail",
+            "platformFlavors": [],
+            "comment": [
+              "This port has a hardware failure"
+            ],
+            "label": "faulty "
+          },
+          {
+            "value": "23",
+            "localName": "inactive",
+            "platformFlavors": [],
+            "label": "inactive "
+          },
+          {
+            "value": "34",
+            "localName": "incompatible-admin-mode",
+            "platformFlavors": [],
+            "label": "errDisabledIncompatPortMode-err-disabled "
+          },
+          {
+            "value": "141",
+            "localName": "incompatible-admin-rxbbcredit",
+            "platformFlavors": [],
+            "label": "incompAdmin-rxbbcr err-disabled "
+          },
+          {
+            "value": "142",
+            "localName": "incompatible-admin-rxbbcredit-performance-buf",
+            "platformFlavors": [],
+            "label": "incompAdminPerf err-disabled "
+          },
+          {
+            "value": "143",
+            "localName": "incompatible-admin-rxbufsize",
+            "platformFlavors": [],
+            "label": "incompAdminrxBufSz err-disabled "
+          },
+          {
+            "value": "35",
+            "localName": "incompatible-admin-speed",
+            "platformFlavors": [],
+            "label": "errDisabledIncompatPortSpeed-err-disabled "
+          },
+          {
+            "value": "87",
+            "localName": "incompatible-fecmode",
+            "platformFlavors": [],
+            "label": "errDisabledIncompatFECMode-err-disabled "
+          },
+          {
+            "value": "22",
+            "localName": "initializing",
+            "platformFlavors": [],
+            "label": "init "
+          },
+          {
+            "value": "31",
+            "localName": "interface-removed",
+            "platformFlavors": [],
+            "label": "ifRemoved "
+          },
+          {
+            "value": "144",
+            "localName": "internal-rcf-in-progress",
+            "platformFlavors": [],
+            "label": "intlRcf "
+          },
+          {
+            "value": "145",
+            "localName": "invalid-attachment",
+            "platformFlavors": [],
+            "label": "invaldAttch "
+          },
+          {
+            "value": "146",
+            "localName": "invalid-config",
+            "platformFlavors": [],
+            "label": "invalidCfg "
+          },
+          {
+            "value": "147",
+            "localName": "invalid-fabric-binding-exchange",
+            "platformFlavors": [],
+            "label": "InvaldFabBindExIsolated "
+          },
+          {
+            "value": "148",
+            "localName": "invalid-other-princ-efp-req-recd",
+            "platformFlavors": [],
+            "label": "invalid "
+          },
+          {
+            "value": "59",
+            "localName": "invalid-sat-fabric-if",
+            "platformFlavors": [],
+            "label": "invalidFbIf "
+          },
+          {
+            "value": "19",
+            "localName": "ipqos-dcbxp-compat-failure",
+            "platformFlavors": [],
+            "label": "ipQosDcbxpCompatFailure "
+          },
+          {
+            "value": "3",
+            "localName": "link-down",
+            "platformFlavors": [],
+            "comment": [
+              "The link is down"
+            ],
+            "label": "parentEthDown "
+          },
+          {
+            "value": "149",
+            "localName": "link-fail-credit-loss",
+            "platformFlavors": [],
+            "label": "linkFailCrLossNotConnect "
+          },
+          {
+            "value": "150",
+            "localName": "link-fail-credit-loss-b2b",
+            "platformFlavors": [],
+            "label": "linkFailCrLossb2bNotConnect "
+          },
+          {
+            "value": "151",
+            "localName": "link-fail-debounce-timeout",
+            "platformFlavors": [],
+            "label": "linkFailDebounceTmoutNotConnect "
+          },
+          {
+            "value": "152",
+            "localName": "link-fail-line-card-port-shutdown",
+            "platformFlavors": [],
+            "label": "linkFailLcPrtShtNotConnect "
+          },
+          {
+            "value": "153",
+            "localName": "link-fail-lip-f8-rcvd",
+            "platformFlavors": [],
+            "label": "linkFailLipf8RcvdNotConnect "
+          },
+          {
+            "value": "154",
+            "localName": "link-fail-lip-rcvd-b2b",
+            "platformFlavors": [],
+            "label": "linkFailLipRcvdB2bNotConnect "
+          },
+          {
+            "value": "155",
+            "localName": "link-fail-loss-of-signal",
+            "platformFlavors": [],
+            "label": "linkFailSigLoassNotConnect "
+          },
+          {
+            "value": "156",
+            "localName": "link-fail-loss-of-sync",
+            "platformFlavors": [],
+            "label": "linkFailSyncLossNotConnect "
+          },
+          {
+            "value": "157",
+            "localName": "link-fail-lr-rcvd-b2b",
+            "platformFlavors": [],
+            "label": "linkFailLrRcvdB2bNotConnect "
+          },
+          {
+            "value": "158",
+            "localName": "link-fail-nos-rcvd",
+            "platformFlavors": [],
+            "label": "linkFailNosRcvdNotConnect "
+          },
+          {
+            "value": "159",
+            "localName": "link-fail-ols-rcvd",
+            "platformFlavors": [],
+            "label": "linkFailOlsRcvdNotConnect "
+          },
+          {
+            "value": "160",
+            "localName": "link-fail-opny-ret-b2b",
+            "platformFlavors": [],
+            "label": "linkFailOpnyRetNotConnect "
+          },
+          {
+            "value": "161",
+            "localName": "link-fail-opny-tmo-b2b",
+            "platformFlavors": [],
+            "label": "linkFailOpnyTmoNotConnect "
+          },
+          {
+            "value": "162",
+            "localName": "link-fail-port-init-failed",
+            "platformFlavors": [],
+            "label": "linkFail "
+          },
+          {
+            "value": "85",
+            "localName": "link-fail-port-unusable",
+            "platformFlavors": [],
+            "label": "linkFailPortUnusable "
+          },
+          {
+            "value": "81",
+            "localName": "link-fail-reset",
+            "platformFlavors": [],
+            "label": "linkReset "
+          },
+          {
+            "value": "163",
+            "localName": "link-fail-rx-que-overflow",
+            "platformFlavors": [],
+            "label": "linkFailRxQueOvrFlowNotConnect "
+          },
+          {
+            "value": "164",
+            "localName": "link-fail-too-many-intr",
+            "platformFlavors": [],
+            "label": "errDisabled "
+          },
+          {
+            "value": "20",
+            "localName": "link-failure",
+            "platformFlavors": [],
+            "label": "linkFailure "
+          },
+          {
+            "value": "17",
+            "localName": "link-flap-err",
+            "platformFlavors": [],
+            "label": "linkFlapErr "
+          },
+          {
+            "value": "211",
+            "localName": "link-not-connected",
+            "platformFlavors": [],
+            "label": "linkNotConnected "
+          },
+          {
+            "value": "6",
+            "localName": "link-up",
+            "platformFlavors": [],
+            "comment": [
+              "The link is up"
+            ],
+            "label": "link-up-connected "
+          },
+          {
+            "value": "11",
+            "localName": "loopback-diag-failure",
+            "platformFlavors": [],
+            "label": "faulty "
+          },
+          {
+            "value": "39",
+            "localName": "loopback-isolation",
+            "platformFlavors": [],
+            "label": "loopbackIsolated "
+          },
+          {
+            "value": "77",
+            "localName": "mac-pinning",
+            "platformFlavors": [],
+            "label": "macPinning "
+          },
+          {
+            "value": "75",
+            "localName": "mcp-loop-err-disable",
+            "platformFlavors": [],
+            "label": "mcpLoop errDisable "
+          },
+          {
+            "value": "45",
+            "localName": "module-removed",
+            "platformFlavors": [],
+            "label": "modRemoved "
+          },
+          {
+            "value": "203",
+            "localName": "mpls-platform-not-supported",
+            "platformFlavors": [],
+            "label": "mplsPfmNotSupp "
+          },
+          {
+            "value": "5",
+            "localName": "no-license",
+            "platformFlavors": [],
+            "comment": [
+              "The port has no valid license"
+            ],
+            "label": "portLicNtAvl "
+          },
+          {
+            "value": "166",
+            "localName": "no-trunk-oper-vsans-isolation",
+            "platformFlavors": [],
+            "label": "noTrunkOperVsansIsolated "
+          },
+          {
+            "value": "165",
+            "localName": "non-participating",
+            "platformFlavors": [],
+            "label": "nonPcpt "
+          },
+          {
+            "value": "65",
+            "localName": "non-sticky-externally-disabled",
+            "platformFlavors": [],
+            "label": "ServDisab "
+          },
+          {
+            "value": "47",
+            "localName": "none",
+            "platformFlavors": [],
+            "label": "connected "
+          },
+          {
+            "value": "90",
+            "localName": "npiv-not-enb-upstream",
+            "platformFlavors": [],
+            "label": "NPIV upstream port not available "
+          },
+          {
+            "value": "88",
+            "localName": "npm-no-ext-link",
+            "platformFlavors": [],
+            "label": "NPV upstream port not available "
+          },
+          {
+            "value": "21",
+            "localName": "offline",
+            "platformFlavors": [],
+            "label": "offline "
+          },
+          {
+            "value": "167",
+            "localName": "ohms-external-lb-test",
+            "platformFlavors": [],
+            "label": "ohmsExtLbTestSuspended "
+          },
+          {
+            "value": "168",
+            "localName": "osm-e-port-up",
+            "platformFlavors": [],
+            "label": "osmEprtUpErrDisabled "
+          },
+          {
+            "value": "169",
+            "localName": "out-of-service",
+            "platformFlavors": [],
+            "label": "outOfService "
+          },
+          {
+            "value": "30",
+            "localName": "parent-admin-down",
+            "platformFlavors": [],
+            "label": "adminDown-parentDown "
+          },
+          {
+            "value": "29",
+            "localName": "parent-down",
+            "platformFlavors": [],
+            "label": "parentDown "
+          },
+          {
+            "value": "92",
+            "localName": "pause-rate-limit-err-disable",
+            "platformFlavors": [],
+            "label": "pauseRateLimit errDisable "
+          },
+          {
+            "value": "170",
+            "localName": "peer-fcip-closed-tcp-connection",
+            "platformFlavors": [],
+            "label": "peerDownClosed "
+          },
+          {
+            "value": "171",
+            "localName": "peer-fcip-reset-tcp-connection",
+            "platformFlavors": [],
+            "label": "peerDownReset "
+          },
+          {
+            "value": "172",
+            "localName": "peer-not-support-bundles",
+            "platformFlavors": [],
+            "label": "PeerNtSupportBundleSuspended "
+          },
+          {
+            "value": "201",
+            "localName": "poe-err-disabled",
+            "platformFlavors": [],
+            "label": "poeErrDisable "
+          },
+          {
+            "value": "178",
+            "localName": "poe-insufficient-power",
+            "platformFlavors": [],
+            "label": "insufficientPower "
+          },
+          {
+            "value": "173",
+            "localName": "port-act-license-not-available",
+            "platformFlavors": [],
+            "label": "portLicNtAvl "
+          },
+          {
+            "value": "174",
+            "localName": "port-bind-failure",
+            "platformFlavors": [],
+            "label": "portBindFailIsolated "
+          },
+          {
+            "value": "175",
+            "localName": "port-blocked",
+            "platformFlavors": [],
+            "label": "portBlcked "
+          },
+          {
+            "value": "176",
+            "localName": "port-bringup-isolation",
+            "platformFlavors": [],
+            "label": "portUpIsolated "
+          },
+          {
+            "value": "177",
+            "localName": "port-cap-fc-port-connector-type-err",
+            "platformFlavors": [],
+            "label": "connctrErr "
+          },
+          {
+            "value": "41",
+            "localName": "port-channel-members-down",
+            "platformFlavors": [],
+            "label": "noOperMembers "
+          },
+          {
+            "value": "199",
+            "localName": "port-quiesced",
+            "platformFlavors": [],
+            "label": "grcefulShtdwn "
+          },
+          {
+            "value": "89",
+            "localName": "port-reinit-limit",
+            "platformFlavors": [],
+            "label": "Port reinit threshold reached "
+          },
+          {
+            "value": "179",
+            "localName": "port-vsan-mismatch-isolation",
+            "platformFlavors": [],
+            "label": "portVsanMismatchIsolated "
+          },
+          {
+            "value": "180",
+            "localName": "prefered-path-isolation",
+            "platformFlavors": [],
+            "label": "preferedPathIsolated "
+          },
+          {
+            "value": "27",
+            "localName": "proto-port-suspend",
+            "platformFlavors": [],
+            "label": "portSuspnd "
+          },
+          {
+            "value": "202",
+            "localName": "qsa-adaptor-no-xcvr",
+            "platformFlavors": [],
+            "label": "qsaAdaptor "
+          },
+          {
+            "value": "181",
+            "localName": "rcf-in-progress",
+            "platformFlavors": [],
+            "label": "rcfInPrgrss "
+          },
+          {
+            "value": "63",
+            "localName": "router-mac-failure",
+            "platformFlavors": [],
+            "label": "routrmacFail "
+          },
+          {
+            "value": "58",
+            "localName": "sat-fabric-if-down",
+            "platformFlavors": [],
+            "label": "fabrcIfDown "
+          },
+          {
+            "value": "52",
+            "localName": "sat-incompat-topo",
+            "platformFlavors": [],
+            "label": "FEX identity mismatch "
+          },
+          {
+            "value": "53",
+            "localName": "sat-not-configured",
+            "platformFlavors": [],
+            "label": "FEX not configured "
+          },
+          {
+            "value": "182",
+            "localName": "sdm-isolation",
+            "platformFlavors": [],
+            "label": "sdmIsolated "
+          },
+          {
+            "value": "51",
+            "localName": "sdp-timeout",
+            "platformFlavors": [],
+            "label": "SDP timeout/SFP Mismatch "
+          },
+          {
+            "value": "50",
+            "localName": "sfp-eth-compliant-err",
+            "platformFlavors": [],
+            "label": "xcvrEthComplianceErr "
+          },
+          {
+            "value": "10",
+            "localName": "sfp-missing",
+            "platformFlavors": [],
+            "comment": [
+              "The SFP is absent on this port"
+            ],
+            "label": "sfpAbsent "
+          },
+          {
+            "value": "66",
+            "localName": "sfp-speed-mismatch",
+            "platformFlavors": [],
+            "label": "xcvrSpeedMismatch "
+          },
+          {
+            "value": "183",
+            "localName": "src-port-not-bound",
+            "platformFlavors": [],
+            "label": "srcUnbound "
+          },
+          {
+            "value": "200",
+            "localName": "stormctrl-err-disabled",
+            "platformFlavors": [],
+            "label": "StormCtrlErrDis "
+          },
+          {
+            "value": "61",
+            "localName": "suspend-by-mtu",
+            "platformFlavors": [],
+            "label": "mtuFailure "
+          },
+          {
+            "value": "62",
+            "localName": "suspend-by-vpc",
+            "platformFlavors": [],
+            "label": "suspndByVpc "
+          },
+          {
+            "value": "26",
+            "localName": "suspended",
+            "platformFlavors": [],
+            "label": "suspnd "
+          },
+          {
+            "value": "36",
+            "localName": "suspended-by-mode",
+            "platformFlavors": [],
+            "label": "suspended-by-mode "
+          },
+          {
+            "value": "37",
+            "localName": "suspended-by-speed",
+            "platformFlavors": [],
+            "label": "suspended-by-speed "
+          },
+          {
+            "value": "184",
+            "localName": "suspended-by-wwn",
+            "platformFlavors": [],
+            "label": "suspended-by-wwn "
+          },
+          {
+            "value": "56",
+            "localName": "suspended-due-to-minlinks",
+            "platformFlavors": [],
+            "label": "suspendedMinLinks "
+          },
+          {
+            "value": "57",
+            "localName": "suspended-due-to-no-lacp-pdus",
+            "platformFlavors": [],
+            "label": "suspended(no LACP PDUs) "
+          },
+          {
+            "value": "8",
+            "localName": "sw-fail",
+            "platformFlavors": [],
+            "comment": [
+              "This port has a software failure"
+            ],
+            "label": "faulty "
+          },
+          {
+            "value": "185",
+            "localName": "tcp-keep-alive-timer-expired",
+            "platformFlavors": [],
+            "label": "tcpDownKeepaliveTmrExpired "
+          },
+          {
+            "value": "186",
+            "localName": "tcp-max-retransmissions",
+            "platformFlavors": [],
+            "label": "tcpDownMaxReTransmission "
+          },
+          {
+            "value": "187",
+            "localName": "tcp-persist-timer-expired",
+            "platformFlavors": [],
+            "label": "tcpDownPersistTmrExpired "
+          },
+          {
+            "value": "188",
+            "localName": "too-many-invalid-flogis",
+            "platformFlavors": [],
+            "label": "invldFlgis "
+          },
+          {
+            "value": "189",
+            "localName": "tov-mismatch",
+            "platformFlavors": [],
+            "label": "tovMismatchIsolated "
+          },
+          {
+            "value": "190",
+            "localName": "tracked-port-down",
+            "platformFlavors": [],
+            "label": "trckdPortDwn "
+          },
+          {
+            "value": "191",
+            "localName": "trunk-not-fully-active",
+            "platformFlavors": [],
+            "label": "some "
+          },
+          {
+            "value": "192",
+            "localName": "tunnel-src-module-not-online",
+            "platformFlavors": [],
+            "label": "srcMdOffline "
+          },
+          {
+            "value": "193",
+            "localName": "tunnel-src-port-removed",
+            "platformFlavors": [],
+            "label": "srcPrtRemv "
+          },
+          {
+            "value": "194",
+            "localName": "two-switches-with-same-wwn",
+            "platformFlavors": [],
+            "label": "dupWwn "
+          },
+          {
+            "value": "16",
+            "localName": "udld-aggressive-mode-link-failed",
+            "platformFlavors": [],
+            "label": "udldAggr "
+          },
+          {
+            "value": "15",
+            "localName": "udld-empty-echo",
+            "platformFlavors": [],
+            "label": "udldEmpEcho "
+          },
+          {
+            "value": "14",
+            "localName": "udld-neighbor-mismatch",
+            "platformFlavors": [],
+            "label": "udldMismatch "
+          },
+          {
+            "value": "13",
+            "localName": "udld-tx-rx-loop",
+            "platformFlavors": [],
+            "label": "udldLoop "
+          },
+          {
+            "value": "12",
+            "localName": "udld-unidir-detected",
+            "platformFlavors": [],
+            "label": "udldUnidir "
+          },
+          {
+            "value": "0",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "comment": [
+              "The port state is unknown"
+            ],
+            "label": "down "
+          },
+          {
+            "value": "97",
+            "localName": "unsupported-platform-l3po",
+            "platformFlavors": [],
+            "label": "unsupportedPlatformL3Po "
+          },
+          {
+            "value": "210",
+            "localName": "unsupported-xcvr",
+            "platformFlavors": [],
+            "label": "unsupportedXcvr "
+          },
+          {
+            "value": "1",
+            "localName": "up",
+            "platformFlavors": [],
+            "comment": [
+              "This port is operationally up"
+            ],
+            "label": "up "
+          },
+          {
+            "value": "40",
+            "localName": "upgrade-in-progress",
+            "platformFlavors": [],
+            "label": "modUpgrade "
+          },
+          {
+            "value": "82",
+            "localName": "vfc-binding-invalid",
+            "platformFlavors": [],
+            "label": "vfcBindingInvalid "
+          },
+          {
+            "value": "195",
+            "localName": "virtual-ivr-domain-overlap-isolation",
+            "platformFlavors": [],
+            "label": "virtualIvrDomOverlapIsolated "
+          },
+          {
+            "value": "83",
+            "localName": "vlan-not-fcoe-enabled",
+            "platformFlavors": [],
+            "label": "vlanNotFcoeEnabled "
+          },
+          {
+            "value": "70",
+            "localName": "vpc-cfg-in-progress",
+            "platformFlavors": [],
+            "label": "vpcConfigInProgress "
+          },
+          {
+            "value": "71",
+            "localName": "vpc-no-response-from-peer",
+            "platformFlavors": [],
+            "label": "noRespFrmVpc "
+          },
+          {
+            "value": "69",
+            "localName": "vpc-peer-link-down",
+            "platformFlavors": [],
+            "label": "vpcPeerLinkDown "
+          },
+          {
+            "value": "46",
+            "localName": "vrf-unusable",
+            "platformFlavors": [],
+            "label": "vrfUnusable "
+          },
+          {
+            "value": "196",
+            "localName": "vsan-mismatch-isolation",
+            "platformFlavors": [],
+            "label": "vsanMismatchIsolated "
+          },
+          {
+            "value": "91",
+            "localName": "vsan-mismatch-upstream",
+            "platformFlavors": [],
+            "label": "VSAN mismatch with upstream port "
+          },
+          {
+            "value": "64",
+            "localName": "xcvr-auth-failed",
+            "platformFlavors": [],
+            "label": "xcvrAuthFailed "
+          },
+          {
+            "value": "48",
+            "localName": "xcvr-initializing",
+            "platformFlavors": [],
+            "label": "sfpInit "
+          },
+          {
+            "value": "68",
+            "localName": "xcvr-invalid",
+            "platformFlavors": [],
+            "label": "Transceiver validation failed "
+          },
+          {
+            "value": "197",
+            "localName": "zone-merge-failure-isolation",
+            "platformFlavors": [],
+            "label": "zoneMergeFailIsolated "
+          },
+          {
+            "value": "198",
+            "localName": "zone-remote-no-resp-isolation",
+            "platformFlavors": [],
+            "label": "zoneRemoteNoRespIsolated "
+          }
+        ],
+        "default": "admin-down",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operFecMode": {
+        "comment": [
+          "FEC knob"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "25849",
+        "propLocalId": "6130",
+        "label": "Operational FEC Mode",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:FECMode",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "8",
+            "localName": "auto-fec",
+            "platformFlavors": [],
+            "label": "AUTO-FEC "
+          },
+          {
+            "value": "3",
+            "localName": "cl74-fc-fec",
+            "platformFlavors": [],
+            "label": "CL74-FC-FEC "
+          },
+          {
+            "value": "2",
+            "localName": "cl91-rs-fec",
+            "platformFlavors": [],
+            "label": "CL91-RS-FEC "
+          },
+          {
+            "value": "5",
+            "localName": "cons16-rs-fec",
+            "platformFlavors": [],
+            "label": "CONS16-RS-FEC "
+          },
+          {
+            "value": "inherit",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "7",
+            "localName": "disable-fec",
+            "platformFlavors": [],
+            "label": "DISABLE-FEC "
+          },
+          {
+            "value": "4",
+            "localName": "ieee-rs-fec",
+            "platformFlavors": [],
+            "label": "IEEE-RS-FEC "
+          },
+          {
+            "value": "1",
+            "localName": "inherit",
+            "platformFlavors": [],
+            "label": "Inherit "
+          },
+          {
+            "value": "6",
+            "localName": "kp-fec",
+            "platformFlavors": [],
+            "label": "KP-FEC "
+          }
+        ],
+        "default": "inherit",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operFlowCtrl": {
+        "comment": [
+          "Operational port flow control"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3802",
+        "propLocalId": "1912",
+        "label": "Operational Flow Control",
+        "baseType": "scalar:UByte",
+        "modelType": "l1:FlowCtrlVal",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "0xf",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          }
+        ],
+        "default": "0xf",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operMdix": {
+        "comment": [
+          "port oper mdix mode"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3825",
+        "propLocalId": "1930",
+        "label": "Port Oper Mdix Mode",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:Mdix",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "1",
+            "localName": "auto",
+            "platformFlavors": [],
+            "label": "Auto "
+          },
+          {
+            "value": "auto",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "2",
+            "localName": "mdi",
+            "platformFlavors": [],
+            "label": "MDI "
+          },
+          {
+            "value": "3",
+            "localName": "mdi-x",
+            "platformFlavors": [],
+            "label": "MDI-X "
+          }
+        ],
+        "default": "auto",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operMode": {
+        "comment": [
+          "The operational port mode."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3800",
+        "propLocalId": "1910",
+        "label": "Operational Mode",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:Mode",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "1",
+            "localName": "access",
+            "platformFlavors": [],
+            "label": "Access "
+          },
+          {
+            "value": "trunk",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "3",
+            "localName": "fex-fabric",
+            "platformFlavors": [],
+            "label": "FEX Fabric "
+          },
+          {
+            "value": "5",
+            "localName": "qiq-tunnel-corePort",
+            "platformFlavors": [],
+            "label": "Q-in-Q Tunnel Core Port "
+          },
+          {
+            "value": "4",
+            "localName": "qiq-tunnel-edgePort",
+            "platformFlavors": [],
+            "label": "Q-in-Q Tunnel Edge Port "
+          },
+          {
+            "value": "2",
+            "localName": "trunk",
+            "platformFlavors": [],
+            "label": "Trunk "
+          },
+          {
+            "value": "6",
+            "localName": "trunk-doubleEncapPort",
+            "platformFlavors": [],
+            "label": "Trunk Double Encap Port "
+          },
+          {
+            "value": "0",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "label": "Unknown "
+          }
+        ],
+        "default": "trunk",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operModeDetail": {
+        "comment": [
+          "Detailed Operational port mode"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "33201",
+        "propLocalId": "7935",
+        "label": "Detailed Operational Mode",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:Mode",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "1",
+            "localName": "access",
+            "platformFlavors": [],
+            "label": "Access "
+          },
+          {
+            "value": "trunk",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "3",
+            "localName": "fex-fabric",
+            "platformFlavors": [],
+            "label": "FEX Fabric "
+          },
+          {
+            "value": "5",
+            "localName": "qiq-tunnel-corePort",
+            "platformFlavors": [],
+            "label": "Q-in-Q Tunnel Core Port "
+          },
+          {
+            "value": "4",
+            "localName": "qiq-tunnel-edgePort",
+            "platformFlavors": [],
+            "label": "Q-in-Q Tunnel Edge Port "
+          },
+          {
+            "value": "2",
+            "localName": "trunk",
+            "platformFlavors": [],
+            "label": "Trunk "
+          },
+          {
+            "value": "6",
+            "localName": "trunk-doubleEncapPort",
+            "platformFlavors": [],
+            "label": "Trunk Double Encap Port "
+          },
+          {
+            "value": "0",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "label": "Unknown "
+          }
+        ],
+        "default": "trunk",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operPhyEnSt": {
+        "comment": [
+          "Operational phy port enable state"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3803",
+        "propLocalId": "1913",
+        "label": "Operational Physical Port Enable State",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:OperSt",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "4",
+            "localName": "channel-admin-down",
+            "platformFlavors": [],
+            "comment": [
+              "Port Channel is admin-down"
+            ],
+            "label": "Channel Admin Down "
+          },
+          {
+            "value": "down",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "comment": [
+              "there are many more..please copy from\n                     global/constants/export/dcos/pm_globals.h"
+            ],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "down",
+            "platformFlavors": [],
+            "comment": [
+              "Port is down"
+            ],
+            "label": "Down "
+          },
+          {
+            "value": "3",
+            "localName": "link-up",
+            "platformFlavors": [],
+            "comment": [
+              "Port is link-up"
+            ],
+            "label": "Link Up "
+          },
+          {
+            "value": "0",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "comment": [
+              "Unknown state"
+            ],
+            "label": "Unknown "
+          },
+          {
+            "value": "2",
+            "localName": "up",
+            "platformFlavors": [],
+            "comment": [
+              "Port is up"
+            ],
+            "label": "Up "
+          }
+        ],
+        "default": "down",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operRouterMac": {
+        "comment": [
+          "Operational port router mac"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3806",
+        "propLocalId": "1915",
+        "label": "Operational Router MAC",
+        "baseType": "address:MAC",
+        "modelType": "address:MAC",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operSpeed": {
+        "comment": [
+          "Operational port speed"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3799",
+        "propLocalId": "1909",
+        "label": "Operational Speed",
+        "baseType": "scalar:Enum16",
+        "modelType": "l1:Speed",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "7",
+            "localName": "100G",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is 100 Gbps"
+            ],
+            "label": "100 Gbps "
+          },
+          {
+            "value": "1",
+            "localName": "100M",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is 100 Mbps"
+            ],
+            "label": "100 Mbps "
+          },
+          {
+            "value": "3",
+            "localName": "10G",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is 10 Gbps"
+            ],
+            "label": "10 Gbps "
+          },
+          {
+            "value": "2",
+            "localName": "1G",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is 1 Gbps"
+            ],
+            "label": "1 Gbps "
+          },
+          {
+            "value": "8",
+            "localName": "200G",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is 200 Gbps"
+            ],
+            "label": "200 Gbps "
+          },
+          {
+            "value": "4",
+            "localName": "25G",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is 25 Gbps"
+            ],
+            "label": "25 Gbps "
+          },
+          {
+            "value": "9",
+            "localName": "400G",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is 400 Gbps"
+            ],
+            "label": "400 Gbps "
+          },
+          {
+            "value": "5",
+            "localName": "40G",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is 40 Gbps"
+            ],
+            "label": "40 Gbps "
+          },
+          {
+            "value": "6",
+            "localName": "50G",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is 50 Gbps"
+            ],
+            "label": "50 Gbps "
+          },
+          {
+            "value": "11",
+            "localName": "auto",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is auto"
+            ],
+            "label": "Auto "
+          },
+          {
+            "value": "inherit",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "10",
+            "localName": "inherit",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is Inherited"
+            ],
+            "label": "inherit "
+          },
+          {
+            "value": "0",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "comment": [
+              "Speed is unknown"
+            ],
+            "label": "Unspecified "
+          }
+        ],
+        "default": "inherit",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operSt": {
+        "comment": [
+          "The operational port state."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3795",
+        "propLocalId": "29",
+        "label": "Operational State",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:OperSt",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "4",
+            "localName": "channel-admin-down",
+            "platformFlavors": [],
+            "comment": [
+              "Port Channel is admin-down"
+            ],
+            "label": "Channel Admin Down "
+          },
+          {
+            "value": "down",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "comment": [
+              "there are many more..please copy from\n                     global/constants/export/dcos/pm_globals.h"
+            ],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "down",
+            "platformFlavors": [],
+            "comment": [
+              "Port is down"
+            ],
+            "label": "Down "
+          },
+          {
+            "value": "3",
+            "localName": "link-up",
+            "platformFlavors": [],
+            "comment": [
+              "Port is link-up"
+            ],
+            "label": "Link Up "
+          },
+          {
+            "value": "0",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "comment": [
+              "Unknown state"
+            ],
+            "label": "Unknown "
+          },
+          {
+            "value": "2",
+            "localName": "up",
+            "platformFlavors": [],
+            "comment": [
+              "Port is up"
+            ],
+            "label": "Up "
+          }
+        ],
+        "default": "down",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operStQual": {
+        "comment": [
+          "The operational state failure reason."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3796",
+        "propLocalId": "974",
+        "label": "Operational State Qualifier",
+        "baseType": "scalar:Enum32",
+        "modelType": "l1:OperStQual",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "44",
+            "localName": "admin-config-change",
+            "platformFlavors": [],
+            "label": "adminCfgChng "
+          },
+          {
+            "value": "2",
+            "localName": "admin-down",
+            "platformFlavors": [],
+            "comment": [
+              "This port is down because it is admin down"
+            ],
+            "label": "disabled "
+          },
+          {
+            "value": "54",
+            "localName": "auth-fail",
+            "platformFlavors": [],
+            "label": "xcvrAuthFailed "
+          },
+          {
+            "value": "55",
+            "localName": "auth-pending",
+            "platformFlavors": [],
+            "label": "authPending "
+          },
+          {
+            "value": "207",
+            "localName": "bfd-establishment",
+            "platformFlavors": [],
+            "label": "bfdEstablishment "
+          },
+          {
+            "value": "98",
+            "localName": "bit-err-rt-thres-exceeded",
+            "platformFlavors": [],
+            "label": "bitEThrshExc "
+          },
+          {
+            "value": "72",
+            "localName": "bpdu-guard-err-disable",
+            "platformFlavors": [],
+            "label": "BPDUGuard errDisable "
+          },
+          {
+            "value": "96",
+            "localName": "bundle-cfg-mismatch",
+            "platformFlavors": [],
+            "label": "bundleCfgMismatch "
+          },
+          {
+            "value": "99",
+            "localName": "bundle-miscfg",
+            "platformFlavors": [],
+            "label": "err-disabled "
+          },
+          {
+            "value": "49",
+            "localName": "cap-absent",
+            "platformFlavors": [],
+            "label": "capAbsent "
+          },
+          {
+            "value": "24",
+            "localName": "channel-admin-down",
+            "platformFlavors": [],
+            "label": "channelDown "
+          },
+          {
+            "value": "25",
+            "localName": "channel-err-disabled",
+            "platformFlavors": [],
+            "label": "Channel error-disabled-err-disabled "
+          },
+          {
+            "value": "28",
+            "localName": "channel-membership-update-in-progress",
+            "platformFlavors": [],
+            "label": "channelUpdate "
+          },
+          {
+            "value": "79",
+            "localName": "configuration-incomplete",
+            "platformFlavors": [],
+            "label": "incomplete config "
+          },
+          {
+            "value": "95",
+            "localName": "dcx-noack-in-100pdus",
+            "platformFlavors": [],
+            "label": "dcxNoACKin100PDUs "
+          },
+          {
+            "value": "admin-down",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "comment": [
+              "there are many more..please copy from \n                     global/constants/export/dcos/pm_globals.h"
+            ],
+            "label": " "
+          },
+          {
+            "value": "100",
+            "localName": "denied-due-to-port-binding",
+            "platformFlavors": [],
+            "label": "invldBndng "
+          },
+          {
+            "value": "86",
+            "localName": "diag-failure-errdisable",
+            "platformFlavors": [],
+            "label": "diag failure errDisable "
+          },
+          {
+            "value": "101",
+            "localName": "domain-addr-assign-failure-isolation",
+            "platformFlavors": [],
+            "label": "domAddrAssignFailIsolated "
+          },
+          {
+            "value": "102",
+            "localName": "domain-invalid-rcf-received",
+            "platformFlavors": [],
+            "label": "domInvlRcfRcvdIsolated "
+          },
+          {
+            "value": "103",
+            "localName": "domain-isolation-unknown-reason",
+            "platformFlavors": [],
+            "label": "domUnkwnRsnIsolated "
+          },
+          {
+            "value": "104",
+            "localName": "domain-manager-disabled",
+            "platformFlavors": [],
+            "label": "domMgrDisIsolated "
+          },
+          {
+            "value": "38",
+            "localName": "domain-max-retransmission-failure",
+            "platformFlavors": [],
+            "label": "domMaxRetransFailIsolated "
+          },
+          {
+            "value": "105",
+            "localName": "domain-not-allowed-isolation",
+            "platformFlavors": [],
+            "label": "domNtAllowedIsolated "
+          },
+          {
+            "value": "106",
+            "localName": "domain-other-side-eport-isolated",
+            "platformFlavors": [],
+            "label": "domOthrSideEprtIsolated "
+          },
+          {
+            "value": "107",
+            "localName": "domain-overlap-isolation",
+            "platformFlavors": [],
+            "label": "domOverlapIsolated "
+          },
+          {
+            "value": "94",
+            "localName": "dot1x-security-errdisable",
+            "platformFlavors": [],
+            "label": "dot1xSecurityErrDisable "
+          },
+          {
+            "value": "108",
+            "localName": "dpvm-vsan-not-found",
+            "platformFlavors": [],
+            "label": "dpvmVsanNtFndSuspended "
+          },
+          {
+            "value": "109",
+            "localName": "dpvm-vsan-suspended",
+            "platformFlavors": [],
+            "label": "dpvmVsanSuspended "
+          },
+          {
+            "value": "110",
+            "localName": "ec-suspended-for-loop",
+            "platformFlavors": [],
+            "label": "ecSuspendedForLoop "
+          },
+          {
+            "value": "111",
+            "localName": "elp-failure-all-zero-peer-wwn-rcvd",
+            "platformFlavors": [],
+            "label": "elpFailZPeer "
+          },
+          {
+            "value": "112",
+            "localName": "elp-failure-classf-param-err",
+            "platformFlavors": [],
+            "label": "elpFailClassfIsolated "
+          },
+          {
+            "value": "113",
+            "localName": "elp-failure-classn-param-err",
+            "platformFlavors": [],
+            "label": "elpFailClassnIsolated "
+          },
+          {
+            "value": "114",
+            "localName": "elp-failure-invalid-flow-ctl-param",
+            "platformFlavors": [],
+            "label": "elpFailInvlFlowCtlIsolated "
+          },
+          {
+            "value": "115",
+            "localName": "elp-failure-invalid-payload-size",
+            "platformFlavors": [],
+            "label": "elpFailInvlPayldSzIsolated "
+          },
+          {
+            "value": "116",
+            "localName": "elp-failure-invalid-port-name",
+            "platformFlavors": [],
+            "label": "elpFailInvlPrtNameIsolated "
+          },
+          {
+            "value": "117",
+            "localName": "elp-failure-invalid-switch-name",
+            "platformFlavors": [],
+            "label": "elpFailInvlSwNameIsolated "
+          },
+          {
+            "value": "118",
+            "localName": "elp-failure-invalid-tx-bbcredit",
+            "platformFlavors": [],
+            "label": "elpFailInvlTxBbcrIsolated "
+          },
+          {
+            "value": "119",
+            "localName": "elp-failure-isolation",
+            "platformFlavors": [],
+            "label": "elpFailIsolated "
+          },
+          {
+            "value": "120",
+            "localName": "elp-failure-loopback-detected",
+            "platformFlavors": [],
+            "label": "elpFailLoopDetectIsolated "
+          },
+          {
+            "value": "121",
+            "localName": "elp-failure-ratov-edtov-mismatch",
+            "platformFlavors": [],
+            "label": "elpFailRaEdTovIsolated "
+          },
+          {
+            "value": "122",
+            "localName": "elp-failure-revision-mismatch",
+            "platformFlavors": [],
+            "label": "elpFailRevMismatchIsolated "
+          },
+          {
+            "value": "123",
+            "localName": "elp-failure-unknown-flow-ctl-code",
+            "platformFlavors": [],
+            "label": "elpFailUnkwnFlowCtlIsolated "
+          },
+          {
+            "value": "76",
+            "localName": "epm-learn-err-disable",
+            "platformFlavors": [],
+            "label": "epmLearn errDisable "
+          },
+          {
+            "value": "124",
+            "localName": "eport-prohibited",
+            "platformFlavors": [],
+            "label": "ficonProhibit "
+          },
+          {
+            "value": "125",
+            "localName": "epp-failure",
+            "platformFlavors": [],
+            "label": "eppFail err-disabled "
+          },
+          {
+            "value": "9",
+            "localName": "err-disabled",
+            "platformFlavors": [],
+            "comment": [
+              "The port is in err disable mode"
+            ],
+            "label": "err-disabled "
+          },
+          {
+            "value": "18",
+            "localName": "err-disabled-ip-conflict",
+            "platformFlavors": [],
+            "label": "conflctErrDis "
+          },
+          {
+            "value": "204",
+            "localName": "err-disabled-link-flaps",
+            "platformFlavors": [],
+            "label": "err-disabled-link-flaps "
+          },
+          {
+            "value": "126",
+            "localName": "esc-failure-isolation",
+            "platformFlavors": [],
+            "label": "escFailIsolated "
+          },
+          {
+            "value": "43",
+            "localName": "ethernet-interface-down",
+            "platformFlavors": [],
+            "label": "interface-parentEthDown "
+          },
+          {
+            "value": "84",
+            "localName": "ethernet-invalid-binding",
+            "platformFlavors": [],
+            "label": "parentInvalidBinding "
+          },
+          {
+            "value": "42",
+            "localName": "ethernet-link-down",
+            "platformFlavors": [],
+            "label": "parentEthDown "
+          },
+          {
+            "value": "80",
+            "localName": "ethernet-vlan-down",
+            "platformFlavors": [],
+            "label": "parentVlanDown "
+          },
+          {
+            "value": "127",
+            "localName": "externally-disabled",
+            "platformFlavors": [],
+            "label": "extDisabled "
+          },
+          {
+            "value": "132",
+            "localName": "fabric-bind-failure",
+            "platformFlavors": [],
+            "label": "FabBindFailIsolated "
+          },
+          {
+            "value": "128",
+            "localName": "fabric-binding-database-mismatch",
+            "platformFlavors": [],
+            "label": "fabBindDbMismatchIsolated "
+          },
+          {
+            "value": "129",
+            "localName": "fabric-binding-domain-invalid",
+            "platformFlavors": [],
+            "label": "fabBindDomInvlIsolated "
+          },
+          {
+            "value": "130",
+            "localName": "fabric-binding-peer-not-responding",
+            "platformFlavors": [],
+            "label": "fabBindPeerNtRespIsolated "
+          },
+          {
+            "value": "131",
+            "localName": "fabric-binding-swwn-not-found",
+            "platformFlavors": [],
+            "label": "fabBindSwwnNtFoundIsolated "
+          },
+          {
+            "value": "78",
+            "localName": "fabric-track",
+            "platformFlavors": [],
+            "label": "fabricTrack "
+          },
+          {
+            "value": "4",
+            "localName": "fail",
+            "platformFlavors": [],
+            "comment": [
+              "The link is failed state"
+            ],
+            "label": "fail "
+          },
+          {
+            "value": "135",
+            "localName": "fc-redirect-isolation",
+            "platformFlavors": [],
+            "label": "fcReIsolated "
+          },
+          {
+            "value": "133",
+            "localName": "fcid-allocation-failed",
+            "platformFlavors": [],
+            "label": "fcidAllcFail "
+          },
+          {
+            "value": "67",
+            "localName": "fcot-chksum-err",
+            "platformFlavors": [],
+            "label": "SFP checksum error "
+          },
+          {
+            "value": "32",
+            "localName": "fcot-no-present",
+            "platformFlavors": [],
+            "comment": [
+              "fcotAbsent is more correct, but vsh uses sfpAbsent."
+            ],
+            "label": "sfpAbsent "
+          },
+          {
+            "value": "33",
+            "localName": "fcot-vendor-not-supported",
+            "platformFlavors": [],
+            "label": "SFP vendor not supported-err-disabled "
+          },
+          {
+            "value": "134",
+            "localName": "fcsp-authent-failure",
+            "platformFlavors": [],
+            "label": "fcspAuthFailIsolated "
+          },
+          {
+            "value": "60",
+            "localName": "fex-sfp-invalid",
+            "platformFlavors": [],
+            "label": "FEX-fabric sfp invalid "
+          },
+          {
+            "value": "136",
+            "localName": "ficon-being-enabled",
+            "platformFlavors": [],
+            "label": "ficonEnabled "
+          },
+          {
+            "value": "138",
+            "localName": "ficon-no-portnumber",
+            "platformFlavors": [],
+            "label": "noFiconPortNm "
+          },
+          {
+            "value": "137",
+            "localName": "ficon-not-enabled",
+            "platformFlavors": [],
+            "label": "ficonNtEn err-disabled "
+          },
+          {
+            "value": "139",
+            "localName": "ficon-vsan-down",
+            "platformFlavors": [],
+            "label": "ficonDown "
+          },
+          {
+            "value": "140",
+            "localName": "ficon-vsan-duplicate-portnum",
+            "platformFlavors": [],
+            "label": "dupPort "
+          },
+          {
+            "value": "74",
+            "localName": "handshake-fail-errdisable",
+            "platformFlavors": [],
+            "label": "intFailErrDis "
+          },
+          {
+            "value": "73",
+            "localName": "hot-standby-in-bundle",
+            "platformFlavors": [],
+            "label": "htStdbyInBndl "
+          },
+          {
+            "value": "209",
+            "localName": "hpo-blkd-by-macsec-sesns",
+            "platformFlavors": [],
+            "label": "hpoBlkdByMACsecSesns "
+          },
+          {
+            "value": "208",
+            "localName": "hpo-max-limit-exceeded",
+            "platformFlavors": [],
+            "label": "hpoMaxLimitExceeded "
+          },
+          {
+            "value": "93",
+            "localName": "hw-disabled",
+            "platformFlavors": [],
+            "label": "hwDisabled "
+          },
+          {
+            "value": "205",
+            "localName": "hw-disabled-by-bkout",
+            "platformFlavors": [],
+            "label": "hwDisabledByBkout "
+          },
+          {
+            "value": "206",
+            "localName": "hw-disbld-speed-mismatch",
+            "platformFlavors": [],
+            "label": "hwDisabledBySpeedMismatch "
+          },
+          {
+            "value": "7",
+            "localName": "hw-fail",
+            "platformFlavors": [],
+            "comment": [
+              "This port has a hardware failure"
+            ],
+            "label": "faulty "
+          },
+          {
+            "value": "23",
+            "localName": "inactive",
+            "platformFlavors": [],
+            "label": "inactive "
+          },
+          {
+            "value": "34",
+            "localName": "incompatible-admin-mode",
+            "platformFlavors": [],
+            "label": "errDisabledIncompatPortMode-err-disabled "
+          },
+          {
+            "value": "141",
+            "localName": "incompatible-admin-rxbbcredit",
+            "platformFlavors": [],
+            "label": "incompAdmin-rxbbcr err-disabled "
+          },
+          {
+            "value": "142",
+            "localName": "incompatible-admin-rxbbcredit-performance-buf",
+            "platformFlavors": [],
+            "label": "incompAdminPerf err-disabled "
+          },
+          {
+            "value": "143",
+            "localName": "incompatible-admin-rxbufsize",
+            "platformFlavors": [],
+            "label": "incompAdminrxBufSz err-disabled "
+          },
+          {
+            "value": "35",
+            "localName": "incompatible-admin-speed",
+            "platformFlavors": [],
+            "label": "errDisabledIncompatPortSpeed-err-disabled "
+          },
+          {
+            "value": "87",
+            "localName": "incompatible-fecmode",
+            "platformFlavors": [],
+            "label": "errDisabledIncompatFECMode-err-disabled "
+          },
+          {
+            "value": "22",
+            "localName": "initializing",
+            "platformFlavors": [],
+            "label": "init "
+          },
+          {
+            "value": "31",
+            "localName": "interface-removed",
+            "platformFlavors": [],
+            "label": "ifRemoved "
+          },
+          {
+            "value": "144",
+            "localName": "internal-rcf-in-progress",
+            "platformFlavors": [],
+            "label": "intlRcf "
+          },
+          {
+            "value": "145",
+            "localName": "invalid-attachment",
+            "platformFlavors": [],
+            "label": "invaldAttch "
+          },
+          {
+            "value": "146",
+            "localName": "invalid-config",
+            "platformFlavors": [],
+            "label": "invalidCfg "
+          },
+          {
+            "value": "147",
+            "localName": "invalid-fabric-binding-exchange",
+            "platformFlavors": [],
+            "label": "InvaldFabBindExIsolated "
+          },
+          {
+            "value": "148",
+            "localName": "invalid-other-princ-efp-req-recd",
+            "platformFlavors": [],
+            "label": "invalid "
+          },
+          {
+            "value": "59",
+            "localName": "invalid-sat-fabric-if",
+            "platformFlavors": [],
+            "label": "invalidFbIf "
+          },
+          {
+            "value": "19",
+            "localName": "ipqos-dcbxp-compat-failure",
+            "platformFlavors": [],
+            "label": "ipQosDcbxpCompatFailure "
+          },
+          {
+            "value": "3",
+            "localName": "link-down",
+            "platformFlavors": [],
+            "comment": [
+              "The link is down"
+            ],
+            "label": "parentEthDown "
+          },
+          {
+            "value": "149",
+            "localName": "link-fail-credit-loss",
+            "platformFlavors": [],
+            "label": "linkFailCrLossNotConnect "
+          },
+          {
+            "value": "150",
+            "localName": "link-fail-credit-loss-b2b",
+            "platformFlavors": [],
+            "label": "linkFailCrLossb2bNotConnect "
+          },
+          {
+            "value": "151",
+            "localName": "link-fail-debounce-timeout",
+            "platformFlavors": [],
+            "label": "linkFailDebounceTmoutNotConnect "
+          },
+          {
+            "value": "152",
+            "localName": "link-fail-line-card-port-shutdown",
+            "platformFlavors": [],
+            "label": "linkFailLcPrtShtNotConnect "
+          },
+          {
+            "value": "153",
+            "localName": "link-fail-lip-f8-rcvd",
+            "platformFlavors": [],
+            "label": "linkFailLipf8RcvdNotConnect "
+          },
+          {
+            "value": "154",
+            "localName": "link-fail-lip-rcvd-b2b",
+            "platformFlavors": [],
+            "label": "linkFailLipRcvdB2bNotConnect "
+          },
+          {
+            "value": "155",
+            "localName": "link-fail-loss-of-signal",
+            "platformFlavors": [],
+            "label": "linkFailSigLoassNotConnect "
+          },
+          {
+            "value": "156",
+            "localName": "link-fail-loss-of-sync",
+            "platformFlavors": [],
+            "label": "linkFailSyncLossNotConnect "
+          },
+          {
+            "value": "157",
+            "localName": "link-fail-lr-rcvd-b2b",
+            "platformFlavors": [],
+            "label": "linkFailLrRcvdB2bNotConnect "
+          },
+          {
+            "value": "158",
+            "localName": "link-fail-nos-rcvd",
+            "platformFlavors": [],
+            "label": "linkFailNosRcvdNotConnect "
+          },
+          {
+            "value": "159",
+            "localName": "link-fail-ols-rcvd",
+            "platformFlavors": [],
+            "label": "linkFailOlsRcvdNotConnect "
+          },
+          {
+            "value": "160",
+            "localName": "link-fail-opny-ret-b2b",
+            "platformFlavors": [],
+            "label": "linkFailOpnyRetNotConnect "
+          },
+          {
+            "value": "161",
+            "localName": "link-fail-opny-tmo-b2b",
+            "platformFlavors": [],
+            "label": "linkFailOpnyTmoNotConnect "
+          },
+          {
+            "value": "162",
+            "localName": "link-fail-port-init-failed",
+            "platformFlavors": [],
+            "label": "linkFail "
+          },
+          {
+            "value": "85",
+            "localName": "link-fail-port-unusable",
+            "platformFlavors": [],
+            "label": "linkFailPortUnusable "
+          },
+          {
+            "value": "81",
+            "localName": "link-fail-reset",
+            "platformFlavors": [],
+            "label": "linkReset "
+          },
+          {
+            "value": "163",
+            "localName": "link-fail-rx-que-overflow",
+            "platformFlavors": [],
+            "label": "linkFailRxQueOvrFlowNotConnect "
+          },
+          {
+            "value": "164",
+            "localName": "link-fail-too-many-intr",
+            "platformFlavors": [],
+            "label": "errDisabled "
+          },
+          {
+            "value": "20",
+            "localName": "link-failure",
+            "platformFlavors": [],
+            "label": "linkFailure "
+          },
+          {
+            "value": "17",
+            "localName": "link-flap-err",
+            "platformFlavors": [],
+            "label": "linkFlapErr "
+          },
+          {
+            "value": "211",
+            "localName": "link-not-connected",
+            "platformFlavors": [],
+            "label": "linkNotConnected "
+          },
+          {
+            "value": "6",
+            "localName": "link-up",
+            "platformFlavors": [],
+            "comment": [
+              "The link is up"
+            ],
+            "label": "link-up-connected "
+          },
+          {
+            "value": "11",
+            "localName": "loopback-diag-failure",
+            "platformFlavors": [],
+            "label": "faulty "
+          },
+          {
+            "value": "39",
+            "localName": "loopback-isolation",
+            "platformFlavors": [],
+            "label": "loopbackIsolated "
+          },
+          {
+            "value": "77",
+            "localName": "mac-pinning",
+            "platformFlavors": [],
+            "label": "macPinning "
+          },
+          {
+            "value": "75",
+            "localName": "mcp-loop-err-disable",
+            "platformFlavors": [],
+            "label": "mcpLoop errDisable "
+          },
+          {
+            "value": "45",
+            "localName": "module-removed",
+            "platformFlavors": [],
+            "label": "modRemoved "
+          },
+          {
+            "value": "203",
+            "localName": "mpls-platform-not-supported",
+            "platformFlavors": [],
+            "label": "mplsPfmNotSupp "
+          },
+          {
+            "value": "5",
+            "localName": "no-license",
+            "platformFlavors": [],
+            "comment": [
+              "The port has no valid license"
+            ],
+            "label": "portLicNtAvl "
+          },
+          {
+            "value": "166",
+            "localName": "no-trunk-oper-vsans-isolation",
+            "platformFlavors": [],
+            "label": "noTrunkOperVsansIsolated "
+          },
+          {
+            "value": "165",
+            "localName": "non-participating",
+            "platformFlavors": [],
+            "label": "nonPcpt "
+          },
+          {
+            "value": "65",
+            "localName": "non-sticky-externally-disabled",
+            "platformFlavors": [],
+            "label": "ServDisab "
+          },
+          {
+            "value": "47",
+            "localName": "none",
+            "platformFlavors": [],
+            "label": "connected "
+          },
+          {
+            "value": "90",
+            "localName": "npiv-not-enb-upstream",
+            "platformFlavors": [],
+            "label": "NPIV upstream port not available "
+          },
+          {
+            "value": "88",
+            "localName": "npm-no-ext-link",
+            "platformFlavors": [],
+            "label": "NPV upstream port not available "
+          },
+          {
+            "value": "21",
+            "localName": "offline",
+            "platformFlavors": [],
+            "label": "offline "
+          },
+          {
+            "value": "167",
+            "localName": "ohms-external-lb-test",
+            "platformFlavors": [],
+            "label": "ohmsExtLbTestSuspended "
+          },
+          {
+            "value": "168",
+            "localName": "osm-e-port-up",
+            "platformFlavors": [],
+            "label": "osmEprtUpErrDisabled "
+          },
+          {
+            "value": "169",
+            "localName": "out-of-service",
+            "platformFlavors": [],
+            "label": "outOfService "
+          },
+          {
+            "value": "30",
+            "localName": "parent-admin-down",
+            "platformFlavors": [],
+            "label": "adminDown-parentDown "
+          },
+          {
+            "value": "29",
+            "localName": "parent-down",
+            "platformFlavors": [],
+            "label": "parentDown "
+          },
+          {
+            "value": "92",
+            "localName": "pause-rate-limit-err-disable",
+            "platformFlavors": [],
+            "label": "pauseRateLimit errDisable "
+          },
+          {
+            "value": "170",
+            "localName": "peer-fcip-closed-tcp-connection",
+            "platformFlavors": [],
+            "label": "peerDownClosed "
+          },
+          {
+            "value": "171",
+            "localName": "peer-fcip-reset-tcp-connection",
+            "platformFlavors": [],
+            "label": "peerDownReset "
+          },
+          {
+            "value": "172",
+            "localName": "peer-not-support-bundles",
+            "platformFlavors": [],
+            "label": "PeerNtSupportBundleSuspended "
+          },
+          {
+            "value": "201",
+            "localName": "poe-err-disabled",
+            "platformFlavors": [],
+            "label": "poeErrDisable "
+          },
+          {
+            "value": "178",
+            "localName": "poe-insufficient-power",
+            "platformFlavors": [],
+            "label": "insufficientPower "
+          },
+          {
+            "value": "173",
+            "localName": "port-act-license-not-available",
+            "platformFlavors": [],
+            "label": "portLicNtAvl "
+          },
+          {
+            "value": "174",
+            "localName": "port-bind-failure",
+            "platformFlavors": [],
+            "label": "portBindFailIsolated "
+          },
+          {
+            "value": "175",
+            "localName": "port-blocked",
+            "platformFlavors": [],
+            "label": "portBlcked "
+          },
+          {
+            "value": "176",
+            "localName": "port-bringup-isolation",
+            "platformFlavors": [],
+            "label": "portUpIsolated "
+          },
+          {
+            "value": "177",
+            "localName": "port-cap-fc-port-connector-type-err",
+            "platformFlavors": [],
+            "label": "connctrErr "
+          },
+          {
+            "value": "41",
+            "localName": "port-channel-members-down",
+            "platformFlavors": [],
+            "label": "noOperMembers "
+          },
+          {
+            "value": "199",
+            "localName": "port-quiesced",
+            "platformFlavors": [],
+            "label": "grcefulShtdwn "
+          },
+          {
+            "value": "89",
+            "localName": "port-reinit-limit",
+            "platformFlavors": [],
+            "label": "Port reinit threshold reached "
+          },
+          {
+            "value": "179",
+            "localName": "port-vsan-mismatch-isolation",
+            "platformFlavors": [],
+            "label": "portVsanMismatchIsolated "
+          },
+          {
+            "value": "180",
+            "localName": "prefered-path-isolation",
+            "platformFlavors": [],
+            "label": "preferedPathIsolated "
+          },
+          {
+            "value": "27",
+            "localName": "proto-port-suspend",
+            "platformFlavors": [],
+            "label": "portSuspnd "
+          },
+          {
+            "value": "202",
+            "localName": "qsa-adaptor-no-xcvr",
+            "platformFlavors": [],
+            "label": "qsaAdaptor "
+          },
+          {
+            "value": "181",
+            "localName": "rcf-in-progress",
+            "platformFlavors": [],
+            "label": "rcfInPrgrss "
+          },
+          {
+            "value": "63",
+            "localName": "router-mac-failure",
+            "platformFlavors": [],
+            "label": "routrmacFail "
+          },
+          {
+            "value": "58",
+            "localName": "sat-fabric-if-down",
+            "platformFlavors": [],
+            "label": "fabrcIfDown "
+          },
+          {
+            "value": "52",
+            "localName": "sat-incompat-topo",
+            "platformFlavors": [],
+            "label": "FEX identity mismatch "
+          },
+          {
+            "value": "53",
+            "localName": "sat-not-configured",
+            "platformFlavors": [],
+            "label": "FEX not configured "
+          },
+          {
+            "value": "182",
+            "localName": "sdm-isolation",
+            "platformFlavors": [],
+            "label": "sdmIsolated "
+          },
+          {
+            "value": "51",
+            "localName": "sdp-timeout",
+            "platformFlavors": [],
+            "label": "SDP timeout/SFP Mismatch "
+          },
+          {
+            "value": "50",
+            "localName": "sfp-eth-compliant-err",
+            "platformFlavors": [],
+            "label": "xcvrEthComplianceErr "
+          },
+          {
+            "value": "10",
+            "localName": "sfp-missing",
+            "platformFlavors": [],
+            "comment": [
+              "The SFP is absent on this port"
+            ],
+            "label": "sfpAbsent "
+          },
+          {
+            "value": "66",
+            "localName": "sfp-speed-mismatch",
+            "platformFlavors": [],
+            "label": "xcvrSpeedMismatch "
+          },
+          {
+            "value": "183",
+            "localName": "src-port-not-bound",
+            "platformFlavors": [],
+            "label": "srcUnbound "
+          },
+          {
+            "value": "200",
+            "localName": "stormctrl-err-disabled",
+            "platformFlavors": [],
+            "label": "StormCtrlErrDis "
+          },
+          {
+            "value": "61",
+            "localName": "suspend-by-mtu",
+            "platformFlavors": [],
+            "label": "mtuFailure "
+          },
+          {
+            "value": "62",
+            "localName": "suspend-by-vpc",
+            "platformFlavors": [],
+            "label": "suspndByVpc "
+          },
+          {
+            "value": "26",
+            "localName": "suspended",
+            "platformFlavors": [],
+            "label": "suspnd "
+          },
+          {
+            "value": "36",
+            "localName": "suspended-by-mode",
+            "platformFlavors": [],
+            "label": "suspended-by-mode "
+          },
+          {
+            "value": "37",
+            "localName": "suspended-by-speed",
+            "platformFlavors": [],
+            "label": "suspended-by-speed "
+          },
+          {
+            "value": "184",
+            "localName": "suspended-by-wwn",
+            "platformFlavors": [],
+            "label": "suspended-by-wwn "
+          },
+          {
+            "value": "56",
+            "localName": "suspended-due-to-minlinks",
+            "platformFlavors": [],
+            "label": "suspendedMinLinks "
+          },
+          {
+            "value": "57",
+            "localName": "suspended-due-to-no-lacp-pdus",
+            "platformFlavors": [],
+            "label": "suspended(no LACP PDUs) "
+          },
+          {
+            "value": "8",
+            "localName": "sw-fail",
+            "platformFlavors": [],
+            "comment": [
+              "This port has a software failure"
+            ],
+            "label": "faulty "
+          },
+          {
+            "value": "185",
+            "localName": "tcp-keep-alive-timer-expired",
+            "platformFlavors": [],
+            "label": "tcpDownKeepaliveTmrExpired "
+          },
+          {
+            "value": "186",
+            "localName": "tcp-max-retransmissions",
+            "platformFlavors": [],
+            "label": "tcpDownMaxReTransmission "
+          },
+          {
+            "value": "187",
+            "localName": "tcp-persist-timer-expired",
+            "platformFlavors": [],
+            "label": "tcpDownPersistTmrExpired "
+          },
+          {
+            "value": "188",
+            "localName": "too-many-invalid-flogis",
+            "platformFlavors": [],
+            "label": "invldFlgis "
+          },
+          {
+            "value": "189",
+            "localName": "tov-mismatch",
+            "platformFlavors": [],
+            "label": "tovMismatchIsolated "
+          },
+          {
+            "value": "190",
+            "localName": "tracked-port-down",
+            "platformFlavors": [],
+            "label": "trckdPortDwn "
+          },
+          {
+            "value": "191",
+            "localName": "trunk-not-fully-active",
+            "platformFlavors": [],
+            "label": "some "
+          },
+          {
+            "value": "192",
+            "localName": "tunnel-src-module-not-online",
+            "platformFlavors": [],
+            "label": "srcMdOffline "
+          },
+          {
+            "value": "193",
+            "localName": "tunnel-src-port-removed",
+            "platformFlavors": [],
+            "label": "srcPrtRemv "
+          },
+          {
+            "value": "194",
+            "localName": "two-switches-with-same-wwn",
+            "platformFlavors": [],
+            "label": "dupWwn "
+          },
+          {
+            "value": "16",
+            "localName": "udld-aggressive-mode-link-failed",
+            "platformFlavors": [],
+            "label": "udldAggr "
+          },
+          {
+            "value": "15",
+            "localName": "udld-empty-echo",
+            "platformFlavors": [],
+            "label": "udldEmpEcho "
+          },
+          {
+            "value": "14",
+            "localName": "udld-neighbor-mismatch",
+            "platformFlavors": [],
+            "label": "udldMismatch "
+          },
+          {
+            "value": "13",
+            "localName": "udld-tx-rx-loop",
+            "platformFlavors": [],
+            "label": "udldLoop "
+          },
+          {
+            "value": "12",
+            "localName": "udld-unidir-detected",
+            "platformFlavors": [],
+            "label": "udldUnidir "
+          },
+          {
+            "value": "0",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "comment": [
+              "The port state is unknown"
+            ],
+            "label": "down "
+          },
+          {
+            "value": "97",
+            "localName": "unsupported-platform-l3po",
+            "platformFlavors": [],
+            "label": "unsupportedPlatformL3Po "
+          },
+          {
+            "value": "210",
+            "localName": "unsupported-xcvr",
+            "platformFlavors": [],
+            "label": "unsupportedXcvr "
+          },
+          {
+            "value": "1",
+            "localName": "up",
+            "platformFlavors": [],
+            "comment": [
+              "This port is operationally up"
+            ],
+            "label": "up "
+          },
+          {
+            "value": "40",
+            "localName": "upgrade-in-progress",
+            "platformFlavors": [],
+            "label": "modUpgrade "
+          },
+          {
+            "value": "82",
+            "localName": "vfc-binding-invalid",
+            "platformFlavors": [],
+            "label": "vfcBindingInvalid "
+          },
+          {
+            "value": "195",
+            "localName": "virtual-ivr-domain-overlap-isolation",
+            "platformFlavors": [],
+            "label": "virtualIvrDomOverlapIsolated "
+          },
+          {
+            "value": "83",
+            "localName": "vlan-not-fcoe-enabled",
+            "platformFlavors": [],
+            "label": "vlanNotFcoeEnabled "
+          },
+          {
+            "value": "70",
+            "localName": "vpc-cfg-in-progress",
+            "platformFlavors": [],
+            "label": "vpcConfigInProgress "
+          },
+          {
+            "value": "71",
+            "localName": "vpc-no-response-from-peer",
+            "platformFlavors": [],
+            "label": "noRespFrmVpc "
+          },
+          {
+            "value": "69",
+            "localName": "vpc-peer-link-down",
+            "platformFlavors": [],
+            "label": "vpcPeerLinkDown "
+          },
+          {
+            "value": "46",
+            "localName": "vrf-unusable",
+            "platformFlavors": [],
+            "label": "vrfUnusable "
+          },
+          {
+            "value": "196",
+            "localName": "vsan-mismatch-isolation",
+            "platformFlavors": [],
+            "label": "vsanMismatchIsolated "
+          },
+          {
+            "value": "91",
+            "localName": "vsan-mismatch-upstream",
+            "platformFlavors": [],
+            "label": "VSAN mismatch with upstream port "
+          },
+          {
+            "value": "64",
+            "localName": "xcvr-auth-failed",
+            "platformFlavors": [],
+            "label": "xcvrAuthFailed "
+          },
+          {
+            "value": "48",
+            "localName": "xcvr-initializing",
+            "platformFlavors": [],
+            "label": "sfpInit "
+          },
+          {
+            "value": "68",
+            "localName": "xcvr-invalid",
+            "platformFlavors": [],
+            "label": "Transceiver validation failed "
+          },
+          {
+            "value": "197",
+            "localName": "zone-merge-failure-isolation",
+            "platformFlavors": [],
+            "label": "zoneMergeFailIsolated "
+          },
+          {
+            "value": "198",
+            "localName": "zone-remote-no-resp-isolation",
+            "platformFlavors": [],
+            "label": "zoneRemoteNoRespIsolated "
+          }
+        ],
+        "default": "admin-down",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operStQualCode": {
+        "comment": [
+          "Operational port status syserror code"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3797",
+        "propLocalId": "1907",
+        "label": "Operational State Qualifier Code",
+        "baseType": "scalar:Uint32",
+        "modelType": "l1:OperStQualCode",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "operVlans": {
+        "comment": [
+          "operational vlans"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3822",
+        "propLocalId": "1927",
+        "label": "Operational Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "osSum": {
+        "comment": [
+          "Operational state summary"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3794",
+        "propLocalId": "1664",
+        "label": "Operational State Summary",
+        "baseType": "scalar:Enum8",
+        "modelType": "nw:OSSum",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "ok",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "3",
+            "localName": "degraded",
+            "platformFlavors": [],
+            "comment": [
+              "Degraded"
+            ],
+            "label": "Degraded "
+          },
+          {
+            "value": "0",
+            "localName": "failed",
+            "platformFlavors": [],
+            "comment": [
+              "Failed"
+            ],
+            "label": "Failed "
+          },
+          {
+            "value": "1",
+            "localName": "initializing",
+            "platformFlavors": [],
+            "comment": [
+              "Initializing"
+            ],
+            "label": "Initializing "
+          },
+          {
+            "value": "4",
+            "localName": "ok",
+            "platformFlavors": [],
+            "comment": [
+              "Ok"
+            ],
+            "label": "Ok "
+          },
+          {
+            "value": "2",
+            "localName": "resetting",
+            "platformFlavors": [],
+            "comment": [
+              "Resetting"
+            ],
+            "label": "Resetting "
+          }
+        ],
+        "default": "ok",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "portCfgWaitFlags": {
+        "comment": [
+          "port config wait flags"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3809",
+        "propLocalId": "1918",
+        "label": "Config Wait Flags",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "primaryVlan": {
+        "comment": [
+          "port primary-vlan"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3814",
+        "propLocalId": "1921",
+        "label": "Port Primary-vlan",
+        "baseType": "base:Encap",
+        "modelType": "base:Encap",
+        "needsPropDelimiters": true,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "resetCtr": {
+        "comment": [
+          "reset counter"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3817",
+        "propLocalId": "1923",
+        "label": "Reset Counter",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "rn": {
+        "comment": [
+          "Identifies an object from its siblings within the context of its parent object. The distinguished name contains a sequence of relative names."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "2",
+        "propLocalId": "3",
+        "label": "rn",
+        "baseType": "reference:BinRN",
+        "modelType": "reference:BinRN",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "siList": {
+        "comment": [
+          "configured sub-interface ids"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3839",
+        "propLocalId": "1944",
+        "label": "Configured Sub-interface Ids",
+        "baseType": "base:BitArray4096",
+        "modelType": "ethpm:SiBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "status": {
+        "comment": [
+          "The upgrade status. This property is for internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3",
+        "propLocalId": "4",
+        "label": "status",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationStatus",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2",
+            "localName": "created",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be created. An error is returned if the object already exists.  \nIn the return value of a setter method: indicates that an object has been created.  \n"
+            ],
+            "label": "created "
+          },
+          {
+            "value": "8",
+            "localName": "deleted",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be deleted.  \nIn the return value of a setter method: indicates that an object has been deleted.\n"
+            ],
+            "label": "deleted "
+          },
+          {
+            "value": "4",
+            "localName": "modified",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be modified  \nIn the return value of a setter method: indicates that an object has been modified.\n"
+            ],
+            "label": "modified "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "txT": {
+        "comment": [
+          "port Tx type"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3807",
+        "propLocalId": "1916",
+        "label": "Transmit Type",
+        "baseType": "scalar:Enum8",
+        "modelType": "l1:TxT",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "8",
+            "localName": "10GBASE-ER",
+            "platformFlavors": [],
+            "label": "10GBASE-ER "
+          },
+          {
+            "value": "12",
+            "localName": "10GBASE-EW",
+            "platformFlavors": [],
+            "label": "10GBASE-EW "
+          },
+          {
+            "value": "7",
+            "localName": "10GBASE-LR",
+            "platformFlavors": [],
+            "label": "10GBASE-LR "
+          },
+          {
+            "value": "11",
+            "localName": "10GBASE-LW",
+            "platformFlavors": [],
+            "label": "10GBASE-LW "
+          },
+          {
+            "value": "9",
+            "localName": "10GBASE-LX4",
+            "platformFlavors": [],
+            "label": "10GBASE-LX4 "
+          },
+          {
+            "value": "6",
+            "localName": "10GBASE-SR",
+            "platformFlavors": [],
+            "label": "10GBASE-SR "
+          },
+          {
+            "value": "10",
+            "localName": "10GBASE-SW",
+            "platformFlavors": [],
+            "label": "10GBASE-SW "
+          },
+          {
+            "value": "5",
+            "localName": "EL",
+            "platformFlavors": [],
+            "label": "EL "
+          },
+          {
+            "value": "4",
+            "localName": "LC",
+            "platformFlavors": [],
+            "label": "LC "
+          },
+          {
+            "value": "2",
+            "localName": "LL",
+            "platformFlavors": [],
+            "label": "LL "
+          },
+          {
+            "value": "3",
+            "localName": "SN",
+            "platformFlavors": [],
+            "label": "SN "
+          },
+          {
+            "value": "unknown",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "label": "Unknown "
+          }
+        ],
+        "default": "unknown",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "usage": {
+        "comment": [
+          ""
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3804",
+        "propLocalId": "1851",
+        "label": "Port Usage",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "l1:PortUsage",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": true,
+        "likeProp": "l1:EthIf:usage",
+        "validValues": [
+          {
+            "value": "32",
+            "localName": "blacklist",
+            "platformFlavors": [],
+            "label": "Admin Down "
+          },
+          {
+            "value": "16",
+            "localName": "controller",
+            "platformFlavors": [],
+            "label": "Controller "
+          },
+          {
+            "value": "discovery",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "512",
+            "localName": "direct-mpod",
+            "platformFlavors": [],
+            "label": "Back to Back Multipod "
+          },
+          {
+            "value": "1",
+            "localName": "discovery",
+            "platformFlavors": [],
+            "label": "Discovery "
+          },
+          {
+            "value": "2",
+            "localName": "epg",
+            "platformFlavors": [],
+            "label": "EPG "
+          },
+          {
+            "value": "4",
+            "localName": "fabric",
+            "platformFlavors": [],
+            "label": "Fabric "
+          },
+          {
+            "value": "256",
+            "localName": "fabric-ext",
+            "platformFlavors": [],
+            "label": "Fabric External "
+          },
+          {
+            "value": "8",
+            "localName": "infra",
+            "platformFlavors": [],
+            "label": "Infra "
+          },
+          {
+            "value": "128",
+            "localName": "out-of-service",
+            "platformFlavors": [],
+            "label": "Out Of Service "
+          },
+          {
+            "value": "64",
+            "localName": "span",
+            "platformFlavors": [],
+            "label": "Span "
+          },
+          {
+            "value": "1024",
+            "localName": "tier1-leaf",
+            "platformFlavors": [],
+            "label": "Fabric link connected to tier1 leaf "
+          },
+          {
+            "value": "2048",
+            "localName": "tier2-leaf",
+            "platformFlavors": [],
+            "label": "Fabric link connected to tier2 leaf "
+          }
+        ],
+        "default": "discovery",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "userCfgdFlags": {
+        "comment": [
+          "port user config flags"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3837",
+        "propLocalId": "1942",
+        "label": "Port User Config Flags",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "vdcId": {
+        "comment": [
+          "vdc id"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3816",
+        "propLocalId": "1779",
+        "label": "Vdc Id",
+        "baseType": "scalar:Uint16",
+        "modelType": "l2:VdcId",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      }
+    }
+  }
+}

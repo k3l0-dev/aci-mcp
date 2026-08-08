@@ -17,10 +17,9 @@ entire ACI object model without any hardcoded class knowledge:
   get_by_dn       — fetch a single object directly by its DN (shortcut path)
   count           — count objects of a class without transferring them
 
-All ACI domain knowledge lives in:
-  ../data/schemas/                 15 k+ jsonmeta files from the APIC /doc/jsonmeta/ endpoint
-  ../data/class-descriptions.json  label + comment index, built by the collector's
-                                   descriptions step (aci-collect run --from descriptions)
+All ACI domain knowledge comes from the catalogue embedded in the `niwaki`
+dependency — 15 k+ classes in one SQLite file, no data bundle to download and
+no checkout required.
 
 Typical LLM workflow
 --------------------
@@ -122,9 +121,7 @@ def _checkout_root() -> Path | None:
     assumed.
     """
     candidate = BASE_DIR.parent.parent.parent
-    looks_right = (candidate / "mcp" / "pyproject.toml").is_file() and (
-        candidate / "data"
-    ).is_dir()
+    looks_right = (candidate / "mcp" / "pyproject.toml").is_file()
     return candidate if looks_right else None
 
 
@@ -136,21 +133,7 @@ def _first_existing(*candidates: Path | None) -> Path | None:
 
 
 _CHECKOUT = _checkout_root()
-_ckt_data = _CHECKOUT / "data" if _CHECKOUT else None
 
-# Explicit override, then the working directory, then the checkout. When none
-# of them exists the value still has to be *something*: `cwd()/data` is chosen
-# because it names the place the operator most likely meant, so the eventual
-# DescriptionsLoadError points somewhere actionable rather than into
-# site-packages.
-_DATA_DIR = (
-    Path(os.environ["ACI_MCP_DATA_DIR"])
-    if os.environ.get("ACI_MCP_DATA_DIR")
-    else _first_existing(Path.cwd() / "data", _ckt_data) or Path.cwd() / "data"
-)
-
-SCHEMAS_DIR = _DATA_DIR / "schemas"
-DESCRIPTIONS_FILE = _DATA_DIR / "class-descriptions.json"
 
 _USER_ENV = Path.home() / ".config" / "niwashi-mcp" / ".env"
 ENV_FILE = (
