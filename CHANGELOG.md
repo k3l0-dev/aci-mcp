@@ -7,9 +7,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
-Work in progress towards **2.0.0** — replacing the data layer with niwaki's
-embedded catalogue. Landing on `feature/niwaki-core-2.0`, one commit per
-iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
+Nothing yet.
+
+---
+
+## [2.0.0] - 2026-08-08
+
+**The data layer is now niwaki's embedded catalogue.** The server reads the ACI
+object model from one SQLite database shipping inside the `niwaki` dependency
+instead of 15,452 raw jsonmeta files, which is what makes it installable with
+`uvx niwashi-mcp` rather than requiring a git checkout and a 98.8 MB schema
+bundle. The five tools keep their signatures; parity with the 1.x projection was
+proven class by class against a frozen jsonmeta oracle before the old path was
+deleted.
+
+The package is renamed **`niwashi-mcp`** — 庭師, the gardener who tends the
+niwaki. The 1.x name carried a protected mark it had no licence to use.
 
 ### Added
 
