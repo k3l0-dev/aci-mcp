@@ -110,6 +110,36 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
 
 ### Fixed
 
+- **`query()` could never report the end of a result set.** `truncated`
+  compared the total to the size of the page in hand rather than to the offset
+  consumed, so it was permanently true: page 2 of 45 objects returned 5 and
+  still claimed more remained, and so did page 99 returning nothing. Since
+  `SKILL.md` and `docs/tools/query.md` both instruct an agent to *page until
+  `truncated` is false*, an agent following the documented procedure looped
+  until it exhausted its turn budget — one APIC call per iteration — and
+  returned nothing. No test had ever called `query()` past page 0; six now do,
+  including one that walks the documented loop to exhaustion.
+
+- **The server bound every interface, without authentication, while the README
+  said localhost.** `0.0.0.0` was hardcoded with no way to change it. The
+  documented quickstart therefore put an unauthenticated server holding APIC
+  credentials — usually admin-capable — on every interface of the machine, with
+  a log line as the only guard. It now binds `127.0.0.1` by default, `MCP_HOST`
+  selects the interface, and a routable bind with `MCP_API_KEYS` unset is
+  **refused** rather than warned about. `MCP_ALLOW_NO_AUTH=true` accepts the
+  risk explicitly and logs that it was deliberate. The production path
+  (`docker-compose`, which uses `expose:`) was never affected — only the
+  documented one.
+
+- **`APIC_VERIFY_SSL=false` passed in silence.** The first thing the server
+  does is POST the APIC username and password to `/api/aaaLogin.json`; without
+  verification it does so to whatever answers, so an ARP or DNS spoof on the
+  management network collects the credential in clear. The default stays false
+  — an APIC ships self-signed, and demanding verification would make the server
+  unusable on most fabrics — but startup now names the risk instead of leaving
+  it to be inferred from four documentation lines that called it a lab
+  convenience.
+
 - **Eleven tests were silently skipping — the search guarantees were not being
   checked at all.** Deleting `data/class-descriptions.json` in the same release
   that removed the data plane left every test that compared against it in a

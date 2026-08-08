@@ -54,7 +54,7 @@ export APIC_PASSWORD='!v3G@!4@Y'
 uvx niwashi-mcp
 ```
 
-The server listens on `http://localhost:8000`. The MCP endpoint is `/mcp`, and
+The server listens on `http://127.0.0.1:8000` — loopback only by default. Set `MCP_HOST` to expose it, and set `MCP_API_KEYS` first: it holds your APIC credentials, so a routable bind without authentication is refused.
 `/health` answers without authentication for container and load-balancer probes.
 Startup logs how many classes were indexed and which APIC release the object
 model was built from.

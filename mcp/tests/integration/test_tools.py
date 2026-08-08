@@ -683,3 +683,116 @@ async def test_count_unknown_class_logs_warning(tool_ctx):
     tool_ctx.warning.assert_called_once()
 
 
+
+
+# ── query — pagination terminates ─────────────────────────────────────────────
+#
+# Until 2.0 `truncated` compared total_available to the size of the page in
+# hand, never to the offset consumed, so it was permanently true: page 2 of 45
+# objects returned 5 and still said truncated, and page 99 returning 0 said it
+# too. SKILL.md and docs/tools/query.md both tell an agent to "page until
+# truncated is false", so an agent following the documented procedure looped
+# until it ran out of turns, spending one APIC call each time.
+#
+# The suite never caught it because no test called query() past page 0.
+
+
+def _paged_imdata(n: int) -> list[dict]:
+    return [
+        {"fvBD": {"attributes": {"dn": f"uni/tn-T/BD-{i}", "name": f"bd{i}"}}}
+        for i in range(n)
+    ]
+
+
+@pytest.mark.asyncio
+async def test_query_last_page_reports_not_truncated():
+    """The page that exhausts the set must say so — this is the whole contract."""
+    from niwashi_mcp.main import query
+
+    ctx = _stub_ctx(_paged_imdata(45))
+    envelope = await query("fvBD", ctx, limit=20, page=2)
+
+    assert envelope["returned"] == 5
+    assert envelope["truncated"] is False, "the last page must not claim more remains"
+    assert envelope["next_page"] is None
+
+
+@pytest.mark.asyncio
+async def test_query_page_beyond_the_set_terminates():
+    """An over-shot page returns nothing and says nothing remains.
+
+    Without this, an agent that pages one step too far is told to keep going,
+    forever.
+    """
+    from niwashi_mcp.main import query
+
+    ctx = _stub_ctx(_paged_imdata(45))
+    for page in (3, 99):
+        envelope = await query("fvBD", ctx, limit=20, page=page)
+        assert envelope["returned"] == 0
+        assert envelope["truncated"] is False, f"page {page} still claims truncation"
+        assert envelope["next_page"] is None
+
+
+@pytest.mark.asyncio
+async def test_query_intermediate_pages_still_advance():
+    """The fix must not break the case pagination exists for."""
+    from niwashi_mcp.main import query
+
+    ctx = _stub_ctx(_paged_imdata(45))
+    for page, expected_next in ((0, 1), (1, 2)):
+        envelope = await query("fvBD", ctx, limit=20, page=page)
+        assert envelope["truncated"] is True
+        assert envelope["next_page"] == expected_next
+
+
+@pytest.mark.asyncio
+async def test_query_set_smaller_than_one_page_is_never_truncated():
+    from niwashi_mcp.main import query
+
+    ctx = _stub_ctx(_paged_imdata(5))
+    envelope = await query("fvBD", ctx, limit=20)
+
+    assert envelope["returned"] == 5
+    assert envelope["truncated"] is False
+    assert envelope["next_page"] is None
+
+
+@pytest.mark.asyncio
+async def test_query_fetch_all_is_never_truncated():
+    """fetch_all walks every page itself, so nothing is left to fetch."""
+    from niwashi_mcp.main import query
+
+    ctx = _stub_ctx(_paged_imdata(45))
+    envelope = await query("fvBD", ctx, fetch_all=True)
+
+    assert envelope["returned"] == 45
+    assert envelope["truncated"] is False
+    assert envelope["next_page"] is None
+
+
+@pytest.mark.asyncio
+async def test_query_pagination_walk_terminates():
+    """Walk the documented loop to exhaustion, as an agent would.
+
+    The regression this pins is not a wrong flag on one page — it is a loop
+    that never ends. Bounded at 10 iterations so a reintroduced bug fails the
+    test rather than hanging the suite.
+    """
+    from niwashi_mcp.main import query
+
+    ctx = _stub_ctx(_paged_imdata(45))
+    seen, page, iterations = 0, 0, 0
+
+    while iterations < 10:
+        iterations += 1
+        envelope = await query("fvBD", ctx, limit=20, page=page)
+        seen += envelope["returned"]
+        if not envelope["truncated"]:
+            break
+        page = envelope["next_page"]
+    else:
+        pytest.fail("pagination did not terminate within 10 pages")
+
+    assert seen == 45, f"the walk collected {seen} of 45 objects"
+    assert iterations == 3, f"45 objects at 20 per page should take 3 pages, took {iterations}"

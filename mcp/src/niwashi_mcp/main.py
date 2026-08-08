@@ -36,8 +36,14 @@ Environment variables (read from .env at startup)
   APIC_HOST        APIC hostname or IP
   APIC_USER        APIC username (default: admin)
   APIC_PASSWORD    APIC password
-  APIC_VERIFY_SSL  "true" to enforce TLS verification (default: false)
+  APIC_VERIFY_SSL  "true" to verify the APIC TLS certificate (default: false,
+                   because an APIC ships self-signed). While false the APIC
+                   password is sent to an unauthenticated peer — a warning is
+                   logged at startup. Set it true in production.
+  MCP_HOST         Interface to bind (default: 127.0.0.1 — loopback only)
   MCP_PORT         HTTP port the server listens on (default: 8000)
+  MCP_ALLOW_NO_AUTH  "true" to permit a routable bind with MCP_API_KEYS unset.
+                   Refused otherwise: this process holds APIC credentials.
   MCP_API_KEYS     Comma-separated bearer tokens accepted by ApiKeyMiddleware.
                    Unset means the server runs with NO authentication (logged
                    as a warning at startup).  Reloadable at runtime with
@@ -228,6 +234,21 @@ async def app_lifespan(server: FastMCP):
 
     user = os.environ.get("APIC_USER", "admin")
     verify_ssl = os.environ.get("APIC_VERIFY_SSL", "false").lower() == "true"
+    if not verify_ssl:
+        # The default stays false because an APIC ships with a self-signed
+        # certificate and demanding verification out of the box would make the
+        # server unusable on most fabrics. But silence was wrong: the first
+        # thing this process does is POST APIC_USER and APIC_PASSWORD to
+        # /api/aaaLogin.json, and without verification it will do so to
+        # whatever answers — an ARP or DNS spoof on the management network
+        # collects an often admin-capable credential in clear.
+        logger.warning(
+            "APIC_VERIFY_SSL is not enabled — the TLS certificate of %s is NOT "
+            "verified. The APIC password is sent to whatever answers at that "
+            "address. Acceptable on an isolated lab; set APIC_VERIFY_SSL=true "
+            "in production.",
+            host,
+        )
     backend = ApicClient(host=host, user=user, password=password, verify_ssl=verify_ssl)
     await backend.authenticate()
     logger.info("Connected to APIC — %s", host)
@@ -639,7 +660,19 @@ async def query(
     )
 
     returned = len(result.objects)
-    truncated = result.total_available > returned
+
+    # `truncated` must be measured against what the caller has *consumed*, not
+    # against the size of the page in hand. Comparing `total_available` to
+    # `returned` alone made it permanently true: page 2 of 45 objects returned
+    # 5 and still reported truncated, as did page 99 returning 0. Since
+    # SKILL.md and docs/tools/query.md both instruct an agent to "page until
+    # truncated is false", an agent following the documented procedure looped
+    # until it exhausted its turn budget, spending one APIC call per iteration
+    # and returning nothing.
+    #
+    # fetch_all walks every page itself, so everything is already in hand.
+    consumed = 0 if fetch_all else (page or 0) * clamped_limit + returned
+    truncated = False if fetch_all else consumed < result.total_available
 
     note: str | None = None
     if truncated and not fetch_all:
@@ -830,6 +863,25 @@ async def count(
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 
+def _is_loopback(host: str) -> bool:
+    """Whether binding to ``host`` keeps the server off the network.
+
+    ``0.0.0.0`` and ``::`` are wildcards: they bind every interface, so they
+    are never loopback however local the machine feels. Anything unparseable
+    is treated as routable — the safe reading when in doubt.
+    """
+    import ipaddress
+
+    if host in ("0.0.0.0", "::", ""):
+        return False
+    if host in ("localhost", "127.0.0.1", "::1"):
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
 async def _serve() -> None:
     load_dotenv(ENV_FILE)
     _port_raw = os.environ.get("MCP_PORT", "8000")
@@ -840,15 +892,46 @@ async def _serve() -> None:
             f"MCP_PORT must be an integer, got '{_port_raw}'."
         ) from None
 
+    # Loopback by default. Until 2.0 this was a hardcoded 0.0.0.0 with no way
+    # to change it, while README.md told the reader the server listened on
+    # localhost — so the documented quickstart put an unauthenticated server
+    # holding APIC credentials on every interface of the machine.
+    bind_host = os.environ.get("MCP_HOST", "127.0.0.1").strip() or "127.0.0.1"
+    allow_no_auth = os.environ.get("MCP_ALLOW_NO_AUTH", "").lower() == "true"
+
     from starlette.middleware import Middleware
 
     key_store = KeyStore(load_api_keys())
     if key_store:
         logger.info("API key authentication enabled (%d key(s) loaded)", len(key_store))
-    else:
+    elif _is_loopback(bind_host) or allow_no_auth:
         logger.warning(
-            "MCP_API_KEYS is not set — server is running WITHOUT authentication. "
-            "Set MCP_API_KEYS in .env before deploying to production."
+            "MCP_API_KEYS is not set — running WITHOUT authentication on %s. "
+            "Acceptable on loopback; set MCP_API_KEYS before exposing this server.",
+            bind_host,
+        )
+        if not _is_loopback(bind_host):
+            logger.warning(
+                "MCP_ALLOW_NO_AUTH=true — the unauthenticated bind on %s is deliberate. "
+                "Every tool, and the APIC credentials behind them, are reachable "
+                "from the network.",
+                bind_host,
+            )
+    else:
+        # Refusing here rather than warning is deliberate. This process holds
+        # APIC credentials, usually for an admin-capable account, and an
+        # unauthenticated bind on a routable interface hands every tool to
+        # anyone on the network — no header required. A log line is not enough
+        # of a guard for that: warnings scroll past, and the default path
+        # (`uvx niwashi-mcp`) is exactly the one a first-time user takes.
+        raise ConfigurationError(
+            f"Refusing to listen on {bind_host} without authentication.\n"
+            "This server holds APIC credentials; binding a routable interface "
+            "with MCP_API_KEYS unset exposes every tool to the network.\n"
+            "Choose one:\n"
+            "  - set MCP_API_KEYS (recommended), or\n"
+            "  - keep the default MCP_HOST=127.0.0.1, or\n"
+            "  - set MCP_ALLOW_NO_AUTH=true to accept the risk explicitly."
         )
 
     # SIGHUP reloads MCP_API_KEYS from .env without restarting the server.
@@ -875,7 +958,7 @@ async def _serve() -> None:
     ]
 
     await mcp.run_http_async(
-        host="0.0.0.0",
+        host=bind_host,
         port=port,
         stateless_http=True,
         json_response=True,
