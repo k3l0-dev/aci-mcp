@@ -7,7 +7,61 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
-Nothing yet.
+### Fixed
+
+- **Authentication could be removed by a SIGHUP, on a bind that refuses to start
+  without it.** An empty key set makes `ApiKeyMiddleware` a no-op — intended on
+  loopback, and refused outright at startup on a routable bind. But that refusal
+  runs once. `SIGHUP` re-reads the file afterwards, and anything that yields an
+  empty set there applied it: a truncated `.env`, a file caught mid-rotation, an
+  unmounted secret volume, a mistyped key in `kubectl create secret`. The server
+  kept serving, kept reporting healthy, and every tool — with the APIC
+  credentials behind them — became reachable without a header. The code already
+  logged `auth disabled`; logging is not refusing.
+
+  `KeyStore` now carries `auth_required`, set from the same
+  loopback/`MCP_ALLOW_NO_AUTH` fact the startup guard uses, and `reload()`
+  refuses an empty set rather than applying it — keeping the previous keys and
+  returning `False` so the handler reports it at `error`. The refusal lives in
+  `KeyStore` rather than in the signal handler so it holds for every call site,
+  and is testable without an HTTP layer. Rotation to a non-empty set is
+  unaffected, and loopback dev mode is unchanged.
+
+- **The rate limiter's tracking table had no bound.** `RateLimiter._counts` was
+  a `defaultdict(list)` keyed by peer address that pruned timestamps only for
+  the address being looked at — an address seen once kept its key forever. The
+  table is written by requests carrying no valid credential, so its size was
+  chosen by an unauthenticated caller: measured at 206 bytes per address,
+  200,000 distinct sources retain 39.3 MiB, bounded only by the address space.
+  Under a container memory limit that ends as a SIGKILL, and since CPython does
+  not read cgroup limits it arrives as exit 137 with no traceback and no log
+  line.
+
+  Two mechanisms now bound it: a sweep of the whole table once per window, so
+  the retained set is "addresses that failed within the last window" rather than
+  "addresses that have ever failed", and a hard ceiling of 4,096 entries
+  (~4.5 MiB worst case) for a burst inside a single window. A full table refuses
+  a new address rather than evicting the oldest — eviction would hand an
+  attacker who sprays addresses a fresh budget on every one of them, which is
+  the property the limiter exists to deny.
+
+  Also documented, not changed: "per-IP" means per *peer* address, so behind the
+  reverse proxy this repository ships, the window is global rather than
+  per-client. That is stricter than advertised, not laxer, and reading
+  `X-Forwarded-For` unvalidated would be worse than the imprecision.
+
+Thirteen tests cover both, and were mutation-tested before being committed: five
+sabotages — the wiring in `_serve`, the refusal in `reload()`, the handler's
+check of its return value, the sweep, and the ceiling — each fail the tests that
+target them.
+
+### Changed
+
+- The Cisco DevNet sandbox password no longer appears in `README.md` or
+  `.env.example`. Both now point at the sandbox page, which is where Cisco
+  publishes the credentials and rotates them; a copy here goes stale and teaches
+  the wrong habit. The value remains in the git history, where it is what it
+  always was — a credential Cisco publishes for a shared always-on lab.
 
 ---
 

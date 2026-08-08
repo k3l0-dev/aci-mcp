@@ -43,13 +43,14 @@ That is the whole installation. No checkout, no schema bundle, no data directory
 
 You need Python 3.12+, [`uv`](https://github.com/astral-sh/uv), and an APIC to
 point at. If you do not have one, the free
-[Cisco DevNet Always-On sandbox](https://devnetsandbox.cisco.com) works and
-requires no hardware:
+[Cisco DevNet Always-On ACI sandbox](https://devnetsandbox.cisco.com) works and
+requires no hardware. Cisco publishes its hostname and credentials on that page —
+read them there rather than from here, since Cisco rotates them:
 
 ```bash
-export APIC_HOST=sandboxapicdc.cisco.com
-export APIC_USER=admin
-export APIC_PASSWORD='!v3G@!4@Y'
+export APIC_HOST=<host from the DevNet sandbox page>
+export APIC_USER=<user from the DevNet sandbox page>
+export APIC_PASSWORD=<password from the DevNet sandbox page>
 
 uvx niwashi-mcp
 ```

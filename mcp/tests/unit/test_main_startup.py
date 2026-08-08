@@ -10,6 +10,7 @@ Tests cover:
 """
 
 import logging
+import signal
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -277,3 +278,119 @@ async def test_lifespan_verifies_before_reading_the_catalogue(monkeypatch):
             pass
 
     assert calls == ["verify", "index"]
+
+
+# ── _serve() — a SIGHUP reload cannot disable authentication ──────────────────
+#
+# The startup guard refuses a routable bind with no keys, but it only runs
+# once. SIGHUP re-reads the file afterwards, and anything that yields an empty
+# set there — a truncated .env, a file caught mid-rotation, an unmounted secret
+# volume, a mistyped key — used to strip authentication from every tool while
+# the process kept serving and kept reporting healthy. These tests exercise the
+# real signal handler _serve() installs, and read the KeyStore back out of the
+# middleware stack it handed to FastMCP, so the wiring is asserted end to end
+# rather than the KeyStore alone.
+
+
+def _key_store_from(run_mock):
+    """Pull the KeyStore out of the middleware stack _serve() passed to FastMCP."""
+    for mw in run_mock.call_args.kwargs["middleware"]:
+        if "key_store" in mw.kwargs:
+            return mw.kwargs["key_store"]
+    raise AssertionError("no middleware in the stack carried a key_store")
+
+
+@pytest.mark.asyncio
+async def test_sighup_refuses_an_empty_reload_on_a_routable_bind(monkeypatch, caplog):
+    """The previous keys survive a reload that would have disabled auth."""
+    monkeypatch.setenv("MCP_PORT", "8000")
+    monkeypatch.setenv("MCP_HOST", "0.0.0.0")
+    monkeypatch.delenv("MCP_ALLOW_NO_AUTH", raising=False)
+
+    previous = signal.getsignal(signal.SIGHUP)
+    try:
+        with (
+            patch("niwashi_mcp.main.load_dotenv"),
+            patch("niwashi_mcp.main.load_api_keys", return_value=["key-a", "key-b"]),
+            patch.object(main.mcp, "run_http_async", new_callable=AsyncMock) as run_mock,
+        ):
+            await main._serve()
+
+        store = _key_store_from(run_mock)
+        assert len(store) == 2
+
+        handler = signal.getsignal(signal.SIGHUP)
+        with (
+            patch("niwashi_mcp.main.load_dotenv"),
+            patch("niwashi_mcp.main.load_api_keys", return_value=[]),
+            caplog.at_level(logging.DEBUG),
+        ):
+            handler(signal.SIGHUP, None)
+
+        assert len(store) == 2, "an empty SIGHUP reload stripped authentication"
+        assert "REFUSED" in caplog.text
+    finally:
+        signal.signal(signal.SIGHUP, previous)
+
+
+@pytest.mark.asyncio
+async def test_sighup_still_applies_an_empty_reload_on_loopback(monkeypatch, caplog):
+    """The refusal is scoped to routable binds — loopback dev mode is unchanged."""
+    monkeypatch.setenv("MCP_PORT", "8000")
+    monkeypatch.setenv("MCP_HOST", "127.0.0.1")
+    monkeypatch.delenv("MCP_ALLOW_NO_AUTH", raising=False)
+
+    previous = signal.getsignal(signal.SIGHUP)
+    try:
+        with (
+            patch("niwashi_mcp.main.load_dotenv"),
+            patch("niwashi_mcp.main.load_api_keys", return_value=["key-a"]),
+            patch.object(main.mcp, "run_http_async", new_callable=AsyncMock) as run_mock,
+        ):
+            await main._serve()
+
+        store = _key_store_from(run_mock)
+        handler = signal.getsignal(signal.SIGHUP)
+        with (
+            patch("niwashi_mcp.main.load_dotenv"),
+            patch("niwashi_mcp.main.load_api_keys", return_value=[]),
+            caplog.at_level(logging.DEBUG),
+        ):
+            handler(signal.SIGHUP, None)
+
+        assert len(store) == 0
+        assert "auth disabled" in caplog.text
+        assert "REFUSED" not in caplog.text
+    finally:
+        signal.signal(signal.SIGHUP, previous)
+
+
+@pytest.mark.asyncio
+async def test_sighup_rotates_keys_normally_on_a_routable_bind(monkeypatch, caplog):
+    """The refusal targets emptiness only — rotation without downtime still works."""
+    monkeypatch.setenv("MCP_PORT", "8000")
+    monkeypatch.setenv("MCP_HOST", "0.0.0.0")
+    monkeypatch.delenv("MCP_ALLOW_NO_AUTH", raising=False)
+
+    previous = signal.getsignal(signal.SIGHUP)
+    try:
+        with (
+            patch("niwashi_mcp.main.load_dotenv"),
+            patch("niwashi_mcp.main.load_api_keys", return_value=["old"]),
+            patch.object(main.mcp, "run_http_async", new_callable=AsyncMock) as run_mock,
+        ):
+            await main._serve()
+
+        store = _key_store_from(run_mock)
+        handler = signal.getsignal(signal.SIGHUP)
+        with (
+            patch("niwashi_mcp.main.load_dotenv"),
+            patch("niwashi_mcp.main.load_api_keys", return_value=["new-1", "new-2"]),
+            caplog.at_level(logging.DEBUG),
+        ):
+            handler(signal.SIGHUP, None)
+
+        assert store.get() == ["new-1", "new-2"]
+        assert "2 key(s)" in caplog.text
+    finally:
+        signal.signal(signal.SIGHUP, previous)

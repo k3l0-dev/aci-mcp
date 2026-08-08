@@ -449,3 +449,112 @@ def test_protected_path_still_requires_auth_after_well_known_bypass():
     """Bypassing /.well-known/ must not affect protection of /mcp."""
     client = TestClient(_app(KEYS))
     assert client.get("/mcp").status_code == 401
+
+
+# ── KeyStore — the fail-open refusal ──────────────────────────────────────────
+#
+# An empty key set makes ApiKeyMiddleware a no-op. That is the documented dev
+# mode on loopback, and _serve() refuses it outright on a routable bind — but
+# that refusal only runs at startup. These tests pin the invariant that closes
+# the SIGHUP path behind it.
+
+
+def test_key_store_defaults_to_permitting_an_empty_reload():
+    """Without auth_required, an empty reload applies — the loopback dev mode."""
+    ks = KeyStore(frozenset({"a"}))
+    assert ks.reload(frozenset()) is True
+    assert ks.get() == frozenset()
+    assert not ks
+
+
+def test_key_store_refuses_an_empty_reload_when_auth_is_required():
+    """The keys survive a reload that would have disabled authentication."""
+    ks = KeyStore(frozenset({"a", "b"}), auth_required=True)
+    assert ks.reload(frozenset()) is False
+    assert ks.get() == frozenset({"a", "b"})
+    assert len(ks) == 2
+
+
+def test_key_store_applies_a_populated_reload_when_auth_is_required():
+    """The refusal targets emptiness only — rotation still works."""
+    ks = KeyStore(frozenset({"old"}), auth_required=True)
+    assert ks.reload(frozenset({"new"})) is True
+    assert ks.get() == frozenset({"new"})
+
+
+def test_key_store_refusal_is_repeatable():
+    """A second failed reload does not erode the retained set."""
+    ks = KeyStore(frozenset({"a"}), auth_required=True)
+    ks.reload(frozenset())
+    ks.reload(frozenset())
+    assert ks.get() == frozenset({"a"})
+
+
+# ── RateLimiter — the memory bound ────────────────────────────────────────────
+#
+# The table is written by requests that carry no valid credential, so its size
+# is chosen by an unauthenticated caller. Two mechanisms bound it: a sweep once
+# per window for ordinary churn, and a hard ceiling for a burst inside one
+# window. Both are asserted here.
+
+
+def test_rate_limiter_sweeps_addresses_whose_window_expired():
+    """The table retains addresses that failed recently, not every address ever seen."""
+    import time as _time
+
+    limiter = RateLimiter(max_attempts=5, window_s=1)
+    for i in range(50):
+        limiter.is_allowed(f"10.0.0.{i}")
+    assert len(limiter._counts) == 50
+
+    _time.sleep(1.1)
+    limiter.is_allowed("10.9.9.9")
+
+    # Everything from before the window is gone; only the fresh address remains.
+    assert len(limiter._counts) == 1
+
+
+def test_rate_limiter_table_is_bounded_under_address_spraying():
+    """A caller with a large address space cannot grow the table without limit."""
+    limiter = RateLimiter(max_attempts=5, window_s=60, max_tracked_ips=64)
+    for i in range(5_000):
+        limiter.is_allowed(f"2001:db8::{i:x}")
+    assert len(limiter._counts) <= 64
+
+
+def test_rate_limiter_refuses_a_new_address_when_the_table_is_full():
+    """Full table refuses rather than evicts — eviction would hand out fresh budgets."""
+    limiter = RateLimiter(max_attempts=5, window_s=60, max_tracked_ips=2)
+    assert limiter.is_allowed("1.1.1.1") is True
+    assert limiter.is_allowed("2.2.2.2") is True
+    assert limiter.is_allowed("3.3.3.3") is False
+
+
+def test_rate_limiter_full_table_does_not_affect_already_tracked_addresses():
+    """A tracked address keeps its own budget while the table is saturated."""
+    limiter = RateLimiter(max_attempts=5, window_s=60, max_tracked_ips=2)
+    limiter.is_allowed("1.1.1.1")
+    limiter.is_allowed("2.2.2.2")
+    limiter.is_allowed("3.3.3.3")  # refused, table full
+    assert limiter.is_allowed("1.1.1.1") is True
+
+
+def test_rate_limiter_full_table_recovers_once_the_window_rolls_over():
+    """Saturation is temporary: expired addresses are swept and slots free up."""
+    import time as _time
+
+    limiter = RateLimiter(max_attempts=5, window_s=1, max_tracked_ips=2)
+    limiter.is_allowed("1.1.1.1")
+    limiter.is_allowed("2.2.2.2")
+    assert limiter.is_allowed("3.3.3.3") is False
+
+    _time.sleep(1.1)
+    assert limiter.is_allowed("3.3.3.3") is True
+
+
+def test_rate_limiter_threshold_still_holds_after_the_bound_was_added():
+    """The bound must not have loosened the limit it exists alongside."""
+    limiter = RateLimiter(max_attempts=2, window_s=60, max_tracked_ips=1)
+    assert limiter.is_allowed("1.2.3.4") is True
+    assert limiter.is_allowed("1.2.3.4") is True
+    assert limiter.is_allowed("1.2.3.4") is False

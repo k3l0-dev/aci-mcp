@@ -998,10 +998,16 @@ async def _serve() -> None:
 
     from starlette.middleware import Middleware
 
-    key_store = KeyStore(load_api_keys())
+    # An empty key set disables authentication outright. That is intended on
+    # loopback, and refused below on a routable bind — but the refusal only
+    # guards startup. Handing the same fact to the KeyStore is what stops a
+    # later SIGHUP from re-creating the refused combination behind the guard's
+    # back, with the process still running and still reporting healthy.
+    auth_optional = _is_loopback(bind_host) or allow_no_auth
+    key_store = KeyStore(load_api_keys(), auth_required=not auth_optional)
     if key_store:
         logger.info("API key authentication enabled (%d key(s) loaded)", len(key_store))
-    elif _is_loopback(bind_host) or allow_no_auth:
+    elif auth_optional:
         logger.warning(
             "MCP_API_KEYS is not set — running WITHOUT authentication on %s. "
             "Acceptable on loopback; set MCP_API_KEYS before exposing this server.",
@@ -1036,7 +1042,21 @@ async def _serve() -> None:
     def _handle_sighup(_signum, _frame):
         load_dotenv(ENV_FILE, override=True)
         new_keys = load_api_keys()
-        key_store.reload(new_keys)
+        if not key_store.reload(new_keys):
+            # Refused, not applied: this bind requires authentication and the
+            # reload produced nothing to authenticate against. A truncated
+            # .env, a file caught mid-rotation, an unmounted secret volume or a
+            # mistyped key all land here, and applying any of them would strip
+            # authentication from every tool while the server kept serving.
+            logger.error(
+                "SIGHUP — MCP_API_KEYS is empty after reload; REFUSED, keeping the "
+                "previous %d key(s). Applying it would have disabled authentication "
+                "on %s, which is routable. Fix the file and send SIGHUP again, or "
+                "set MCP_ALLOW_NO_AUTH=true and restart if that is truly intended.",
+                len(key_store),
+                bind_host,
+            )
+            return
         n = len(new_keys)
         if n:
             logger.info("SIGHUP — API keys reloaded (%d key(s))", n)
