@@ -89,7 +89,8 @@ class TestEnvironmentOverride:
         [
             # ACI_MCP_DATA_DIR is gone in 2.0 — the catalogue ships inside the
             # niwaki dependency, so there is no data directory left to point at.
-            ("ACI_MCP_ENV_FILE", "ENV_FILE", "/opt/secrets/aci.env"),
+            # Its absence is asserted below rather than merely noted here.
+            ("NIWASHI_MCP_ENV_FILE", "ENV_FILE", "/opt/secrets/aci.env"),
         ],
     )
     def test_override_is_honoured(self, var, attr, value, monkeypatch):
@@ -105,6 +106,35 @@ class TestEnvironmentOverride:
             assert resolved.startswith(value), f"{attr} ignored {var}: {resolved}"
         finally:
             monkeypatch.delenv(var, raising=False)
+            importlib.reload(main_mod)
+
+    @pytest.mark.parametrize("retired", ["ACI_MCP_DATA_DIR", "ACI_MCP_ENV_FILE"])
+    def test_a_retired_variable_is_not_read(self, retired, monkeypatch, tmp_path):
+        """Neither retired name may quietly steer path resolution.
+
+        Both failure modes here are silent, which is why they are asserted
+        rather than left to a comment. `ACI_MCP_DATA_DIR` died with the jsonmeta
+        data plane in 2.0; `ACI_MCP_ENV_FILE` was renamed to
+        `NIWASHI_MCP_ENV_FILE` before ever shipping. If either were still
+        honoured, an operator would point it at a file the server then read
+        without saying so — and if a *future* edit reintroduced the old spelling
+        as an alias, the rename would be half-done with nothing to catch it.
+        """
+        import importlib
+
+        import niwashi_mcp.main as main_mod
+
+        decoy = tmp_path / "decoy.env"
+        decoy.write_text("APIC_HOST=should-never-be-read\n")
+        monkeypatch.setenv(retired, str(decoy))
+        try:
+            reloaded = importlib.reload(main_mod)
+            assert str(decoy) not in str(reloaded.ENV_FILE), (
+                f"{retired} still steers ENV_FILE — it was retired in 2.0"
+            )
+            assert not hasattr(reloaded, "DATA_DIR"), "the 2.0 data directory is gone"
+        finally:
+            monkeypatch.delenv(retired, raising=False)
             importlib.reload(main_mod)
 
 

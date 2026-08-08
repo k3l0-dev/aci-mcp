@@ -3,7 +3,7 @@
 """
 main.py
 
-Schema-driven FastMCP server for Cisco ACI APIC — v1.2.2.
+Schema-driven FastMCP server for Cisco ACI APIC — v2.0.0.
 
 Architecture
 ------------
@@ -143,8 +143,8 @@ _CHECKOUT = _checkout_root()
 
 _USER_ENV = Path.home() / ".config" / "niwashi-mcp" / ".env"
 ENV_FILE = (
-    Path(os.environ["ACI_MCP_ENV_FILE"])
-    if os.environ.get("ACI_MCP_ENV_FILE")
+    Path(os.environ["NIWASHI_MCP_ENV_FILE"])
+    if os.environ.get("NIWASHI_MCP_ENV_FILE")
     else _first_existing(
         Path.cwd() / ".env",
         _CHECKOUT / ".env" if _CHECKOUT else None,
@@ -258,7 +258,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
 )
-logger = logging.getLogger("aci-mcp")
+logger = logging.getLogger("niwashi-mcp")
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
@@ -347,7 +347,7 @@ async def app_lifespan(server: FastMCP):
 # ── Server ────────────────────────────────────────────────────────────────────
 
 mcp = FastMCP(
-    name="aci-mcp",
+    name="niwashi-mcp",
     lifespan=app_lifespan,
     instructions="""
 You are an assistant for querying a Cisco ACI fabric through its APIC REST API.

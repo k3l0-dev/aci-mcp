@@ -39,7 +39,7 @@ from starlette.responses import JSONResponse
 
 from niwashi_mcp.exceptions import AuthenticationError
 
-logger = logging.getLogger("aci-mcp.auth")
+logger = logging.getLogger("niwashi-mcp.auth")
 
 _BEARER_PREFIX = "Bearer "
 

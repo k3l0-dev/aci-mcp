@@ -3,16 +3,16 @@
 """
 exceptions.py
 
-All aci-mcp exceptions in a single module so callers can import from one place.
+All niwashi-mcp exceptions in a single module so callers can import from one place.
 
 Hierarchy
 ---------
-AciMcpError
+NiwashiMcpError
 ├── ConfigurationError        — missing or invalid startup configuration
 ├── AuthenticationError       — incoming request carries no valid API key
 ├── RegistryError             — base for registry load failures
-│   ├── DescriptionsLoadError — class-descriptions.json absent or malformed
-│   └── SchemaLoadError       — jsonmeta schema file malformed (exists but invalid)
+│   ├── DescriptionsLoadError — niwaki catalogue missing, unreadable, or moved
+│   └── SchemaLoadError       — retained for compatibility; unreachable since 2.0
 ├── UnknownClassError         — class name not found in the descriptions registry
 ├── FilterError               — invalid identifier or unsafe value in build_filter
 └── ApicError                 — base for APIC communication errors
@@ -23,14 +23,14 @@ AciMcpError
 """
 
 
-class AciMcpError(Exception):
-    """Base exception for all aci-mcp errors."""
+class NiwashiMcpError(Exception):
+    """Base exception for all niwashi-mcp errors."""
 
 
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 
-class ConfigurationError(AciMcpError):
+class ConfigurationError(NiwashiMcpError):
     """Required environment variable is missing or has an invalid value.
 
     Raised at server startup before any tool is served.
@@ -40,7 +40,7 @@ class ConfigurationError(AciMcpError):
 # ── Authentication ────────────────────────────────────────────────────────────
 
 
-class AuthenticationError(AciMcpError):
+class AuthenticationError(NiwashiMcpError):
     """Incoming MCP request is missing or carrying an invalid API key.
 
     Raised by _authenticate() in middleware/auth.py and caught there to produce
@@ -52,7 +52,7 @@ class AuthenticationError(AciMcpError):
 # ── Registry ──────────────────────────────────────────────────────────────────
 
 
-class RegistryError(AciMcpError):
+class RegistryError(NiwashiMcpError):
     """Base for registry (descriptions / schemas) load failures."""
 
 
@@ -79,7 +79,7 @@ class SchemaLoadError(RegistryError):
 # ── Class validation ──────────────────────────────────────────────────────────
 
 
-class UnknownClassError(AciMcpError):
+class UnknownClassError(NiwashiMcpError):
     """ACI class name not found in the descriptions registry.
 
     Raised by the query() tool when the caller supplies a class name that is
@@ -107,7 +107,7 @@ class UnknownClassError(AciMcpError):
 # ── Filter ────────────────────────────────────────────────────────────────────
 
 
-class FilterError(AciMcpError):
+class FilterError(NiwashiMcpError):
     """Invalid input to build_filter().
 
     Raised when a class name or attribute key contains characters outside
@@ -119,7 +119,7 @@ class FilterError(AciMcpError):
 # ── APIC communication ────────────────────────────────────────────────────────
 
 
-class ApicError(AciMcpError):
+class ApicError(NiwashiMcpError):
     """Base for all APIC communication errors."""
 
 

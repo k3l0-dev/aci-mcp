@@ -24,6 +24,30 @@ deleted.
 The package is renamed **`niwashi-mcp`** — 庭師, the gardener who tends the
 niwaki. The 1.x name carried a protected mark it had no licence to use.
 
+### Changed — the retired name
+
+- **Every public identifier drops the retired name.** `AciMcpError` becomes
+  `NiwashiMcpError` (and with it the base of the whole exception hierarchy),
+  `ACI_MCP_ENV_FILE` becomes `NIWASHI_MCP_ENV_FILE`, the FastMCP server
+  announces itself as `niwashi-mcp` in the MCP handshake, and the logger tree
+  moves from `aci-mcp` / `aci-mcp.apic` / `aci-mcp.auth` to `niwashi-mcp.*`.
+
+  The reason is narrower and harder than trademark caution: **`aci-mcp` is
+  already taken on PyPI** by an unrelated project (Aipolabs, `1.0.0b13`). The
+  name was never available. A partial rename would have left this server
+  announcing a name that resolves to somebody else's package.
+
+  `NIWASHI_MCP_ENV_FILE` costs nobody anything — it was introduced inside the
+  2.0 cycle and has never appeared in a tagged release. The other three shipped
+  in 1.2.2, which was installable only from a git checkout; renaming them now
+  rather than later is the difference between one breaking change and two.
+
+  Retired names are **not** accepted as aliases. `ACI_MCP_ENV_FILE` and
+  `ACI_MCP_DATA_DIR` are both ignored, and a test asserts it — an alias that
+  silently steered path resolution is the one failure mode nobody notices. The
+  2.0 removal of `ACI_MCP_DATA_DIR` had until now been recorded only in a
+  source comment.
+
 ### Added
 
 - **The niwaki catalogue adapter (`registry/catalog.py`), not yet wired in.**

@@ -225,10 +225,10 @@ def test_authenticate_raises_for_empty_key_set():
         _authenticate("any", frozenset())
 
 
-def test_authenticate_error_is_aci_mcp_error():
-    from niwashi_mcp.exceptions import AciMcpError
+def test_authenticate_error_is_niwashi_mcp_error():
+    from niwashi_mcp.exceptions import NiwashiMcpError
 
-    with pytest.raises(AciMcpError):
+    with pytest.raises(NiwashiMcpError):
         _authenticate(None, frozenset({"k"}))
 
 

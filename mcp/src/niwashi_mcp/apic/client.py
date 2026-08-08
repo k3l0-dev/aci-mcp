@@ -36,7 +36,7 @@ from niwashi_mcp.exceptions import (
 )
 from niwashi_mcp.registry.filter import build_filter
 
-logger = logging.getLogger("aci-mcp.apic")
+logger = logging.getLogger("niwashi-mcp.apic")
 
 # fetch_all safety caps — a fabric-wide class scan with no scope_dn can be
 # unbounded (a bad filter, or a class with tens of thousands of instances),
