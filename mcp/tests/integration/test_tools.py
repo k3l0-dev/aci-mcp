@@ -8,7 +8,6 @@ Uses StubBackend and MINIMAL_DESCRIPTIONS from conftest so tests always run
 without a live APIC or the full data/ schema collection.
 """
 
-import json
 from pathlib import Path
 
 import pytest
@@ -513,41 +512,6 @@ _EXTRA_ONLY_SCHEMA = {
 
 
 @pytest.mark.asyncio
-async def test_query_allows_class_absent_from_descriptions_but_with_schema(
-    sample_imdata, tmp_path
-):
-    """A class with a schema file but no class-descriptions entry is allowed
-    through instead of raising UnknownClassError."""
-    from niwashi_mcp.main import query
-
-    (tmp_path / "aaaExtraOnlyClass.json").write_text(
-        json.dumps(_EXTRA_ONLY_SCHEMA), encoding="utf-8"
-    )
-    ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
-
-    envelope = await query("aaaExtraOnlyClass", ctx)
-    assert isinstance(envelope["results"], list)
-
-
-@pytest.mark.asyncio
-async def test_query_allows_class_with_schema_logs_warning_not_error(
-    sample_imdata, tmp_path
-):
-    """The schema-fallback path logs a warning (for observability) rather
-    than silently allowing the query with no trace."""
-    from niwashi_mcp.main import query
-
-    (tmp_path / "aaaExtraOnlyClass.json").write_text(
-        json.dumps(_EXTRA_ONLY_SCHEMA), encoding="utf-8"
-    )
-    ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
-
-    await query("aaaExtraOnlyClass", ctx)
-    ctx.warning.assert_called_once()
-    assert "schema file resolved" in ctx.warning.call_args[0][0]
-
-
-@pytest.mark.asyncio
 async def test_query_rejects_class_with_neither_description_nor_schema(
     sample_imdata, tmp_path
 ):
@@ -716,23 +680,5 @@ async def test_count_unknown_class_logs_warning(tool_ctx):
     with pytest.raises(UnknownClassError):
         await count("xyzFakeClass", tool_ctx)
     tool_ctx.warning.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_count_allows_class_absent_from_descriptions_but_with_schema(
-    sample_imdata, tmp_path
-):
-    """count() must agree with query() on the registry/schema fallback — a
-    class with a schema file but no class-descriptions entry is allowed
-    through instead of raising UnknownClassError."""
-    from niwashi_mcp.main import count
-
-    (tmp_path / "aaaExtraOnlyClass.json").write_text(
-        json.dumps(_EXTRA_ONLY_SCHEMA), encoding="utf-8"
-    )
-    ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
-
-    result = await count("aaaExtraOnlyClass", ctx)
-    assert result["class_name"] == "aaaExtraOnlyClass"
 
 

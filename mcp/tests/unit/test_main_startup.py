@@ -182,7 +182,10 @@ async def test_lifespan_yields_expected_context_keys(monkeypatch):
          patch("niwashi_mcp.main.catalog.descriptions_index", return_value=fake_descs), \
          patch("niwashi_mcp.main.ApicClient", return_value=mock_backend):
         async with main.app_lifespan(MagicMock()) as ctx:
-            assert set(ctx.keys()) >= {"descriptions", "backend", "schemas_dir"}
+            # `schemas_dir` is gone in 2.0: the catalogue replaced the
+            # jsonmeta directory, so there is no path left to resolve.
+            assert set(ctx.keys()) >= {"descriptions", "backend"}
+            assert "schemas_dir" not in ctx
             assert ctx["descriptions"] is fake_descs
             assert ctx["backend"] is mock_backend
 
