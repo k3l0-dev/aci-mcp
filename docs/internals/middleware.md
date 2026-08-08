@@ -63,23 +63,6 @@ All other requests (including non-HTTP ASGI events such as WebSocket upgrades) p
 
 `BaseHTTPMiddleware` buffers the request body and adds overhead. `HealthMiddleware` talks directly to the ASGI `send` callable — it sends one `http.response.start` event and one `http.response.body` event and returns. The body and the header list are module-level constants, encoded once at import, so a probe every 30 seconds costs nothing but the two `send()` calls.
 
-### Docker healthcheck
-
-`mcp/deploy/docker-compose.yml` probes this endpoint:
-
-```yaml
-healthcheck:
-  test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
-  interval: 30s
-  timeout: 5s
-  retries: 3
-  start_period: 15s
-```
-
-Caddy waits for the healthcheck to pass (`service_healthy`) before accepting traffic.
-
----
-
 ## OAuthDiscoveryMiddleware
 
 **Source:** `mcp/src/niwashi_mcp/middleware/oauth.py`

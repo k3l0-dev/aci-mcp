@@ -22,7 +22,8 @@ graph LR
         E4["APIC_VERIFY_SSL"]
         E5["MCP_PORT"]
         E6["MCP_API_KEYS"]
-        E7["MCP_DOMAIN"]
+        E8["MCP_HOST"]
+        E9["MCP_ALLOW_NO_AUTH"]
     end
 
     subgraph shell["process environment only"]
@@ -39,10 +40,8 @@ graph LR
     subgraph server["FastMCP server"]
         S1["uvicorn port"]
         S2["ApiKeyMiddleware<br/>api_keys"]
-    end
-
-    subgraph caddy["Caddy"]
-        C1["virtual host"]
+        S3["uvicorn bind address"]
+        S4["startup guard<br/>routable bind + no keys = refused"]
     end
 
     E1 --> A1
@@ -51,7 +50,9 @@ graph LR
     E4 --> A4
     E5 --> S1
     E6 --> S2
-    E7 --> C1
+    E8 --> S3
+    E8 --> S4
+    E9 --> S4
     X1 --> env
 ```
 
@@ -79,7 +80,34 @@ graph LR
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `MCP_PORT` | No | `8000` | TCP port the MCP HTTP server listens on. Must be an integer — a non-integer value raises `ConfigurationError` at startup. |
-| `MCP_API_KEYS` | Production: **Yes** | — | Comma-separated list of pre-shared bearer tokens. Empty = authentication disabled (development only). Re-readable at runtime with `SIGHUP`. |
+| `MCP_API_KEYS` | Production: **Yes** | — | Comma-separated list of pre-shared bearer tokens. Empty = authentication disabled (development only). Re-readable at runtime with `SIGHUP` — but a reload that would empty the set on a routable bind is **refused**, not applied. |
+| `MCP_HOST` | No | `127.0.0.1` | Interface the server binds. Loopback by default, so a fresh install is not reachable from the network. Set it to `0.0.0.0` or a specific address to expose the server — see the guard below. |
+| `MCP_ALLOW_NO_AUTH` | No | `false` | `true` accepts a routable bind with `MCP_API_KEYS` unset. Any other value leaves the refusal in place. |
+
+### The bind guard
+
+This process holds APIC credentials, usually for an admin-capable account. A
+routable bind with no authentication hands every tool to anyone who can reach
+the port — no header required. So the combination is **refused at startup**,
+not warned about:
+
+```text
+Refusing to listen on 0.0.0.0 without authentication.
+This server holds APIC credentials; binding a routable interface with
+MCP_API_KEYS unset exposes every tool to the network.
+Choose one:
+  - set MCP_API_KEYS (recommended), or
+  - keep the default MCP_HOST=127.0.0.1, or
+  - set MCP_ALLOW_NO_AUTH=true to accept the risk explicitly.
+```
+
+`0.0.0.0` and `::` count as routable however local the machine feels — they bind
+every interface. An address that does not parse is treated as routable too,
+which is the safe reading when in doubt.
+
+The guard runs once, at startup. The `SIGHUP` reload path cannot undo it: a
+reload that would leave the key set empty on a routable bind is refused and the
+previous keys are kept.
 
 ### Generating API keys
 
@@ -144,14 +172,6 @@ container.
 
 ---
 
-## HTTPS / Caddy
-
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `MCP_DOMAIN` | Yes (when using docker-compose) | — | Public hostname or internal FQDN. Read by **Caddy**, not by the server — it is substituted into the `Caddyfile` virtual-host block. See [HTTPS deployment](../getting-started/https.md). |
-
----
-
 ## Precedence
 
 `.env` is loaded via `python-dotenv` with `override=False` (the library default): it only fills in variables that aren't already set in the process environment. **The system environment wins, not `.env`.** If you export `APIC_HOST` (or any other variable) in your shell, editing `.env` has no effect until you unset the shell variable or start a fresh shell.
@@ -174,10 +194,9 @@ APIC_USER=admin
 APIC_PASSWORD=Cisco1234!
 APIC_VERIFY_SSL=false
 
+MCP_HOST=127.0.0.1
 MCP_PORT=8000
 MCP_API_KEYS=abc123xyz,def456uvw
-
-MCP_DOMAIN=mcp.mycompany.internal
 ```
 
 ---

@@ -22,8 +22,6 @@ around: `uvx niwashi-mcp` is the whole installation.
 | Page | Description |
 |---|---|
 | [Quickstart](getting-started/quickstart.md) | Install and run — up in 5 minutes |
-| [Docker](getting-started/docker.md) | Single-container deployment |
-| [HTTPS with Caddy](getting-started/https.md) | Production stack — TLS termination, Let's Encrypt, LAN certs |
 
 ### Tools reference
 
@@ -66,9 +64,6 @@ around: `uvx niwashi-mcp` is the whole installation.
 ```text
 LLM client
     │  MCP protocol (JSON-RPC over HTTP)
-    ▼
-Caddy (TLS termination)                  ← port 443
-    │  HTTP plain (internal network)
     ▼
 HealthMiddleware                         ← /health short-circuit (no auth)
     │

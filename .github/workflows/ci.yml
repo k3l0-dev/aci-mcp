@@ -73,12 +73,3 @@ jobs:
       - name: Audit mcp/ (including dev dependencies)
         working-directory: mcp
         run: uv export --frozen --no-emit-project | uvx pip-audit -r /dev/stdin
-
-  build:
-    name: Docker build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Build Docker image
-        run: docker build -f mcp/deploy/Dockerfile . -t niwashi-mcp:ci

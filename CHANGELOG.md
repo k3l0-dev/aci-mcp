@@ -7,6 +7,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+### Removed
+
+- **The Docker deployment path is gone** — `mcp/deploy/` (Dockerfile,
+  `docker-compose.yml`, `Caddyfile`), `docs/getting-started/docker.md`,
+  `docs/getting-started/https.md`, the Docker build jobs in both CI pipelines,
+  the `MCP_DOMAIN` variable, and every reference in the README and `docs/`.
+
+  It was shipped broken. Since 2.0 the server binds `127.0.0.1` by default and
+  nothing in the image, the compose file or `.env.example` overrode it, so the
+  documented `docker run -p 8000:8000` published a port nothing listened on.
+  The compose stack was worse: its healthcheck probed loopback from *inside*
+  the container, so it passed, the container reported healthy, and Caddy then
+  failed with connection refused. No image was ever published, so nothing
+  downstream depends on this.
+
+  Running the server directly — `uvx niwashi-mcp`, or the console script from a
+  virtualenv — is unaffected and is now the only documented path.
+
+### Added
+
+- **`MCP_HOST` and `MCP_ALLOW_NO_AUTH` are documented.** Both were read by the
+  server since 2.0 and appeared nowhere but a docstring — while
+  `docs/architecture/overview.md` positively asserted a list of read variables
+  that omitted them. They are now in `.env.example`, the settings reference
+  (with the startup guard and its exact message), the README configuration
+  table, and the variable map. The absence of `MCP_HOST` from `.env.example` is
+  what made the container defect above invisible.
+
 ### Fixed
 
 - **Authentication could be removed by a SIGHUP, on a bind that refuses to start

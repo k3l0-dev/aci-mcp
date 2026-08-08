@@ -4,7 +4,7 @@
 middleware/health.py
 
 Lightweight ASGI middleware that serves GET /health without authentication.
-Must be placed as the outermost middleware so Docker and load-balancer
+Must be placed as the outermost middleware so load-balancer and supervisor
 health checks are never blocked by auth or discovery middleware.
 """
 

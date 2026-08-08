@@ -264,7 +264,6 @@ The command changed, and one whole step disappeared.
 | Install | `git clone` + download the schema bundle + `tar` | `uvx niwashi-mcp` |
 | Download | 98.8 MB | 16.2 MB — the niwaki wheel |
 | Object model on disk | 1.83 GB across 15 452 files | one 36 229 120-byte file |
-| Docker image | 3.97 GB | 457 MB |
 | Start | `python main.py` | `niwashi-mcp` |
 
 The step that downloaded and extracted a jsonmeta bundle into `data/schemas/` is

@@ -19,7 +19,6 @@ so any LLM can reach all 15,452 classes with no hardcoded class knowledge.</p>
 [![Commercial License](https://img.shields.io/badge/license-Commercial-orange)](LICENSE-COMMERCIAL.md)
 [![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-3.4+-00C896)](https://github.com/jlowin/fastmcp)
-[![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](mcp/deploy/Dockerfile)
 <br/>
 
 ![Cisco ACI](https://img.shields.io/badge/Cisco-ACI-1BA0D7?style=flat-square&logo=cisco&logoColor=white)
@@ -56,7 +55,7 @@ uvx niwashi-mcp
 ```
 
 The server listens on `http://127.0.0.1:8000` — loopback only by default. Set `MCP_HOST` to expose it, and set `MCP_API_KEYS` first: it holds your APIC credentials, so a routable bind without authentication is refused.
-`/health` answers without authentication for container and load-balancer probes.
+`/health` answers without authentication, for load-balancer and supervisor probes.
 Startup logs how many classes were indexed and which APIC release the object
 model was built from.
 
@@ -84,8 +83,8 @@ knows how to navigate the object model.
 The server speaks MCP over HTTP. Point your client at:
 
 ```text
-http://localhost:8000/mcp      # local
-https://your-domain.com/mcp    # production, behind Caddy TLS
+http://localhost:8000/mcp          # local
+https://your-host.example.com/mcp  # behind your own TLS terminator
 ```
 
 #### Claude Desktop
@@ -196,7 +195,6 @@ unchanged; only the source of the data moved.
 | Install | `git clone`, download a schema bundle, extract it | `uvx niwashi-mcp` |
 | Download | 98.8 MB tarball | the `niwaki` wheel (18.8 MB at 1.8.0) |
 | Object model on disk | 1.82 GB across 15,452 jsonmeta files | one 36 MB SQLite file |
-| Container image | 3.97 GB | 457 MB |
 | Data directory to manage | `data/` | none |
 
 The APIC release is now pinned by the `niwaki` dependency rather than chosen by
@@ -260,45 +258,14 @@ Per-tool reference with worked examples: [`docs/tools/`](docs/tools/).
 | `APIC_VERIFY_SSL` | | `false` | Set `true` to enforce TLS certificate verification |
 | `MCP_PORT` | | `8000` | HTTP port the server listens on |
 | `MCP_API_KEYS` | | — | Comma-separated bearer tokens. Unset means no authentication (development only) |
+| `MCP_HOST` | | `127.0.0.1` | Interface to bind. Loopback by default; a routable value requires `MCP_API_KEYS` |
+| `MCP_ALLOW_NO_AUTH` | | `false` | `true` accepts a routable bind with `MCP_API_KEYS` unset. Refused otherwise |
 | `NIWASHI_MCP_ENV_FILE` | | — | Explicit path to the `.env` file to load |
-| `MCP_DOMAIN` | | — | Public hostname for Caddy TLS. Read by the production compose stack, not by the server |
 
 **Hot reload:** send `SIGHUP` to the process to reload `MCP_API_KEYS` from the
 `.env` file without restarting — key rotation with no downtime.
 
 Full reference: [`docs/configuration/settings.md`](docs/configuration/settings.md).
-
----
-
-## Docker
-
-```bash
-# The build context must be the repository root
-docker build -f mcp/deploy/Dockerfile . -t niwashi-mcp
-docker run --env-file .env -p 8000:8000 niwashi-mcp
-```
-
-The image installs the package rather than copying modules in, so a container
-runs exactly what a wheel produces. There is no volume to mount: the object
-model is inside the image, in the `niwaki` dependency.
-
-### Production — MCP behind Caddy
-
-The production stack puts the server behind a Caddy reverse proxy that
-terminates TLS. The MCP port is never published on the host; all traffic enters
-through Caddy on 443.
-
-```bash
-# Set MCP_DOMAIN and MCP_API_KEYS in .env, then:
-docker compose -f mcp/deploy/docker-compose.yml up -d
-```
-
-| TLS mode | When to use it |
-|---|---|
-| **Let's Encrypt** | Public hostname, ports 80/443 reachable from the internet |
-| **Caddy internal CA** | LAN or self-signed — run `docker compose exec caddy caddy trust` once |
-
-Details: [`docs/getting-started/https.md`](docs/getting-started/https.md).
 
 ---
 
@@ -312,7 +279,8 @@ Details: [`docs/getting-started/https.md`](docs/getting-started/https.md).
 - Only three paths bypass authentication, by design: `/health` for liveness
   probes, and `/.well-known/*` plus `/register` so spec-compliant clients can
   complete discovery before they hold a token
-- TLS terminated by Caddy in production; the MCP port is never exposed
+- Loopback bind by default — a routable `MCP_HOST` without `MCP_API_KEYS` is
+  refused at startup, not merely warned about
 - API keys reloadable via `SIGHUP`
 
 Vulnerability disclosure policy: [SECURITY.md](SECURITY.md).
@@ -364,7 +332,7 @@ Full documentation is in [`docs/`](docs/):
 
 | Section | Contents |
 |---|---|
-| [`docs/getting-started/`](docs/getting-started/) | Quickstart, Docker, HTTPS / TLS setup |
+| [`docs/getting-started/`](docs/getting-started/) | Quickstart |
 | [`docs/concepts/`](docs/concepts/) | The ACI object model, for readers who are not network engineers |
 | [`docs/tools/`](docs/tools/) | Tool reference with examples |
 | [`docs/configuration/`](docs/configuration/) | Every environment variable |

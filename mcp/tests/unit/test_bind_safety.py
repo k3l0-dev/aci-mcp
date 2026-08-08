@@ -7,7 +7,7 @@ listened on localhost. The documented quickstart (`uvx niwashi-mcp`) therefore
 put an unauthenticated server holding APIC credentials on every interface of
 the machine, and the only guard was a log line that scrolls past.
 
-The production path was fine: `deploy/docker-compose.yml` uses `expose:` rather
+The deployment path that existed at the time was fine: it used `expose:` rather
 than `ports:`. It was the *documented* path that was exposed, which is the one
 a first-time user takes.
 

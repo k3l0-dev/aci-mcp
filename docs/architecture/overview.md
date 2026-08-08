@@ -30,7 +30,6 @@ Until 1.2.2 the server read raw jsonmeta files from a schema bundle that had to 
 | Install | `git clone` + download script + `tar` | `uvx niwashi-mcp` |
 | Download | 98.8 MB | 16.2 MB — the niwaki wheel |
 | On disk | 1.83 GB | 32.8 MB |
-| Docker image | 3.97 GB | 457 MB |
 
 The catalogue is `catalog.db`, resolved at runtime as `<niwaki package dir>/query/_catalog/catalog.db` — 36,229,120 bytes, built from **APIC 6.0(9c)**, holding **15,452 classes** and 332,297 property rows. `mcp/pyproject.toml` pins the dependency to `niwaki>=1.8,<1.9` — a single minor, because this server reads the catalogue's *private* schema, which niwaki may restructure in any 1.x release without breaking SemVer; the version installed here is 1.8.0.
 
@@ -53,7 +52,6 @@ graph TD
         proj["mcp/pyproject.toml<br/>distribution niwashi-mcp"]
         shim["mcp/main.py<br/>deprecated launcher"]
         tests["mcp/tests/"]
-        deploy["mcp/deploy/<br/>Dockerfile, compose, Caddyfile"]
         docs["docs/"]
         envex[".env.example"]
     end
@@ -88,9 +86,8 @@ graph TB
         llm["LLM"]
     end
 
-    subgraph prod["Production stack — docker compose"]
-        caddy["Caddy<br/>TLS termination<br/>ports 443 and 80"]
-        subgraph mcp_server["niwashi-mcp container — port 8000, internal"]
+    subgraph prod["niwashi-mcp process — MCP_HOST:MCP_PORT"]
+        subgraph mcp_server["HTTP layer"]
             health["HealthMiddleware<br/>GET /health"]
             oauth["OAuthDiscoveryMiddleware<br/>/.well-known/oauth-protected-resource"]
             auth["ApiKeyMiddleware<br/>bearer or X-API-Key, rate limiting"]
@@ -117,8 +114,7 @@ graph TB
         db["query/_catalog/catalog.db<br/>15,452 classes in one SQLite file"]
     end
 
-    llm -->|"MCP JSON-RPC"| caddy
-    caddy -->|"plain HTTP, internal"| health
+    llm -->|"MCP JSON-RPC over HTTP"| health
     health -->|"non-health requests"| oauth
     oauth -->|"non-discovery requests"| auth
     auth -->|"authenticated requests"| fm
@@ -180,18 +176,17 @@ Three middleware layers wrap FastMCP, outermost first:
 | Step | Where | What happens |
 |---|---|---|
 | 1 | LLM client | Sends MCP tool call over JSON-RPC |
-| 2 | Caddy | Terminates TLS, proxies to port 8000 |
-| 3 | `HealthMiddleware` | Passes through — not `/health` |
-| 4 | `OAuthDiscoveryMiddleware` | Passes through — not a discovery path |
-| 5 | `ApiKeyMiddleware` | Validates the token — 401 or 429 if invalid or rate-limited |
-| 6 | FastMCP dispatcher | Routes to the tool function |
-| 7 | Tool | Reads the in-memory index or the catalogue, and calls the APIC when the tool needs live data |
-| 8 | `ApicClient` | Builds URL and query parameters, sends an HTTPS GET to the APIC |
-| 9 | APIC | Returns an `imdata` JSON array |
-| 10 | Tool | Shapes the response: `query` flattens objects, each gaining a `_class` key, into an envelope — `{"results", "returned", "total_available", "truncated", "next_page", "complete", "note"}`; `count` returns `{"class_name", "count", "scope_dn", "filters"}`; `get_by_dn` returns the flattened object, or a `{"found": false, …}` dict |
-| 11 | FastMCP | Serialises the response as an MCP JSON-RPC result |
+| 2 | `HealthMiddleware` | Passes through — not `/health` |
+| 3 | `OAuthDiscoveryMiddleware` | Passes through — not a discovery path |
+| 4 | `ApiKeyMiddleware` | Validates the token — 401 or 429 if invalid or rate-limited |
+| 5 | FastMCP dispatcher | Routes to the tool function |
+| 6 | Tool | Reads the in-memory index or the catalogue, and calls the APIC when the tool needs live data |
+| 7 | `ApicClient` | Builds URL and query parameters, sends an HTTPS GET to the APIC |
+| 8 | APIC | Returns an `imdata` JSON array |
+| 9 | Tool | Shapes the response: `query` flattens objects, each gaining a `_class` key, into an envelope — `{"results", "returned", "total_available", "truncated", "next_page", "complete", "note"}`; `count` returns `{"class_name", "count", "scope_dn", "filters"}`; `get_by_dn` returns the flattened object, or a `{"found": false, …}` dict |
+| 10 | FastMCP | Serialises the response as an MCP JSON-RPC result |
 
-Steps 8 and 9 do not occur for `search_classes` and `get_schema`: both are answered entirely from process-local data.
+Steps 7 and 8 do not occur for `search_classes` and `get_schema`: both are answered entirely from process-local data.
 
 ---
 
@@ -201,7 +196,7 @@ Steps 8 and 9 do not occur for `search_classes` and `get_schema`: both are answe
 
 ```mermaid
 sequenceDiagram
-    participant OS as OS or Docker
+    participant OS as OS or supervisor
     participant serve as _serve
     participant life as app_lifespan
     participant cat as registry.catalog
@@ -272,10 +267,6 @@ Sending `SIGHUP` reloads `MCP_API_KEYS` from `.env` without restarting the proce
 kill -HUP $(pgrep -f niwashi-mcp)
 ```
 
-### Container ships no data
-
-`mcp/deploy/Dockerfile` installs the package with `uv pip install --no-deps .` after `uv sync --frozen --no-dev`, so the image runs exactly what a `pip install` produces. The object model arrives as an ordinary dependency; there is no bundle to copy in and no volume to mount for it. The container runs as a non-root user and its command is `niwashi-mcp`.
-
 ---
 
 ## Removed in 2.0
@@ -293,7 +284,7 @@ Anything below is gone from the running server. It appears here only so that a r
 | `ACI_MCP_DATA_DIR` | nothing — the catalogue's location is derived from the installed package |
 | `SchemaLoadError` in practice | `DescriptionsLoadError` — the catalogue is missing or unreadable. The class is still defined but nothing raises it. |
 
-Environment variables actually read by the server are `APIC_HOST`, `APIC_USER`, `APIC_PASSWORD`, `APIC_VERIFY_SSL`, `MCP_PORT`, `MCP_API_KEYS`, and `NIWASHI_MCP_ENV_FILE`. See [settings reference](../configuration/settings.md).
+Environment variables actually read by the server are `APIC_HOST`, `APIC_USER`, `APIC_PASSWORD`, `APIC_VERIFY_SSL`, `MCP_HOST`, `MCP_PORT`, `MCP_API_KEYS`, `MCP_ALLOW_NO_AUTH`, and `NIWASHI_MCP_ENV_FILE`. See [settings reference](../configuration/settings.md).
 
 ---
 
