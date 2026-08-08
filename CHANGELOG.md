@@ -13,6 +13,25 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
 
 ### Added
 
+- **The niwaki catalogue adapter (`registry/catalog.py`), not yet wired in.**
+  It reads the object model from the SQLite catalogue shipped inside the
+  `niwaki` dependency and is the only module in the codebase that knows niwaki
+  exists — which is what keeps the migration reviewable and the rollback cheap.
+  The server still runs entirely on the jsonmeta path, so this can be proven or
+  disproven at no cost.
+
+  Measured against the live corpus: **1,500 classes compared, zero unexpected
+  divergence**; the only difference is the `options` list on `mo:*` register
+  properties, which niwaki drops deliberately (one `mo:MoClassId` carries
+  17,653 entries into an agent's context). The rebuilt search index is
+  **byte-identical** to `class-descriptions.json` — 15,239 entries, including
+  the 213-class gap, which turns out to be a property of the collector's filter
+  rather than an accident.
+
+  Twenty-five tests cover it, and were mutation-tested before being committed:
+  six sabotages — a leaked readable name, an unfiltered `defaultValue`, a
+  truncated `dnFormats`, `prop_labels` as a string, a case-insensitive lookup,
+  an omitted empty key — each fail the test that targets them.
 - **A behavioural baseline, recorded before any 2.0 change was made.** The five
   tools keep their signatures across this migration, so a defect in the swap
   would be silent — a changed field shape, a drifted ranking, a truncated list —

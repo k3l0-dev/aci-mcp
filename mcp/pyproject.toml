@@ -25,6 +25,7 @@ classifiers = [
 dependencies = [
     "fastmcp>=3.4.5,<4.0",
     "httpx>=0.27,<1.0",
+    "niwaki>=1.8,<2.0",
     "python-dotenv>=1.0,<2.0",
 ]
 
@@ -58,6 +59,7 @@ addopts = ["-m", "not live"]
 markers = [
     "live: requires a reachable real APIC (see tests/live/conftest.py)",
     "baseline: asserts behaviour equals tests/baseline/baseline.json (drift net)",
+    "catalog: exercises the niwaki catalogue adapter (registry/catalog.py)",
 ]
 
 [tool.ruff.lint]
