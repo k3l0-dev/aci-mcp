@@ -47,6 +47,7 @@ testpaths = ["tests"]
 addopts = ["-m", "not live"]
 markers = [
     "live: requires a reachable real APIC (see tests/live/conftest.py)",
+    "baseline: asserts behaviour equals tests/baseline/baseline.json (drift net)",
 ]
 
 [tool.ruff.lint]
