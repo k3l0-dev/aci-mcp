@@ -92,7 +92,7 @@ from niwashi_mcp.exceptions import ConfigurationError, UnknownClassError
 from niwashi_mcp.middleware.auth import ApiKeyMiddleware, KeyStore, load_api_keys
 from niwashi_mcp.middleware.health import HealthMiddleware
 from niwashi_mcp.middleware.oauth import OAuthDiscoveryMiddleware
-from niwashi_mcp.registry.descriptions import load_descriptions
+from niwashi_mcp.registry import catalog
 from niwashi_mcp.registry.descriptions import search as desc_search
 from niwashi_mcp.registry.schema import class_exists, load_schema, resolve_schemas_dir
 
@@ -212,8 +212,22 @@ async def app_lifespan(server: FastMCP):
     """
     load_dotenv(ENV_FILE)
 
-    descriptions = load_descriptions(DESCRIPTIONS_FILE)
-    logger.info("Registry loaded — %d class descriptions", len(descriptions))
+    # The search index is rebuilt from niwaki's catalogue rather than read from
+    # data/class-descriptions.json. Proven byte-identical to the file it
+    # replaces (15,239 entries, no field differing), so search quality is
+    # unchanged by construction — the golden-set metrics are asserted as
+    # equalities, not floors, in tests/baseline/.
+    #
+    # Built ONCE here, deliberately. `descriptions.search()` caches its
+    # tokenised index keyed on the *identity* of this dict, so rebuilding it
+    # per call would silently re-tokenise 15,239 entries on every query and
+    # turn a 15 ms search into seconds.
+    descriptions = catalog.descriptions_index()
+    logger.info(
+        "Registry loaded — %d class descriptions (niwaki catalogue, APIC %s)",
+        len(descriptions),
+        catalog.apic_version(),
+    )
 
     schemas_dir = resolve_schemas_dir(SCHEMAS_DIR)
     logger.info("Schema directory resolved — %s", schemas_dir)
