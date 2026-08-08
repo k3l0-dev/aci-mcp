@@ -1,6 +1,6 @@
 [project]
 name = "niwashi-mcp"
-version = "2.0.0"
+version = "2.0.0rc1"
 description = "Schema-driven MCP server for Cisco ACI (APIC)"
 readme = "README.md"
 license = {text = "PolyForm-Noncommercial-1.0.0"}
