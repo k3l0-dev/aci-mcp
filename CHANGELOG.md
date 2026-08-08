@@ -48,6 +48,30 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
 
 ### Changed
 
+- **BREAKING — `get_schema` and class validation now read the catalogue.** The
+  jsonmeta directory is no longer resolved, opened or consulted at runtime, and
+  `schemas_dir` is gone from the server's lifespan context.
+
+  Measured against the recorded pre-2.0 baseline, on 38 stratified classes:
+  **zero drift on the plain schema**, and a single divergence on
+  `property_details` — `actionAeSubj`, whose `mo:MoClassId` register loses its
+  17,653-entry `options` list. That class is in the sample deliberately, and the
+  exception is asserted to be exactly itself: the test fails both if the drift
+  disappears (a stale allowlist entry) and if it spreads to any other field.
+
+- **BREAKING — class validation has one source of truth, and the class universe
+  opens from 15,239 to 15,452.** `query()` and `count()` used to validate in two
+  tiers — the descriptions index, then a fallback to the schema files — because
+  the two collections disagreed by 213 classes and a class absent from the first
+  could still be perfectly queryable. Both now come from the same catalogue, so
+  the fallback is gone along with the warning it emitted on 213 valid classes.
+  Those 213 remain validatable but not searchable, which is a property of the
+  index filter rather than an accident.
+
+  Case sensitivity is now structural: SQLite's BINARY collation makes `fvBd`
+  resolving to `fvBD` impossible, where the previous reader needed an explicit
+  guard against case-insensitive filesystems doing exactly that.
+
 - **`search_classes` now runs on the catalogue-rebuilt index.** The server no
   longer reads `data/class-descriptions.json` at startup; it rebuilds the index
   from niwaki's catalogue instead. Because that index is byte-identical, search
@@ -94,6 +118,12 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
   checkout is now *verified* by its layout rather than assumed, and an
   invariant test asserts no resolved path may ever point inside
   `site-packages`.
+- `get_schema`'s documented exception is retargeted. `SchemaLoadError` meant
+  "a jsonmeta file exists but is malformed", a condition that can no longer
+  arise. The failure that replaces it — the niwaki catalogue missing or
+  unreadable — is a real one and needed naming, so it is reported as
+  `DescriptionsLoadError` with a reinstall hint rather than leaving a
+  documented exception that nothing can raise.
 - The container looked for the data bundle in `/app/data/` while the image
   copies it to `/data/`, which would have broken startup. The image now also
   installs the package rather than copying modules one by one, so it runs

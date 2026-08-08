@@ -94,7 +94,6 @@ from niwashi_mcp.middleware.health import HealthMiddleware
 from niwashi_mcp.middleware.oauth import OAuthDiscoveryMiddleware
 from niwashi_mcp.registry import catalog
 from niwashi_mcp.registry.descriptions import search as desc_search
-from niwashi_mcp.registry.schema import class_exists, load_schema, resolve_schemas_dir
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 #
@@ -207,8 +206,6 @@ async def app_lifespan(server: FastMCP):
     Yields a context dict available to all tools via ctx.lifespan_context:
       descriptions  — in-memory class descriptions index
       backend       — ApicClient instance
-      schemas_dir   — Path to the *resolved* jsonmeta schema directory
-                      (see registry.schema.resolve_schemas_dir)
     """
     load_dotenv(ENV_FILE)
 
@@ -228,9 +225,6 @@ async def app_lifespan(server: FastMCP):
         len(descriptions),
         catalog.apic_version(),
     )
-
-    schemas_dir = resolve_schemas_dir(SCHEMAS_DIR)
-    logger.info("Schema directory resolved — %s", schemas_dir)
 
     host = (
         os.environ.get("APIC_HOST", "")
@@ -259,7 +253,6 @@ async def app_lifespan(server: FastMCP):
         yield {
             "descriptions": descriptions,
             "backend": backend,
-            "schemas_dir": schemas_dir,
         }
     finally:
         await backend.close()
@@ -490,16 +483,14 @@ async def get_schema(
         is not found in the local schema collection.
 
     Raises:
-        SchemaLoadError: A schema file exists on disk for this class but
-                         could not be parsed — malformed or empty JSON.
-                         Indicates a corrupted or manually edited file in
-                         data/schemas/, not a missing class (a missing class
-                         returns {} instead, see Returns above).
+        DescriptionsLoadError: The niwaki catalogue is missing or unreadable.
+                         Indicates a broken installation, not a missing class
+                         (a missing class returns {} instead, see Returns
+                         above). Reinstall with:
+                         pip install --force-reinstall niwaki
     """
-    schemas_dir: Path = ctx.lifespan_context["schemas_dir"]
-    schema = load_schema(
+    schema = catalog.load_schema(
         class_name,
-        schemas_dir,
         include_property_details=include_property_details,
         properties_filter=properties_filter,
     )
@@ -628,27 +619,20 @@ async def query(
     """
     descriptions: dict = ctx.lifespan_context["descriptions"]
     backend: ApicClient = ctx.lifespan_context["backend"]
-    schemas_dir: Path = ctx.lifespan_context["schemas_dir"]
-
-    # Validate class_name against the registry — catch typos and wrong names
-    # before hitting the backend (which would silently return []). The
-    # schemas/ collection is ~200 classes larger than class-descriptions.json
-    # (schema-collector builds them from separate passes over /doc/jsonmeta/),
-    # so a class absent from `descriptions` may still be a perfectly valid,
-    # queryable ACI class — fall back to a schema-file check before rejecting.
-    # class_exists() (not load_schema() directly) guards against
-    # case-insensitive filesystems silently resolving a typo to a real file.
-    if class_name not in descriptions:
-        if class_exists(class_name, schemas_dir):
-            await ctx.warning(
-                f"query({class_name!r}) — no class-descriptions entry, but a "
-                "schema file resolved for this class; allowing the query"
-            )
-        else:
-            suggestions = desc_search(class_name, descriptions, limit=5)
-            suggestion_names = [s["class_name"] for s in suggestions]
-            await ctx.warning(f"query called with unknown class {class_name!r}")
-            raise UnknownClassError(class_name, suggestion_names, len(descriptions))
+    # Validate class_name before hitting the backend, which would silently
+    # return [] for a typo. One lookup against the catalogue, which is now the
+    # single source of truth for "does this class exist".
+    #
+    # This used to be two tiers: the descriptions index, then a fallback to the
+    # schema files, because the two collections disagreed by 213 classes and a
+    # class missing from the first could still be perfectly queryable. Both now
+    # come from the same catalogue, so the fallback — and the warning it emitted
+    # on 213 valid classes — is gone.
+    if not catalog.class_exists(class_name):
+        suggestions = desc_search(class_name, descriptions, limit=5)
+        suggestion_names = [s["class_name"] for s in suggestions]
+        await ctx.warning(f"query called with unknown class {class_name!r}")
+        raise UnknownClassError(class_name, suggestion_names, len(descriptions))
 
     clamped_limit = max(1, min(limit, 200))
     await ctx.info(
@@ -834,23 +818,13 @@ async def count(
     """
     descriptions: dict = ctx.lifespan_context["descriptions"]
     backend: ApicClient = ctx.lifespan_context["backend"]
-    schemas_dir: Path = ctx.lifespan_context["schemas_dir"]
-
-    # Validate class_name against the registry — identical guard to query(),
-    # including the same schema-file fallback for the ~200-class gap between
-    # class-descriptions.json and the schemas/ collection, so count() and
-    # query() never disagree on whether a class is "known".
-    if class_name not in descriptions:
-        if class_exists(class_name, schemas_dir):
-            await ctx.warning(
-                f"count({class_name!r}) — no class-descriptions entry, but a "
-                "schema file resolved for this class; allowing the count"
-            )
-        else:
-            suggestions = desc_search(class_name, descriptions, limit=5)
-            suggestion_names = [s["class_name"] for s in suggestions]
-            await ctx.warning(f"count called with unknown class {class_name!r}")
-            raise UnknownClassError(class_name, suggestion_names, len(descriptions))
+    # Identical guard to query(), so the two tools can never disagree on
+    # whether a class is "known".
+    if not catalog.class_exists(class_name):
+        suggestions = desc_search(class_name, descriptions, limit=5)
+        suggestion_names = [s["class_name"] for s in suggestions]
+        await ctx.warning(f"count called with unknown class {class_name!r}")
+        raise UnknownClassError(class_name, suggestion_names, len(descriptions))
 
     await ctx.info(
         f"count({class_name!r}, filters={filters!r}, scope={scope_dn!r})"

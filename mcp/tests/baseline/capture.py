@@ -61,9 +61,8 @@ sys.path.insert(0, str(_MCP_ROOT))
 # ruff: noqa: E402 — the sys.path insert above must run before these imports,
 # because this module is also executed directly (`python -m tests.baseline.capture`)
 # from a tree that is not yet an installed package.
-from niwashi_mcp.registry.descriptions import load_descriptions
+from niwashi_mcp.registry import catalog
 from niwashi_mcp.registry.descriptions import search as desc_search
-from niwashi_mcp.registry.schema import class_exists, load_schema, resolve_schemas_dir
 
 BASELINE_PATH = _HERE / "baseline.json"
 _REPO_ROOT = _MCP_ROOT.parent
@@ -129,18 +128,23 @@ def _trim(schema: dict[str, Any]) -> tuple[dict[str, Any], bool]:
     return trimmed, True
 
 
-def capture_schemas(schemas_dir: Path) -> dict[str, Any]:
+def capture_schemas() -> dict[str, Any]:
     """get_schema() output for the sample, with and without property details.
+
+    Reads through whatever data layer the server currently uses — since
+    iteration 4 that is the catalogue. The recorded baseline.json was captured
+    from the jsonmeta reader, so this comparison is the migration's proof:
+    "the new implementation reproduces what the old one did".
 
     The digest is the oracle; the stored payload is for human review.
     """
     out: dict[str, Any] = {}
     for cls in dict.fromkeys(SAMPLE_CLASSES):  # dedupe, keep order
-        plain = load_schema(cls, schemas_dir)
-        detailed = load_schema(cls, schemas_dir, include_property_details=True)
+        plain = catalog.load_schema(cls)
+        detailed = catalog.load_schema(cls, include_property_details=True)
         stored, was_trimmed = _trim(plain)
         out[cls] = {
-            "exists": class_exists(cls, schemas_dir),
+            "exists": catalog.class_exists(cls),
             "schema_digest": _digest(plain),  # always on the FULL schema
             "detailed_digest": _digest(detailed),
             "property_count": len(plain.get("properties", [])),
@@ -202,7 +206,7 @@ def capture_index(descriptions: dict) -> dict[str, Any]:
     }
 
 
-def capture_perf(schemas_dir: Path, descriptions: dict) -> dict[str, Any]:
+def capture_perf(descriptions: dict) -> dict[str, Any]:
     """Observed timings. Context for humans — not asserted (see module docstring)."""
 
     def _time(fn, n: int) -> float:
@@ -214,9 +218,9 @@ def capture_perf(schemas_dir: Path, descriptions: dict) -> dict[str, Any]:
 
     return {
         "unit": "ms_per_call",
-        "load_schema": _time(lambda: load_schema("fvBD", schemas_dir), 200),
+        "load_schema": _time(lambda: catalog.load_schema("fvBD"), 200),
         "load_schema_detailed": _time(
-            lambda: load_schema("fvBD", schemas_dir, include_property_details=True), 200
+            lambda: catalog.load_schema("fvBD", include_property_details=True), 200
         ),
         "search": _time(lambda: desc_search("bridge domain", descriptions, limit=5), 20),
         "index_build_cold": None,  # filled by the caller, measured once
@@ -224,25 +228,23 @@ def capture_perf(schemas_dir: Path, descriptions: dict) -> dict[str, Any]:
 
 
 def capture() -> dict[str, Any]:
-    schemas_dir = resolve_schemas_dir(_SCHEMAS_DIR)
-
     t0 = time.perf_counter()
-    descriptions = load_descriptions(_DESCRIPTIONS)
+    descriptions = catalog.descriptions_index()
     load_ms = round((time.perf_counter() - t0) * 1000, 2)
 
-    perf = capture_perf(schemas_dir, descriptions)
+    perf = capture_perf(descriptions)
     perf["descriptions_load_cold"] = load_ms
 
     return {
         "_meta": {
             "purpose": "Behavioural baseline of the pre-2.0 (jsonmeta) data layer.",
-            "captured_from": "data/schemas + data/class-descriptions.json",
+            "captured_from": "niwaki catalogue (was: data/schemas + class-descriptions.json)",
             "python": platform.python_version(),
             "platform": platform.platform(),
             "note": "Timings are recorded, not asserted. See capture.py docstring.",
         },
         "index": capture_index(descriptions),
-        "schemas": capture_schemas(schemas_dir),
+        "schemas": capture_schemas(),
         "search": capture_search(descriptions),
         "perf": perf,
     }

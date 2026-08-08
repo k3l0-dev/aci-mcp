@@ -39,6 +39,23 @@ from tests.baseline.capture import (
     capture_search,
 )
 
+# Classes whose `property_details` legitimately differ from the recorded
+# baseline because niwaki's catalogue drops the `options` list on `mo:*`
+# identifier registers. One `mo:MoClassId` carries 17,653 entries — the entire
+# class list — into an agent's context, so losing it is a token-budget fix, not
+# a regression. Named explicitly, and asserted to be the *only* exception, so a
+# real drift cannot hide behind it.
+ACCEPTED_DETAIL_DRIFT = {"actionAeSubj"}
+
+# The identifier-register types whose `options` niwaki drops. Measured: only
+# `mo:MoClassId` appears in the sampled classes, carrying 17,653 entries — the
+# entire class list. Other `mo:*` types (`mo:Owner`, `mo:ModificationStatus`…)
+# keep their small, genuinely useful enumerations, so the exception is scoped
+# to these four rather than to the whole `mo:` namespace.
+_DROPPED_REGISTER_TYPES = frozenset(
+    {"mo:MoClassId", "mo:StatsPropId", "mo:StatsClassId", "mo:PropId"}
+)
+
 pytestmark = pytest.mark.baseline
 
 
@@ -107,7 +124,7 @@ def test_index_content_identical(recorded, descriptions):
 # --------------------------------------------------------------- schemas
 
 
-def test_schema_output_identical(recorded, schemas_dir):
+def test_schema_output_identical(recorded):
     """``get_schema()`` returns exactly what it returned before, class by class.
 
     This is the parity oracle for the data-layer swap. It covers the plain call
@@ -115,7 +132,7 @@ def test_schema_output_identical(recorded, schemas_dir):
     relations, abstract classes, stats classes, enum-heavy classes, the
     huge-``dnFormats`` monsters, and one class that must stay absent.
     """
-    current = capture_schemas(schemas_dir)
+    current = capture_schemas()
     moved: list[str] = []
 
     for cls, ref in recorded["schemas"].items():
@@ -129,42 +146,85 @@ def test_schema_output_identical(recorded, schemas_dir):
                 f"keys -{sorted(set(ref['keys']) - set(got['keys']))} "
                 f"+{sorted(set(got['keys']) - set(ref['keys']))})"
             )
-        elif got["detailed_digest"] != ref["detailed_digest"]:
+        elif (
+            got["detailed_digest"] != ref["detailed_digest"]
+            and cls not in ACCEPTED_DETAIL_DRIFT
+        ):
             moved.append(f"{cls}: property_details changed (plain schema is unchanged)")
 
     assert not moved, "get_schema() drifted:\n  " + "\n  ".join(moved)
 
 
-def test_absent_class_still_returns_empty_dict(recorded, schemas_dir):
+def test_the_accepted_drift_is_still_exactly_what_we_accepted(recorded):
+    """The ``mo:*`` exception must stay an exception, and stay *this* one.
+
+    An allowlist that is never re-checked becomes a hole. Two things are
+    asserted, and both can fail:
+
+    1. The listed class really does still differ from the recorded baseline —
+       so an entry that has become stale is noticed rather than accumulating.
+    2. The drift has the signature we accepted: the class carries ``mo:*``
+       identifier-register properties, and **none of them** carries an
+       ``options`` list. If a future catalogue started emitting those 17,653
+       entries again, or if the drift moved to some other field, this fails.
+    """
+    from niwashi_mcp.registry import catalog
+
+    current = capture_schemas()
+    for cls in ACCEPTED_DETAIL_DRIFT:
+        assert current[cls]["detailed_digest"] != recorded["schemas"][cls]["detailed_digest"], (
+            f"{cls} no longer drifts from the baseline — "
+            "remove it from ACCEPTED_DETAIL_DRIFT rather than leaving a dead entry"
+        )
+
+        details = catalog.load_schema(cls, include_property_details=True)["property_details"]
+        registers = {
+            name: detail
+            for name, detail in details.items()
+            if detail.get("type") in _DROPPED_REGISTER_TYPES
+        }
+        assert registers, (
+            f"{cls} carries none of {sorted(_DROPPED_REGISTER_TYPES)}, so the "
+            "accepted drift cannot be what we documented — investigate before "
+            "trusting this allowlist"
+        )
+        leaked = {name: len(d["options"]) for name, d in registers.items() if d.get("options")}
+        assert not leaked, (
+            f"{cls}: identifier registers regained their options list ({leaked}) — "
+            "the drift is no longer the one we accepted"
+        )
+
+
+def test_absent_class_still_returns_empty_dict(recorded):
     """A class that does not exist returns ``{}`` and ``class_exists`` says False.
 
     Pinned separately because the 2.0 migration changes *where* absence is
     determined (file lookup → SQL lookup), and an exception thrown instead of an
     empty dict would be a contract break an agent cannot recover from.
     """
-    from niwashi_mcp.registry.schema import class_exists, load_schema
+    from niwashi_mcp.registry import catalog
 
     absent = [c for c, r in recorded["schemas"].items() if not r["exists"]]
     assert absent, "baseline has no absent-class case — the contract is unpinned"
     for cls in absent:
-        assert load_schema(cls, schemas_dir) == {}, f"{cls} should return an empty dict"
-        assert class_exists(cls, schemas_dir) is False, f"class_exists({cls}) should be False"
+        assert catalog.load_schema(cls) == {}, f"{cls} should return an empty dict"
+        assert catalog.class_exists(cls) is False, f"class_exists({cls}) should be False"
 
 
-def test_dn_formats_not_truncated(recorded, schemas_dir):
+def test_dn_formats_not_truncated(recorded):
     """The high-cardinality classes keep every template.
 
     ``faultDelegate`` carries 64,313 DN templates and ``faultInst`` 24,151. A
     storage or serialisation change that silently caps a list would be invisible
     in aggregate but would make the anti-hallucination anchor in SKILL.md lie.
     """
-    from niwashi_mcp.registry.schema import load_schema
+    from niwashi_mcp.registry import catalog
 
     checked = 0
     for cls, ref in recorded["schemas"].items():
         if ref["dn_format_count"] < 1000:
             continue
-        got = len(load_schema(cls, schemas_dir).get("dnFormats", []))
+        got = len(catalog.load_schema(cls).get("dnFormats", []))
         assert got == ref["dn_format_count"], (
             f"{cls}: dnFormats went from {ref['dn_format_count']:,} to {got:,}"
         )
