@@ -25,6 +25,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   Running the server directly — `uvx niwashi-mcp`, or the console script from a
   virtualenv — is unaffected and is now the only documented path.
 
+- **Dead code the 2.0 migration left behind.** None of it was reachable; all of
+  it pointed at a world that no longer exists.
+
+  - `registry.descriptions.load_descriptions()` read `class-descriptions.json`,
+    the file 2.0 deleted. Nothing in the server called it — a test asserts that
+    — and its error message told the reader to run `aci-collect`, a tool that
+    is not in this repository. Gone, with its four tests and its reference page.
+  - `scripts/list-configurable-classes.sh` read `data/schemas/`, removed in 2.0
+    and `.gitignore`d besides, so on a fresh clone it could only ever print
+    `run schema-collector first`. It was the only file in `scripts/`; the
+    directory goes with it.
+  - `tests/perf/conftest.py` still generated synthetic jsonmeta files into a
+    versioned directory, for a `resolve_schemas_dir()` and a
+    `tests/perf/test_schema_perf.py` that 2.0 deleted. No test consumed the
+    fixture.
+  - `tests/integration/test_tools.py` carried an unused `_EXTRA_ONLY_SCHEMA`
+    fixture and a comment describing the two-tier validation fallback that 2.0
+    replaced with a single source of truth. The surviving test is rewritten to
+    assert what actually happens now, including that the backend is never
+    reached — the APIC does not error on an unknown class, it returns an empty
+    result, which is indistinguishable from "no such objects".
+
 ### Added
 
 - **`MCP_HOST` and `MCP_ALLOW_NO_AUTH` are documented.** Both were read by the
@@ -73,15 +95,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   attacker who sprays addresses a fresh budget on every one of them, which is
   the property the limiter exists to deny.
 
-  Also documented, not changed: "per-IP" means per *peer* address, so behind the
-  reverse proxy this repository ships, the window is global rather than
-  per-client. That is stricter than advertised, not laxer, and reading
-  `X-Forwarded-For` unvalidated would be worse than the imprecision.
+  Also documented, not changed: "per-IP" means per *peer* address, which is only
+  per-client when the server is reached directly. Behind a reverse proxy the
+  peer is the proxy for every request, so the window becomes global. That is
+  stricter than advertised, not laxer, and reading `X-Forwarded-For` unvalidated
+  would be worse than the imprecision.
 
-Thirteen tests cover both, and were mutation-tested before being committed: five
-sabotages — the wiring in `_serve`, the refusal in `reload()`, the handler's
-check of its return value, the sweep, and the ceiling — each fail the tests that
-target them.
+  Thirteen tests cover both defects, and were mutation-tested before being
+  committed: five sabotages — the wiring in `_serve`, the refusal in `reload()`,
+  the handler's check of its return value, the sweep, and the ceiling — each
+  fail the tests that target them.
+
+- **`DescriptionsLoadError` described the wrong failure.** Its docstring still
+  said "class-descriptions.json is missing or contains invalid JSON. Regenerate
+  it with: `aci-collect run --from descriptions`", while in 2.0 it is raised by
+  `registry.catalog` for a broken niwaki catalogue — and `get_schema`'s own
+  docstring told the caller to reinstall niwaki. Two contradictory instructions
+  for one error; the exception now describes what it actually means.
 
 ### Changed
 

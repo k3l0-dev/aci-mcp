@@ -8,7 +8,7 @@ The niwashi-mcp test suite is organized into five categories, each with a
 distinct purpose and a distinct relationship to CI:
 
   unit/         Pure-logic tests with no I/O — registry/filter.py,
-                registry/schema.py, registry/descriptions.py, middleware,
+                registry/catalog.py, registry/descriptions.py, middleware,
                 exceptions, and apic/client.py driven through a fake HTTP
                 transport (FakeHTTPClient in tests/unit/test_client.py).
                 Fast, deterministic, run on every CI push.

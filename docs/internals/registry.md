@@ -445,13 +445,6 @@ Deterministic, with no dependence on dict iteration order.
   entries that carry flags but no text can never be returned
 - A curated synonym boost is capped so it cannot override a genuine exact match
 
-### `load_descriptions(path)`
-
-Retired from the server path. It reads the JSON index file that 2.0 removed and
-survives only so tests can compare the rebuilt index against that file when a
-maintainer still has a copy; they skip when it is absent. Nothing in
-`main.py` calls it — a test asserts that too.
-
 ---
 
 ## filter.py

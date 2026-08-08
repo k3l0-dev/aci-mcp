@@ -57,10 +57,16 @@ class RegistryError(NiwashiMcpError):
 
 
 class DescriptionsLoadError(RegistryError):
-    """class-descriptions.json is missing or contains invalid JSON.
+    """The niwaki catalogue is missing, unreadable, or has moved.
 
-    The file is mandatory — the server cannot start without it.
-    Regenerate it with: aci-collect run --from descriptions
+    Raised by `registry.catalog` — at startup by `verify_catalogue()` when a
+    table, column, manifest key or stored encoding is not what this server
+    reads, and at any time when `catalog.db` cannot be opened. It signals a
+    broken installation, never a missing ACI class: an unknown class returns
+    an empty dict from `load_schema()`.
+
+    The remedy is to reinstall the dependency that carries the catalogue:
+        pip install --force-reinstall niwaki
     """
 
 

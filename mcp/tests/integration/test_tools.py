@@ -492,39 +492,28 @@ async def test_query_unknown_class_error_carries_registry_size(tool_ctx):
     )
 
 
-# ── query — registry/schema asymmetry fallback ────────────────────────────────
+# ── query — class validation ──────────────────────────────────────────────────
 #
-# The schemas/ collection and class-descriptions.json are built by separate
-# schema-collector passes and can drift apart (~300 classes in production
-# have a jsonmeta schema but no descriptions entry). A class absent from
-# `descriptions` should only be rejected as UnknownClassError when it *also*
-# has no resolvable schema file — otherwise a legitimate, queryable class
-# would be needlessly blocked.
-
-_EXTRA_ONLY_SCHEMA = {
-    "aaaExtraOnlyClass": {
-        "identifiedBy": ["name"],
-        "rnFormat": "extra-{name}",
-        "label": "Extra Only Class",
-        "isAbstract": False,
-        "isConfigurable": True,
-        "className": "ExtraOnlyClass",
-        "classPkg": "aaa",
-    }
-}
+# Until 2.0 this validated in two tiers: the descriptions index, then a fallback
+# to the schema files, because the two collections disagreed by 213 classes and
+# a class missing from the first could still be perfectly queryable. Both now
+# come from the same catalogue, so there is one source of truth and no fallback.
 
 
 @pytest.mark.asyncio
-async def test_query_rejects_class_with_neither_description_nor_schema(sample_imdata):
-    """A class with no descriptions entry AND no resolvable schema file is
-    still rejected — the fallback only rescues genuinely known classes."""
+async def test_query_rejects_a_class_absent_from_the_catalogue(sample_imdata):
+    """An invented class name is rejected before the backend is ever called.
+
+    This is the guard that matters: the APIC does not error on an unknown class,
+    it returns an empty result — indistinguishable from "no such objects".
+    """
     from niwashi_mcp.main import query
 
-    # tmp_path is empty — no schema file for any class.
     ctx = _stub_ctx(sample_imdata, descriptions=dict(MINIMAL_DESCRIPTIONS))
 
     with pytest.raises(UnknownClassError):
         await query("totallyMadeUpClassNotAnywhere", ctx)
+    assert not ctx.lifespan_context["backend"].calls
 
 
 # ── query — config_only (Task 5) ──────────────────────────────────────────────

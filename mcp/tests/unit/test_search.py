@@ -1,14 +1,12 @@
 # Copyright (C) 2026 Khalid El-Ouiali — MONARK AIOPS srl
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
-"""Unit tests for registry.descriptions.search and load_descriptions (v2 scoring)."""
+"""Unit tests for registry.descriptions.search (v2 scoring)."""
 
-import json
 
 import pytest
 
-from niwashi_mcp.exceptions import DescriptionsLoadError
-from niwashi_mcp.registry.descriptions import load_descriptions, search
+from niwashi_mcp.registry.descriptions import search
 
 _DESCRIPTIONS = {
     "fvBD": {
@@ -379,41 +377,3 @@ def test_search_rebuilds_index_for_a_distinct_dict_object():
     search("bridge", descs_a)  # warms the cache for descs_a
     results = search("something else entirely", descs_b)
     assert results and results[0]["class_name"] == "fvBD"
-
-
-# ── load_descriptions() ───────────────────────────────────────────────────────
-
-
-def test_load_descriptions_success(tmp_path):
-    data = {"fvBD": {"label": "Bridge Domain", "comment": "A BD."}}
-    (tmp_path / "class-descriptions.json").write_text(
-        json.dumps(data), encoding="utf-8"
-    )
-    result = load_descriptions(tmp_path / "class-descriptions.json")
-    assert result == data
-
-
-def test_load_descriptions_file_not_found_raises_error(tmp_path):
-    with pytest.raises(DescriptionsLoadError) as exc_info:
-        load_descriptions(tmp_path / "nonexistent.json")
-    assert "class-descriptions.json" in str(exc_info.value) or "nonexistent" in str(
-        exc_info.value
-    )
-
-
-def test_load_descriptions_invalid_json_raises_error(tmp_path):
-    (tmp_path / "class-descriptions.json").write_text("{bad json}", encoding="utf-8")
-    with pytest.raises(DescriptionsLoadError) as exc_info:
-        load_descriptions(tmp_path / "class-descriptions.json")
-    assert "JSON" in str(exc_info.value)
-
-
-def test_load_descriptions_os_error_raises_error(tmp_path):
-    f = tmp_path / "class-descriptions.json"
-    f.write_text("{}", encoding="utf-8")
-    f.chmod(0o000)
-    try:
-        with pytest.raises(DescriptionsLoadError):
-            load_descriptions(f)
-    finally:
-        f.chmod(0o644)

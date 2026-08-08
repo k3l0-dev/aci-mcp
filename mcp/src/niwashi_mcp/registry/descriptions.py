@@ -79,11 +79,7 @@ offline report. Run `python tests/eval_search.py --verbose` for the current
 per-query breakdown, including misses and near-misses.
 """
 
-import json
 import re
-from pathlib import Path
-
-from niwashi_mcp.exceptions import DescriptionsLoadError
 
 # ── Tokenization ──────────────────────────────────────────────────────────────
 
@@ -238,40 +234,6 @@ def _get_index(descriptions: dict[str, dict[str, str]]) -> list[dict]:
     return index
 
 
-def load_descriptions(path: Path) -> dict[str, dict[str, str]]:
-    """Load class-descriptions.json into memory.
-
-    Args:
-        path: Absolute path to the class-descriptions.json file.
-
-    Returns:
-        Dict mapping ACI class name → {"label": str, "comment": str,
-        "prop_labels": list[str], "isConfigurable": bool, "isAbstract": bool}.
-        All keys but the class name may be absent when the source schema had
-        no value (or the flag was False — both fields are omitted rather than
-        written as `false`, to keep the file compact).
-
-    Raises:
-        DescriptionsLoadError: File not found or contains invalid JSON.
-    """
-    try:
-        text = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        raise DescriptionsLoadError(
-            f"class-descriptions.json not found at {path}. "
-            "Regenerate it with: aci-collect run --from descriptions"
-        ) from None
-    except OSError as exc:
-        raise DescriptionsLoadError(f"Cannot read {path}: {exc}") from exc
-
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError as exc:
-        raise DescriptionsLoadError(
-            f"class-descriptions.json at {path} is not valid JSON: {exc}"
-        ) from exc
-
-
 def _score(
     q_lc: str, squash: str, qset: frozenset[str], n: int, e: dict
 ) -> float:
@@ -356,7 +318,7 @@ def search(
 
     Args:
         keyword:      Case-insensitive search term (plain English or partial class name).
-        descriptions: In-memory descriptions dict from load_descriptions().
+        descriptions: In-memory index, as built by `catalog.descriptions_index()`.
         limit:        Maximum number of results to return. Values below 1
                       (zero or negative) are treated as 1 rather than passed
                       through to the final `results[:limit]` slice, where a
