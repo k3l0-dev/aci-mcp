@@ -129,6 +129,36 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
   installs the package rather than copying modules one by one, so it runs
   exactly what a wheel produces.
 
+### Removed
+
+- **BREAKING — the data plane is gone.** `data/schemas/` (1.7 GB),
+  `data/class-descriptions.json` (11 MB, previously tracked in git),
+  `scripts/download-schemas.sh` and the jsonmeta reader
+  (`registry/schema.py`, 361 lines) are all deleted. Installing no longer means
+  cloning a repository and downloading a 98.8 MB bundle: **`uvx niwashi-mcp`
+  starts on a machine with no checkout**, which is the entire point of 2.0.
+
+  The container drops from **3.97 GB to 457 MB** — 8.7x smaller — because it no
+  longer carries the schema corpus. Deployments that mounted `/data` lose that
+  mount point; there is nothing left to mount.
+
+  Parity remains verifiable, deliberately and by two independent means.
+  `tests/fixtures/jsonmeta/` freezes 31 raw APIC 6.0(9c) class files (2.4 MB)
+  and `tests/fixtures/jsonmeta_oracle.py` keeps the 1.x projection as a **test
+  oracle**, so the expected output is *derived* from the vendor's own files
+  rather than read back from a snapshot this project recorded of itself — a
+  snapshot cannot catch an error made identically in both the recording and the
+  implementation. For the full corpus, the `reference/pre-2.0-jsonmeta` branch
+  and the v1.0.0 release asset together reconstruct the complete comparison;
+  the procedure is recorded and was tested end to end.
+
+- `ACI_MCP_DATA_DIR` no longer exists — there is no data directory to point at.
+  `ACI_MCP_ENV_FILE` remains.
+- 43 tests of the deleted jsonmeta reader, and its performance suite, are
+  removed rather than adapted: a module that no longer exists cannot be tested.
+  The 31-class oracle covers what they covered, and covers it by independent
+  derivation rather than by reading the implementation back to itself.
+
 ### Fixed (1.x)
 
 - The README described the project as "the first open-source MCP server for

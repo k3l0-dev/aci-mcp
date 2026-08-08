@@ -1,0 +1,1315 @@
+{
+  "vz:Subj": {
+    "contains": {
+      "aaa:RbacAnnotation": "",
+      "fault:Counts": "",
+      "fault:Delegate": "",
+      "fault:Inst": "",
+      "health:Inst": "",
+      "tag:AliasDelInst": "",
+      "tag:AliasInst": "",
+      "tag:Annotation": "",
+      "tag:ExtMngdInst": "",
+      "tag:Inst": "",
+      "tag:Tag": "",
+      "vz:ConsSubjLbl": "",
+      "vz:Exception": "",
+      "vz:InTerm": "",
+      "vz:OutTerm": "",
+      "vz:ProvSubjLbl": "",
+      "vz:RsSdwanPol": "",
+      "vz:RsSubjFiltAtt": "",
+      "vz:RsSubjGraphAtt": ""
+    },
+    "rnMap": {
+      "alias": "tag:AliasInst",
+      "aliasdel-": "tag:AliasDelInst",
+      "annotationKey-": "tag:Annotation",
+      "conssubjlbl-": "vz:ConsSubjLbl",
+      "excp-": "vz:Exception",
+      "extmngd": "tag:ExtMngdInst",
+      "fault-": "fault:Inst",
+      "fd-": "fault:Delegate",
+      "fltCnts": "fault:Counts",
+      "health": "health:Inst",
+      "intmnl": "vz:InTerm",
+      "outtmnl": "vz:OutTerm",
+      "provsubjlbl-": "vz:ProvSubjLbl",
+      "rbacDom-": "aaa:RbacAnnotation",
+      "rsSdwanPol": "vz:RsSdwanPol",
+      "rsSubjGraphAtt": "vz:RsSubjGraphAtt",
+      "rssubjFiltAtt-": "vz:RsSubjFiltAtt",
+      "tag-": "tag:Inst",
+      "tagKey-": "tag:Tag"
+    },
+    "identifiedBy": [
+      "name"
+    ],
+    "rnFormat": "subj-{name}",
+    "containedBy": {
+      "vz:BrCP": "",
+      "vz:OOBBrCP": ""
+    },
+    "superClasses": [
+      "vz:ASubj",
+      "pol:Comp",
+      "pol:Obj",
+      "naming:NamedObject"
+    ],
+    "subClasses": {},
+    "relationFrom": {},
+    "relationTo": {
+      "vz:RsSdwanPol": "extdev:SDWanSlaPol",
+      "vz:RsSubjFiltAtt": "vz:Filter",
+      "vz:RsSubjGraphAtt": "vns:AbsGraph"
+    },
+    "dnFormats": [
+      "uni/tn-{name}/oobbrc-{name}/subj-{name}",
+      "uni/tn-{name}/brc-{name}/subj-{name}",
+      "uni/tn-{name}/subj-{name}"
+    ],
+    "writeAccess": [
+      "admin",
+      "tenant-security"
+    ],
+    "readAccess": [
+      "admin",
+      "ops",
+      "tenant-security"
+    ],
+    "faults": {
+      "F1339": "fltVzSubjConfigurationMissing"
+    },
+    "events": {
+      "E4213700": "creation||vz:Subj",
+      "E4213701": "modification||vz:Subj",
+      "E4213702": "deletion||vz:Subj"
+    },
+    "stats": {},
+    "isAbstract": false,
+    "isConfigurable": true,
+    "isContextRoot": false,
+    "isNxosConverged": false,
+    "isDeprecated": false,
+    "isHidden": false,
+    "isEncrypted": false,
+    "isExportable": true,
+    "isPersistent": true,
+    "isSubjectToQuota": false,
+    "isObservable": true,
+    "hasStats": false,
+    "isStat": false,
+    "isFaultable": true,
+    "isDomainable": false,
+    "isHealthScorable": true,
+    "shouldCollectHealthStats": false,
+    "healthCollectionSource": "faults",
+    "hasEventRules": false,
+    "abstractionLayer": "logical",
+    "apicNxProcessing": false,
+    "monitoringPolicySource": "Parent",
+    "isCreatableDeletable": "always",
+    "platformFlavors": [],
+    "classId": "1319",
+    "className": "Subj",
+    "classPkg": "vz",
+    "featureTag": "",
+    "moCategory": "Regular",
+    "label": "Contract Subject",
+    "comment": [
+      "A subject is a sub-application running behind an endpoint group (for example, an Exchange server). A subject is parented by the contract, which can encapsulate multiple subjects. An endpoint group associated to a contract is providing one or more subjects or is communicating with the subject as a peer entity. An endpoint group always associates with a subject and defines rules under the association for consuming/providing/peer-to-peer communications to that subject."
+    ],
+    "properties": {
+      "accessPrivilege": {
+        "isConfigurable": false,
+        "propGlobalId": "63554",
+        "propLocalId": "13107",
+        "label": "access privilege for modifying the mo",
+        "baseType": "scalar:Enum8",
+        "modelType": "vz:AccessPrivilegeType",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "1",
+            "localName": "SYSTEM",
+            "platformFlavors": [],
+            "label": "created by the system "
+          },
+          {
+            "value": "0",
+            "localName": "USER",
+            "platformFlavors": [],
+            "label": "created by the user "
+          },
+          {
+            "value": "USER",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          }
+        ],
+        "default": "USER",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "annotation": {
+        "comment": [
+          "User annotation. Suggested format orchestrator:value"
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "37468",
+        "propLocalId": "8719",
+        "label": "Annotation",
+        "baseType": "string:Basic",
+        "modelType": "mo:Annotation",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 0,
+            "max": 128,
+            "regexs": [
+              {
+                "regex": "^[a-zA-Z0-9_.:-]+$",
+                "type": "include"
+              }
+            ]
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "childAction": {
+        "comment": [
+          "Delete or ignore. For internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "4",
+        "propLocalId": "5",
+        "label": "childAction",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationChildAction",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "16384",
+            "localName": "deleteAll",
+            "platformFlavors": [],
+            "label": "deleteAll "
+          },
+          {
+            "value": "8192",
+            "localName": "deleteNonPresent",
+            "platformFlavors": [],
+            "label": "deleteNonPresent "
+          },
+          {
+            "value": "4096",
+            "localName": "ignore",
+            "platformFlavors": [],
+            "label": "ignore "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "configIssues": {
+        "comment": [
+          "Bitmask representation of the configuration issues found during the endpoint group deployment."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15771",
+        "propLocalId": "153",
+        "label": "Config Issues",
+        "baseType": "scalar:Bitmask64",
+        "modelType": "vz:ConfigIssues",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "8",
+            "localName": "any-to-prov-shared-service",
+            "platformFlavors": [],
+            "label": "Private Network Cannot be a Provider in Shared Service Scenario "
+          },
+          {
+            "value": "none",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "filter-not-present",
+            "platformFlavors": [],
+            "label": "Filter Not Present "
+          },
+          {
+            "value": "0",
+            "localName": "none",
+            "platformFlavors": [],
+            "label": "none "
+          },
+          {
+            "value": "4",
+            "localName": "subject-not-in-use-due-to-label",
+            "platformFlavors": [],
+            "label": "No EPG Has Label For This Subject "
+          },
+          {
+            "value": "2",
+            "localName": "taboo-has-no-filter",
+            "platformFlavors": [],
+            "label": "Taboo Not associated to Any Filter "
+          }
+        ],
+        "default": "none",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "consMatchT": {
+        "comment": [
+          "The subject match criteria across consumers."
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "1048",
+        "propLocalId": "549",
+        "label": "Consumer Label Match Type",
+        "baseType": "scalar:Enum8",
+        "modelType": "vz:MatchT",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "1",
+            "localName": "All",
+            "platformFlavors": [],
+            "comment": [
+              "Logical AND i.e. &&"
+            ],
+            "label": "All "
+          },
+          {
+            "value": "2",
+            "localName": "AtleastOne",
+            "platformFlavors": [],
+            "comment": [
+              "Logical OR i.e. ||"
+            ],
+            "label": "AtleastOne "
+          },
+          {
+            "value": "3",
+            "localName": "AtmostOne",
+            "platformFlavors": [],
+            "comment": [
+              "Logical XOR"
+            ],
+            "label": "AtmostOne "
+          },
+          {
+            "value": "4",
+            "localName": "None",
+            "platformFlavors": [],
+            "comment": [
+              "Logical NOT i.e. !"
+            ],
+            "label": "None "
+          },
+          {
+            "value": "AtleastOne",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "comment": [
+              "default is OR"
+            ],
+            "label": " "
+          }
+        ],
+        "default": "AtleastOne",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "descr": {
+        "comment": [
+          "Specifies the description of a policy component."
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "5582",
+        "propLocalId": "28",
+        "label": "Description",
+        "baseType": "string:Basic",
+        "modelType": "naming:Descr",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": true,
+        "likeProp": "naming:Described:descr",
+        "validators": [
+          {
+            "min": 0,
+            "max": 128,
+            "regexs": [
+              {
+                "regex": "^[a-zA-Z0-9\\\\!#$%()*,-./:;@ _{|}~?&+]+$",
+                "type": "include"
+              }
+            ]
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "dn": {
+        "comment": [
+          "A tag or metadata is a non-hierarchical keyword or term assigned to the fabric module."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "1",
+        "propLocalId": "2",
+        "label": "dn",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "extMngdBy": {
+        "comment": [
+          "Indicates which orchestrator is managing this MO"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "39607",
+        "propLocalId": "8023",
+        "label": "Managed By",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ExtMngdByType",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "undefined",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "msc",
+            "platformFlavors": [],
+            "label": "msc "
+          },
+          {
+            "value": "0",
+            "localName": "undefined",
+            "platformFlavors": [],
+            "label": "undefined "
+          }
+        ],
+        "default": "undefined",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "lcOwn": {
+        "comment": [
+          "A value that indicates how this object was created. For internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "9",
+        "propLocalId": "9",
+        "label": "lcOwn",
+        "baseType": "scalar:Enum8",
+        "modelType": "mo:Owner",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "local",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "4",
+            "localName": "implicit",
+            "platformFlavors": [],
+            "label": "Implicit "
+          },
+          {
+            "value": "0",
+            "localName": "local",
+            "platformFlavors": [],
+            "label": "Local "
+          },
+          {
+            "value": "1",
+            "localName": "policy",
+            "platformFlavors": [],
+            "label": "Policy "
+          },
+          {
+            "value": "2",
+            "localName": "replica",
+            "platformFlavors": [],
+            "label": "Replica "
+          },
+          {
+            "value": "3",
+            "localName": "resolveOnBehalf",
+            "platformFlavors": [],
+            "label": "ResolvedOnBehalf "
+          }
+        ],
+        "default": "local",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "modTs": {
+        "comment": [
+          "The time when this object was last modified."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "7",
+        "propLocalId": "7",
+        "label": "modTs",
+        "baseType": "scalar:Date",
+        "modelType": "mo:TStamp",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "never",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "0",
+            "localName": "never",
+            "platformFlavors": [],
+            "label": "never "
+          }
+        ],
+        "default": "never",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "monPolDn": {
+        "comment": [
+          ""
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "14080",
+        "propLocalId": "228",
+        "label": "Monitoring policy",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "name": {
+        "comment": [
+          "The name of a sub application running behind an endpoint group, such as an Exchange server. This name can be up to 64 alphanumeric characters. Note that you cannot change this name after the object has been saved."
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "7430",
+        "propLocalId": "13",
+        "label": "Name",
+        "baseType": "string:Basic",
+        "modelType": "naming:Name",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": false,
+        "isNaming": true,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": true,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 1,
+            "max": 64,
+            "regexs": [
+              {
+                "regex": "^[a-zA-Z0-9_.:-]+$",
+                "type": "include"
+              }
+            ]
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "nameAlias": {
+        "isConfigurable": true,
+        "propGlobalId": "28417",
+        "propLocalId": "6719",
+        "label": "Display Name",
+        "baseType": "string:Basic",
+        "modelType": "naming:NameAlias",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 0,
+            "max": 63,
+            "regexs": [
+              {
+                "regex": "^[a-zA-Z0-9_.-]+$",
+                "type": "include"
+              }
+            ]
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "prio": {
+        "comment": [
+          "The priority level of a sub application running behind an endpoint group, such as an Exchange server."
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "1049",
+        "propLocalId": "172",
+        "label": "QOS Class Id",
+        "baseType": "scalar:Enum8",
+        "modelType": "qos:TenantPrio",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 0,
+            "max": 9
+          }
+        ],
+        "validValues": [
+          {
+            "value": "unspecified",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "3",
+            "localName": "level1",
+            "platformFlavors": [],
+            "label": "Level1 "
+          },
+          {
+            "value": "2",
+            "localName": "level2",
+            "platformFlavors": [],
+            "label": "Level2 "
+          },
+          {
+            "value": "1",
+            "localName": "level3",
+            "platformFlavors": [],
+            "comment": [
+              "User configurable classes"
+            ],
+            "label": "Level3 (Default) "
+          },
+          {
+            "value": "9",
+            "localName": "level4",
+            "platformFlavors": [],
+            "label": "Level4 "
+          },
+          {
+            "value": "8",
+            "localName": "level5",
+            "platformFlavors": [],
+            "label": "Level5 "
+          },
+          {
+            "value": "7",
+            "localName": "level6",
+            "platformFlavors": [],
+            "label": "Level6 "
+          },
+          {
+            "value": "0",
+            "localName": "unspecified",
+            "platformFlavors": [],
+            "label": "Unspecified "
+          }
+        ],
+        "default": "unspecified",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "provMatchT": {
+        "comment": [
+          "The subject match criteria across consumers."
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "1047",
+        "propLocalId": "548",
+        "label": "Provider Label Match Type",
+        "baseType": "scalar:Enum8",
+        "modelType": "vz:MatchT",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "1",
+            "localName": "All",
+            "platformFlavors": [],
+            "comment": [
+              "Logical AND i.e. &&"
+            ],
+            "label": "All "
+          },
+          {
+            "value": "2",
+            "localName": "AtleastOne",
+            "platformFlavors": [],
+            "comment": [
+              "Logical OR i.e. ||"
+            ],
+            "label": "AtleastOne "
+          },
+          {
+            "value": "3",
+            "localName": "AtmostOne",
+            "platformFlavors": [],
+            "comment": [
+              "Logical XOR"
+            ],
+            "label": "AtmostOne "
+          },
+          {
+            "value": "4",
+            "localName": "None",
+            "platformFlavors": [],
+            "comment": [
+              "Logical NOT i.e. !"
+            ],
+            "label": "None "
+          },
+          {
+            "value": "AtleastOne",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "comment": [
+              "default is OR"
+            ],
+            "label": " "
+          }
+        ],
+        "default": "AtleastOne",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "revFltPorts": {
+        "comment": [
+          "Enables the filter to apply on both ingress and egress traffic."
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "1046",
+        "propLocalId": "547",
+        "label": "Reverse Filter Ports",
+        "baseType": "scalar:Bool",
+        "modelType": "scalar:Bool",
+        "needsPropDelimiters": false,
+        "uitype": "boolean",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "true",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "false",
+            "localName": "no",
+            "platformFlavors": [],
+            "label": "No "
+          },
+          {
+            "value": "true",
+            "localName": "yes",
+            "platformFlavors": [],
+            "label": "Yes "
+          }
+        ],
+        "default": "true",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "rn": {
+        "comment": [
+          "Identifies an object from its siblings within the context of its parent object. The distinguished name contains a sequence of relative names."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "2",
+        "propLocalId": "3",
+        "label": "rn",
+        "baseType": "reference:BinRN",
+        "modelType": "reference:BinRN",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "status": {
+        "comment": [
+          "The upgrade status. This property is for internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3",
+        "propLocalId": "4",
+        "label": "status",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationStatus",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2",
+            "localName": "created",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be created. An error is returned if the object already exists.  \nIn the return value of a setter method: indicates that an object has been created.  \n"
+            ],
+            "label": "created "
+          },
+          {
+            "value": "8",
+            "localName": "deleted",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be deleted.  \nIn the return value of a setter method: indicates that an object has been deleted.\n"
+            ],
+            "label": "deleted "
+          },
+          {
+            "value": "4",
+            "localName": "modified",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be modified  \nIn the return value of a setter method: indicates that an object has been modified.\n"
+            ],
+            "label": "modified "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "targetDscp": {
+        "comment": [
+          "The target differentiated services code point (DSCP) of the path attached to the layer 3 outside profile."
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "22212",
+        "propLocalId": "855",
+        "label": "Subject Level Dscp",
+        "baseType": "scalar:UByte",
+        "modelType": "qosp:Dscp",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 0,
+            "max": 64
+          }
+        ],
+        "validValues": [
+          {
+            "value": "10",
+            "localName": "AF11",
+            "platformFlavors": [],
+            "comment": [
+              "AF11 low drop"
+            ],
+            "label": "AF11 low drop "
+          },
+          {
+            "value": "12",
+            "localName": "AF12",
+            "platformFlavors": [],
+            "comment": [
+              "AF12 medium drop"
+            ],
+            "label": "AF12 medium drop "
+          },
+          {
+            "value": "14",
+            "localName": "AF13",
+            "platformFlavors": [],
+            "comment": [
+              "AF13 high drop"
+            ],
+            "label": "AF13 high drop "
+          },
+          {
+            "value": "18",
+            "localName": "AF21",
+            "platformFlavors": [],
+            "comment": [
+              "AF21 low drop"
+            ],
+            "label": "AF21 low drop "
+          },
+          {
+            "value": "20",
+            "localName": "AF22",
+            "platformFlavors": [],
+            "comment": [
+              "AF22 medium drop"
+            ],
+            "label": "AF22 medium drop "
+          },
+          {
+            "value": "22",
+            "localName": "AF23",
+            "platformFlavors": [],
+            "comment": [
+              "AF22 high drop"
+            ],
+            "label": "AF23 high drop "
+          },
+          {
+            "value": "26",
+            "localName": "AF31",
+            "platformFlavors": [],
+            "comment": [
+              "AF31 low drop"
+            ],
+            "label": "AF31 low drop "
+          },
+          {
+            "value": "28",
+            "localName": "AF32",
+            "platformFlavors": [],
+            "comment": [
+              "AF32 medium drop"
+            ],
+            "label": "AF32 medium drop "
+          },
+          {
+            "value": "30",
+            "localName": "AF33",
+            "platformFlavors": [],
+            "comment": [
+              "AF33 high drop"
+            ],
+            "label": "AF33 high drop "
+          },
+          {
+            "value": "34",
+            "localName": "AF41",
+            "platformFlavors": [],
+            "comment": [
+              "AF41 low drop"
+            ],
+            "label": "AF41 low drop "
+          },
+          {
+            "value": "36",
+            "localName": "AF42",
+            "platformFlavors": [],
+            "comment": [
+              "AF42 medium drop"
+            ],
+            "label": "AF42 medium drop "
+          },
+          {
+            "value": "38",
+            "localName": "AF43",
+            "platformFlavors": [],
+            "comment": [
+              "AF42 high drop"
+            ],
+            "label": "AF43 high drop "
+          },
+          {
+            "value": "0",
+            "localName": "CS0",
+            "platformFlavors": [],
+            "comment": [
+              "CS0"
+            ],
+            "label": "CS0 "
+          },
+          {
+            "value": "8",
+            "localName": "CS1",
+            "platformFlavors": [],
+            "comment": [
+              "CS1"
+            ],
+            "label": "CS1 "
+          },
+          {
+            "value": "16",
+            "localName": "CS2",
+            "platformFlavors": [],
+            "comment": [
+              "CS2"
+            ],
+            "label": "CS2 "
+          },
+          {
+            "value": "24",
+            "localName": "CS3",
+            "platformFlavors": [],
+            "comment": [
+              "CS3"
+            ],
+            "label": "CS3 "
+          },
+          {
+            "value": "32",
+            "localName": "CS4",
+            "platformFlavors": [],
+            "comment": [
+              "CS4"
+            ],
+            "label": "CS4 "
+          },
+          {
+            "value": "40",
+            "localName": "CS5",
+            "platformFlavors": [],
+            "comment": [
+              "CS5"
+            ],
+            "label": "CS5 "
+          },
+          {
+            "value": "48",
+            "localName": "CS6",
+            "platformFlavors": [],
+            "comment": [
+              "CS6"
+            ],
+            "label": "CS6 "
+          },
+          {
+            "value": "56",
+            "localName": "CS7",
+            "platformFlavors": [],
+            "comment": [
+              "CS7"
+            ],
+            "label": "CS7 "
+          },
+          {
+            "value": "46",
+            "localName": "EF",
+            "platformFlavors": [],
+            "comment": [
+              "EF"
+            ],
+            "label": "Expedited Forwarding "
+          },
+          {
+            "value": "44",
+            "localName": "VA",
+            "platformFlavors": [],
+            "comment": [
+              "VA"
+            ],
+            "label": "Voice Admit "
+          },
+          {
+            "value": "unspecified",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "64",
+            "localName": "unspecified",
+            "platformFlavors": [],
+            "comment": [
+              "Unspecified"
+            ],
+            "label": "Unspecified "
+          }
+        ],
+        "default": "unspecified",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "uid": {
+        "comment": [
+          "A unique identifier for this object."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8",
+        "propLocalId": "8",
+        "label": "uid",
+        "baseType": "scalar:Uint16",
+        "modelType": "scalar:Uint16",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "userdom": {
+        "isConfigurable": true,
+        "propGlobalId": "60657",
+        "propLocalId": "13244",
+        "label": "userdom",
+        "baseType": "string:Basic",
+        "modelType": "mo:UserDomType",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 0,
+            "max": 1024,
+            "regexs": [
+              {
+                "regex": "^[a-zA-Z0-9_.:-]+$",
+                "type": "include"
+              }
+            ]
+          }
+        ],
+        "validValues": [
+          {
+            "value": "all",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          }
+        ],
+        "default": "all",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      }
+    }
+  }
+}

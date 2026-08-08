@@ -1,0 +1,1206 @@
+{
+  "vpc:If": {
+    "contains": {
+      "fault:Counts": "",
+      "fault:Inst": "",
+      "health:Inst": "",
+      "vpc:AppParams": "",
+      "vpc:RsVpcConf": ""
+    },
+    "rnMap": {
+      "fault-": "fault:Inst",
+      "fltCnts": "fault:Counts",
+      "health": "health:Inst",
+      "params-": "vpc:AppParams",
+      "rsvpcConf": "vpc:RsVpcConf"
+    },
+    "identifiedBy": [
+      "id"
+    ],
+    "rnFormat": "if-{id}",
+    "containedBy": {
+      "vpc:Dom": ""
+    },
+    "superClasses": [],
+    "subClasses": {},
+    "relationFrom": {},
+    "relationTo": {
+      "vpc:RsVpcConf": "pc:AggrIf"
+    },
+    "dnFormats": [
+      "topology/pod-{id}/node-{id}/sys/vpc/inst/dom-{id}/if-{id}",
+      "sys/vpc/inst/dom-{id}/if-{id}"
+    ],
+    "writeAccess": [],
+    "readAccess": [
+      "access-connectivity",
+      "admin"
+    ],
+    "faults": {
+      "F0518": "fltVpcIfIfCompatFail",
+      "F1296": "fltVpcIfIfDown",
+      "F3274": "fltVpcIfIfFabricEncapMismatch",
+      "F2705": "fltVpcIfIfImpaired"
+    },
+    "events": {
+      "E4205113": "state-transition|ifUp|vpc:If",
+      "E4205114": "state-transition|peerIfUp|vpc:If",
+      "E4205116": "state-transition|peerIfDown|vpc:If",
+      "E4205120": "state-transition|ifCompatPass|vpc:If",
+      "E4205121": "state-transition|ifCompatCheckBypass|vpc:If"
+    },
+    "stats": {},
+    "isAbstract": false,
+    "isConfigurable": false,
+    "isContextRoot": false,
+    "isNxosConverged": false,
+    "isDeprecated": false,
+    "isHidden": false,
+    "isEncrypted": false,
+    "isExportable": false,
+    "isPersistent": true,
+    "isSubjectToQuota": false,
+    "isObservable": true,
+    "hasStats": false,
+    "isStat": false,
+    "isFaultable": true,
+    "isDomainable": false,
+    "isHealthScorable": true,
+    "shouldCollectHealthStats": false,
+    "healthCollectionSource": "faults",
+    "hasEventRules": true,
+    "abstractionLayer": "concrete",
+    "apicNxProcessing": false,
+    "monitoringPolicySource": "Parent",
+    "isCreatableDeletable": "always",
+    "platformFlavors": [
+      "apic",
+      "nxos"
+    ],
+    "classId": "3428",
+    "className": "If",
+    "classPkg": "vpc",
+    "featureTag": "",
+    "moCategory": "Regular",
+    "label": "VPC Interface",
+    "comment": [
+      "The vPC interfaces information enables links that are physically connected to two different Fabric devices to appear as a single port channel by a third device. The third device can be a switch, server, or any other networking device that supports port channels. A vPC can provide Layer 2 multipathing, which allows you to create redundancy and increase bisectional bandwidth by enabling multiple parallel paths between nodes and allowing load balancing traffic."
+    ],
+    "properties": {
+      "accBndlGrpDn": {
+        "comment": [
+          "AccBndlGrp DN"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "20367",
+        "propLocalId": "5226",
+        "label": "PC/VPC Interface Policy Group",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "cfgdAccessVlan": {
+        "comment": [
+          "The vPC interface's configured access VLAN."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3587",
+        "propLocalId": "1788",
+        "label": "Configured Access Vlan",
+        "baseType": "base:Encap",
+        "modelType": "base:Encap",
+        "needsPropDelimiters": true,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "cfgdTrunkVlans": {
+        "comment": [
+          "The vPC interface's configured trunk VLANs. A trunk port can have two or more VLANs configured on the interface; it can carry traffic for several VLANs simultaneously."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3586",
+        "propLocalId": "1787",
+        "label": "Configured Trunk Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "cfgdVlans": {
+        "comment": [
+          "The configured VLANs of the interface."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3585",
+        "propLocalId": "1786",
+        "label": "Configured Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "childAction": {
+        "comment": [
+          "Delete or ignore. For internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "4",
+        "propLocalId": "5",
+        "label": "childAction",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationChildAction",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "16384",
+            "localName": "deleteAll",
+            "platformFlavors": [],
+            "label": "deleteAll "
+          },
+          {
+            "value": "8192",
+            "localName": "deleteNonPresent",
+            "platformFlavors": [],
+            "label": "deleteNonPresent "
+          },
+          {
+            "value": "4096",
+            "localName": "ignore",
+            "platformFlavors": [],
+            "label": "ignore "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "compatQual": {
+        "comment": [
+          "Compatibility reason code"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3583",
+        "propLocalId": "1784",
+        "label": "Compatibility Qualifier",
+        "baseType": "scalar:Uint32",
+        "modelType": "vpc:CompatQual",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "compatQualStr": {
+        "comment": [
+          "Compatibility reason code string"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3584",
+        "propLocalId": "1785",
+        "label": "Compatibility Qualifier String",
+        "baseType": "string:Basic",
+        "modelType": "string:Basic",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "compatSt": {
+        "comment": [
+          "Compatibility status"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3582",
+        "propLocalId": "1783",
+        "label": "Compatibility Status",
+        "baseType": "scalar:Enum8",
+        "modelType": "vpc:CompatSt",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "notDone",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "fail",
+            "platformFlavors": [],
+            "label": "failed "
+          },
+          {
+            "value": "2",
+            "localName": "notDone",
+            "platformFlavors": [],
+            "label": "Not Applicable "
+          },
+          {
+            "value": "0",
+            "localName": "pass",
+            "platformFlavors": [],
+            "label": "success "
+          }
+        ],
+        "default": "notDone",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "descr": {
+        "comment": [
+          "The description of this configuration item."
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "19115",
+        "propLocalId": "28",
+        "label": "Description",
+        "baseType": "string:Basic",
+        "modelType": "naming:Descr",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": true,
+        "likeProp": "naming:Described:descr",
+        "validators": [
+          {
+            "min": 0,
+            "max": 128,
+            "regexs": [
+              {
+                "regex": "^[a-zA-Z0-9\\\\!#$%()*,-./:;@ _{|}~?&+]+$",
+                "type": "include"
+              }
+            ]
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "dn": {
+        "comment": [
+          "A tag or metadata is a non-hierarchical keyword or term assigned to the fabric module."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "1",
+        "propLocalId": "2",
+        "label": "dn",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "fabEncMismatchVlans": {
+        "comment": [
+          "Fabric Encap Mismatched vlans on peer"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "45500",
+        "propLocalId": "10079",
+        "label": "fabric Encap Mismatch Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "fabEncMismatchVlansSet": {
+        "comment": [
+          "Event Manger not able to raise fault on bitmapsSo adding fabEncMismatchVlansSet to set Fault"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "55325",
+        "propLocalId": "12523",
+        "label": "fabric Encap Mismatch Vlans Flag",
+        "baseType": "scalar:Enum8",
+        "modelType": "l2:fabEncMismatchVlansSetT",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "pass",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "failed",
+            "platformFlavors": [],
+            "label": "Mismatched Vlans "
+          },
+          {
+            "value": "0",
+            "localName": "pass",
+            "platformFlavors": [],
+            "label": "No Mismatched Vlasns "
+          }
+        ],
+        "default": "pass",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "fabricPathDn": {
+        "comment": [
+          ""
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "18493",
+        "propLocalId": "4285",
+        "label": "fabricPathDn",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "id": {
+        "comment": [
+          "The vPC interface identifier."
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "3579",
+        "propLocalId": "12",
+        "label": "VPC ID",
+        "baseType": "scalar:Uint16",
+        "modelType": "vpc:Id",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": false,
+        "isNaming": true,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 1,
+            "max": 1000
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "lcOwn": {
+        "comment": [
+          "A value that indicates how this object was created. For internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "9",
+        "propLocalId": "9",
+        "label": "lcOwn",
+        "baseType": "scalar:Enum8",
+        "modelType": "mo:Owner",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "local",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "4",
+            "localName": "implicit",
+            "platformFlavors": [],
+            "label": "Implicit "
+          },
+          {
+            "value": "0",
+            "localName": "local",
+            "platformFlavors": [],
+            "label": "Local "
+          },
+          {
+            "value": "1",
+            "localName": "policy",
+            "platformFlavors": [],
+            "label": "Policy "
+          },
+          {
+            "value": "2",
+            "localName": "replica",
+            "platformFlavors": [],
+            "label": "Replica "
+          },
+          {
+            "value": "3",
+            "localName": "resolveOnBehalf",
+            "platformFlavors": [],
+            "label": "ResolvedOnBehalf "
+          }
+        ],
+        "default": "local",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "localOperSt": {
+        "comment": [
+          "The local operational status of the vPC interface."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3580",
+        "propLocalId": "1781",
+        "label": "Local Operational State",
+        "baseType": "scalar:Enum8",
+        "modelType": "vpc:OperSt",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "unknown",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "down",
+            "platformFlavors": [],
+            "label": "Down "
+          },
+          {
+            "value": "3",
+            "localName": "noCfg",
+            "platformFlavors": [],
+            "label": "Not configured "
+          },
+          {
+            "value": "0",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "label": "Unknown "
+          },
+          {
+            "value": "2",
+            "localName": "up",
+            "platformFlavors": [],
+            "label": "Up "
+          }
+        ],
+        "default": "unknown",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "modTs": {
+        "comment": [
+          "The time when this object was last modified."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "7",
+        "propLocalId": "7",
+        "label": "modTs",
+        "baseType": "scalar:Date",
+        "modelType": "mo:TStamp",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "never",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "0",
+            "localName": "never",
+            "platformFlavors": [],
+            "label": "never "
+          }
+        ],
+        "default": "never",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "monPolDn": {
+        "comment": [
+          "The monitoring policy attached to this observable object."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "14544",
+        "propLocalId": "228",
+        "label": "Monitoring policy",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "name": {
+        "comment": [
+          "The name of the object."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "19045",
+        "propLocalId": "13",
+        "label": "VPC Name",
+        "baseType": "string:Basic",
+        "modelType": "naming:Name",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pcMode": {
+        "comment": [
+          ""
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "19112",
+        "propLocalId": "2078",
+        "label": "channel mode",
+        "baseType": "scalar:Enum8",
+        "modelType": "pc:Mode",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2",
+            "localName": "active",
+            "platformFlavors": [],
+            "comment": [
+              "LACP active port channel"
+            ],
+            "label": "lacp-active "
+          },
+          {
+            "value": "static",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "6",
+            "localName": "explicit-failover",
+            "platformFlavors": [],
+            "comment": [
+              "explicit failover order"
+            ],
+            "label": "Explicit Failover Order "
+          },
+          {
+            "value": "4",
+            "localName": "mac-pin",
+            "platformFlavors": [],
+            "comment": [
+              "mac-pin no LACP"
+            ],
+            "label": "MAC Pinning "
+          },
+          {
+            "value": "5",
+            "localName": "mac-pin-nicload",
+            "platformFlavors": [],
+            "label": "MAC Pinning-Physical-NIC-load "
+          },
+          {
+            "value": "0",
+            "localName": "on",
+            "platformFlavors": [],
+            "comment": [
+              "Static port channel"
+            ],
+            "label": "on "
+          },
+          {
+            "value": "3",
+            "localName": "passive",
+            "platformFlavors": [],
+            "comment": [
+              "LACP passive port channel"
+            ],
+            "label": "lacp-passive "
+          },
+          {
+            "value": "1",
+            "localName": "static",
+            "platformFlavors": [],
+            "comment": [
+              "Static port channel, to be deprecated"
+            ],
+            "label": "Static "
+          }
+        ],
+        "default": "static",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "peerCfgdVlans": {
+        "comment": [
+          "The VLANs configured by the peer for the vPC interface."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3590",
+        "propLocalId": "1791",
+        "label": "Peer Configured Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "peerUpVlans": {
+        "comment": [
+          "The VLANs active on the peer for the vPC interface."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3591",
+        "propLocalId": "1792",
+        "label": "Peer Up Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "remoteOperSt": {
+        "comment": [
+          "The peer's operational status for the vPC interface."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3581",
+        "propLocalId": "1782",
+        "label": "Remote Operational State",
+        "baseType": "scalar:Enum8",
+        "modelType": "vpc:OperSt",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "unknown",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "down",
+            "platformFlavors": [],
+            "label": "Down "
+          },
+          {
+            "value": "3",
+            "localName": "noCfg",
+            "platformFlavors": [],
+            "label": "Not configured "
+          },
+          {
+            "value": "0",
+            "localName": "unknown",
+            "platformFlavors": [],
+            "label": "Unknown "
+          },
+          {
+            "value": "2",
+            "localName": "up",
+            "platformFlavors": [],
+            "label": "Up "
+          }
+        ],
+        "default": "unknown",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "rn": {
+        "comment": [
+          "Identifies an object from its siblings within the context of its parent object. The distinguished name contains a sequence of relative names."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "2",
+        "propLocalId": "3",
+        "label": "rn",
+        "baseType": "reference:BinRN",
+        "modelType": "reference:BinRN",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "status": {
+        "comment": [
+          "The upgrade status. This property is for internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3",
+        "propLocalId": "4",
+        "label": "status",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationStatus",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2",
+            "localName": "created",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be created. An error is returned if the object already exists.  \nIn the return value of a setter method: indicates that an object has been created.  \n"
+            ],
+            "label": "created "
+          },
+          {
+            "value": "8",
+            "localName": "deleted",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be deleted.  \nIn the return value of a setter method: indicates that an object has been deleted.\n"
+            ],
+            "label": "deleted "
+          },
+          {
+            "value": "4",
+            "localName": "modified",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be modified  \nIn the return value of a setter method: indicates that an object has been modified.\n"
+            ],
+            "label": "modified "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "suspVlans": {
+        "comment": [
+          "The suspended VLANs of the interface. You can configure VLANs to be in the active state, in which the VLANs pass traffic, or the suspended state, in which the VLANs do not pass traffic. By default, the VLANs are in the active state and pass traffic. Note that even if a VLAN is configured to be active, it can be operationally suspended if it has not been configured on the peer switch."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3589",
+        "propLocalId": "1790",
+        "label": "Suspended Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "upVlans": {
+        "comment": [
+          "The active VLANs of the interface. You can configure VLANs to be in the active state, in which the VLANs pass traffic, or the suspended state, in which the VLANs do not pass traffic. By default, the VLANs are in the active state and pass traffic. Note that even if a VLAN is configured to be active, it can be operationally suspended if it has not been configured on the peer switch."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3588",
+        "propLocalId": "1789",
+        "label": "Up Vlans",
+        "baseType": "base:BitArray4096",
+        "modelType": "l2:VlanBitmap",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "usage": {
+        "comment": [
+          "Port channel usage"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "21493",
+        "propLocalId": "1851",
+        "label": "Port Channel Usage",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "l1:PortUsage",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "32",
+            "localName": "blacklist",
+            "platformFlavors": [],
+            "label": "Admin Down "
+          },
+          {
+            "value": "16",
+            "localName": "controller",
+            "platformFlavors": [],
+            "label": "Controller "
+          },
+          {
+            "value": "discovery",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "512",
+            "localName": "direct-mpod",
+            "platformFlavors": [],
+            "label": "Back to Back Multipod "
+          },
+          {
+            "value": "1",
+            "localName": "discovery",
+            "platformFlavors": [],
+            "label": "Discovery "
+          },
+          {
+            "value": "2",
+            "localName": "epg",
+            "platformFlavors": [],
+            "label": "EPG "
+          },
+          {
+            "value": "4",
+            "localName": "fabric",
+            "platformFlavors": [],
+            "label": "Fabric "
+          },
+          {
+            "value": "256",
+            "localName": "fabric-ext",
+            "platformFlavors": [],
+            "label": "Fabric External "
+          },
+          {
+            "value": "8",
+            "localName": "infra",
+            "platformFlavors": [],
+            "label": "Infra "
+          },
+          {
+            "value": "128",
+            "localName": "out-of-service",
+            "platformFlavors": [],
+            "label": "Out Of Service "
+          },
+          {
+            "value": "64",
+            "localName": "span",
+            "platformFlavors": [],
+            "label": "Span "
+          },
+          {
+            "value": "1024",
+            "localName": "tier1-leaf",
+            "platformFlavors": [],
+            "label": "Fabric link connected to tier1 leaf "
+          },
+          {
+            "value": "2048",
+            "localName": "tier2-leaf",
+            "platformFlavors": [],
+            "label": "Fabric link connected to tier2 leaf "
+          }
+        ],
+        "default": "discovery",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      }
+    }
+  }
+}

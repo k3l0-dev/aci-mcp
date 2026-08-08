@@ -56,11 +56,10 @@ class TestCheckoutRoot:
     """A checkout is verified by its layout, never assumed from path arithmetic."""
 
     def test_detects_the_real_checkout(self):
-        """Running from the repository, the root is found and holds data/."""
+        """Running from the repository, the root is found by its marker file."""
         root = _checkout_root()
         assert root is not None, "checkout not detected while running from the repo"
         assert (root / "mcp" / "pyproject.toml").is_file()
-        assert (root / "data").is_dir()
 
     def test_returns_none_when_layout_does_not_match(self, monkeypatch, tmp_path: Path):
         """Installed in site-packages there is no checkout — say so, don't guess.
@@ -74,13 +73,9 @@ class TestCheckoutRoot:
         monkeypatch.setattr("niwashi_mcp.main.BASE_DIR", fake_pkg)
         assert _checkout_root() is None
 
-    def test_rejects_a_partial_layout(self, monkeypatch, tmp_path: Path):
-        """Both markers are required — one of them is not a checkout."""
-        root = tmp_path / "root"
-        (root / "mcp").mkdir(parents=True)
-        (root / "mcp" / "pyproject.toml").write_text("")
-        # data/ deliberately absent
-        pkg = root / "mcp" / "src" / "niwashi_mcp"
+    def test_rejects_a_tree_without_the_marker(self, monkeypatch, tmp_path: Path):
+        """A directory that merely exists at the right depth is not a checkout."""
+        pkg = tmp_path / "anything" / "deep" / "niwashi_mcp"
         pkg.mkdir(parents=True)
         monkeypatch.setattr("niwashi_mcp.main.BASE_DIR", pkg)
         assert _checkout_root() is None
@@ -92,7 +87,8 @@ class TestEnvironmentOverride:
     @pytest.mark.parametrize(
         "var,attr,value",
         [
-            ("ACI_MCP_DATA_DIR", "SCHEMAS_DIR", "/opt/aci-data"),
+            # ACI_MCP_DATA_DIR is gone in 2.0 — the catalogue ships inside the
+            # niwaki dependency, so there is no data directory left to point at.
             ("ACI_MCP_ENV_FILE", "ENV_FILE", "/opt/secrets/aci.env"),
         ],
     )
@@ -115,13 +111,14 @@ class TestEnvironmentOverride:
 def test_resolved_paths_never_point_inside_site_packages():
     """The invariant that matters, stated directly.
 
-    Whatever the resolution strategy becomes, data must never be looked up
-    inside the installed package: that directory is read-only, wiped on
-    upgrade, and invisible to the operator.
+    Only ``ENV_FILE`` is left in 2.0 — the data directory is gone, replaced by
+    the catalogue inside the niwaki dependency. The rule stands for what
+    remains: an operator-supplied file must never be looked up inside the
+    installed package, which is read-only, wiped on upgrade, and invisible.
     """
     from niwashi_mcp import main as m
 
-    for name in ("SCHEMAS_DIR", "DESCRIPTIONS_FILE", "ENV_FILE"):
+    for name in ("ENV_FILE",):
         value = str(getattr(m, name))
         assert "site-packages" not in value, f"{name} resolves into site-packages: {value}"
         assert os.sep + "dist-packages" not in value, f"{name} resolves into dist-packages"

@@ -18,14 +18,17 @@ from tests.conftest import MINIMAL_DESCRIPTIONS, StubBackend, make_ctx
 # ── Tool context helpers ──────────────────────────────────────────────────────
 
 
-def _stub_ctx(sample_imdata, schemas_dir, descriptions=None):
-    """Build a tool context with optional custom descriptions."""
+def _stub_ctx(sample_imdata, descriptions=None):
+    """Build a tool context with optional custom descriptions.
+
+    No `schemas_dir`: 2.0 reads the object model from the catalogue inside the
+    niwaki dependency, so there is no directory for a test to point at.
+    """
     desc = descriptions if descriptions is not None else dict(MINIMAL_DESCRIPTIONS)
     return make_ctx(
         {
             "descriptions": desc,
             "backend": StubBackend(sample_imdata),
-            "schemas_dir": schemas_dir,
         }
     )
 
@@ -252,13 +255,13 @@ async def test_query_limit_negative_clamped_to_one(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_limit_negative_reaches_backend_as_clamped_value(
-    sample_imdata, schemas_dir
+    sample_imdata
 ):
     """The clamped value — not the raw negative input — is what the backend
     actually receives, so a negative limit never reaches the real APIC."""
     from niwashi_mcp.main import query
 
-    ctx = _stub_ctx(sample_imdata, schemas_dir)
+    ctx = _stub_ctx(sample_imdata)
     await query("fvBD", ctx, limit=-5)
     backend = ctx.lifespan_context["backend"]
     assert backend.calls[-1]["limit"] == 1
@@ -423,10 +426,10 @@ def _argmax_bd_name(results: list[dict]) -> str:
 
 
 @pytest.mark.asyncio
-async def test_query_default_page_argmax_wrong_fetch_all_argmax_right(schemas_dir):
+async def test_query_default_page_argmax_wrong_fetch_all_argmax_right():
     from niwashi_mcp.main import query
 
-    ctx = _stub_ctx(_build_large_bd_imdata(), schemas_dir)
+    ctx = _stub_ctx(_build_large_bd_imdata())
     true_argmax = f"bd{_ARGMAX_BD_INDEX:04d}"
 
     partial = await query("fvBD", ctx, include_children=["fvSubnet"])
@@ -457,12 +460,12 @@ async def test_query_unknown_class_raises_unknown_class_error(tool_ctx):
 
 @pytest.mark.asyncio
 async def test_query_unknown_class_error_includes_suggestions(
-    sample_imdata, schemas_dir
+    sample_imdata
 ):
     from niwashi_mcp.main import query
 
     # Use a registry that contains "fvBD" so "fvBd" (typo) gets a suggestion
-    ctx = _stub_ctx(sample_imdata, schemas_dir, descriptions=dict(MINIMAL_DESCRIPTIONS))
+    ctx = _stub_ctx(sample_imdata, descriptions=dict(MINIMAL_DESCRIPTIONS))
     with pytest.raises(UnknownClassError) as exc_info:
         await query("fvBd", ctx)  # lowercase 'd' — typo
     # Should suggest fvBD
@@ -512,15 +515,13 @@ _EXTRA_ONLY_SCHEMA = {
 
 
 @pytest.mark.asyncio
-async def test_query_rejects_class_with_neither_description_nor_schema(
-    sample_imdata, tmp_path
-):
+async def test_query_rejects_class_with_neither_description_nor_schema(sample_imdata):
     """A class with no descriptions entry AND no resolvable schema file is
     still rejected — the fallback only rescues genuinely known classes."""
     from niwashi_mcp.main import query
 
     # tmp_path is empty — no schema file for any class.
-    ctx = _stub_ctx(sample_imdata, tmp_path, descriptions=dict(MINIMAL_DESCRIPTIONS))
+    ctx = _stub_ctx(sample_imdata, descriptions=dict(MINIMAL_DESCRIPTIONS))
 
     with pytest.raises(UnknownClassError):
         await query("totallyMadeUpClassNotAnywhere", ctx)
@@ -546,20 +547,20 @@ _CONFIG_IMDATA = [
 
 
 @pytest.mark.asyncio
-async def test_query_config_only_passed_through(sample_imdata, schemas_dir):
+async def test_query_config_only_passed_through(sample_imdata):
     from niwashi_mcp.main import query
 
-    ctx = _stub_ctx(sample_imdata, schemas_dir)
+    ctx = _stub_ctx(sample_imdata)
     await query("fvBD", ctx, config_only=True)
     call = ctx.lifespan_context["backend"].calls[-1]
     assert call["config_only"] is True
 
 
 @pytest.mark.asyncio
-async def test_query_config_only_strips_operational_attrs(schemas_dir):
+async def test_query_config_only_strips_operational_attrs():
     from niwashi_mcp.main import query
 
-    ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
+    ctx = _stub_ctx(_CONFIG_IMDATA)
     envelope = await query("fvBD", ctx, config_only=True)
     results = envelope["results"]
     assert results[0]["name"] == "servers"
@@ -568,10 +569,10 @@ async def test_query_config_only_strips_operational_attrs(schemas_dir):
 
 
 @pytest.mark.asyncio
-async def test_query_without_config_only_keeps_all_attrs(schemas_dir):
+async def test_query_without_config_only_keeps_all_attrs():
     from niwashi_mcp.main import query
 
-    ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
+    ctx = _stub_ctx(_CONFIG_IMDATA)
     envelope = await query("fvBD", ctx)
     assert "modTs" in envelope["results"][0]
 
@@ -608,10 +609,10 @@ async def test_get_by_dn_not_found_logs_warning(tool_ctx):
 
 
 @pytest.mark.asyncio
-async def test_get_by_dn_config_only_strips_operational_attrs(schemas_dir):
+async def test_get_by_dn_config_only_strips_operational_attrs():
     from niwashi_mcp.main import get_by_dn
 
-    ctx = _stub_ctx(_CONFIG_IMDATA, schemas_dir)
+    ctx = _stub_ctx(_CONFIG_IMDATA)
     obj = await get_by_dn("uni/tn-OT/BD-servers", ctx, config_only=True)
     assert obj["name"] == "servers"
     assert "modTs" not in obj

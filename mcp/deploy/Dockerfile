@@ -25,17 +25,11 @@ RUN uv sync --frozen --no-dev
 # exactly what a `pip install` produces — no drift between container and wheel.
 COPY mcp/src/ ./src/
 RUN uv pip install --no-deps .
-COPY data/ /data/
-
-# The data bundle lives outside the app directory, so point the server at it
-# explicitly rather than relying on path inference from the working directory.
-# Iteration 5 removes this entirely: the catalogue ships inside the niwaki
-# dependency and there is no data volume left to locate.
-ENV ACI_MCP_DATA_DIR=/data
+# No data bundle: the ACI object model ships inside the niwaki dependency.
 
 # Run as non-root
 RUN groupadd --system app && useradd --system --gid app app
-RUN chown -R app:app /app /data
+RUN chown -R app:app /app
 USER app
 
 EXPOSE 8000
