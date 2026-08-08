@@ -169,6 +169,27 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
   it to be inferred from four documentation lines that called it a lab
   convenience.
 
+- **The niwaki dependency was pinned as if the coupling were its public API.**
+  `registry/catalog.py` reads the catalogue's SQLite schema directly — `mo`,
+  `prop`, `comment_pool`, `label_pool`, `type_pool`, `enum`, `manifest` — none
+  of which appear in niwaki's public surface (`Niwaki`, `AsyncNiwaki`,
+  `models`). A 1.9 could therefore restructure any of it and remain perfectly
+  within SemVer, while `niwaki>=1.8,<2.0` would happily install it. Some of
+  those changes fail loudly; the ones worth guarding are the quiet ones — a
+  repurposed column, a changed blob encoding — where every query still runs and
+  the server answers questions about a production fabric from silently empty
+  fields, reporting that a bridge domain has no parent. The pin is now
+  `>=1.8,<1.9`, and because a pin is only advice (a resolver override or a
+  `--force-reinstall` gets past it), `catalog.verify_catalogue()` runs before
+  anything reads the catalogue and refuses startup on a mismatch, naming what
+  moved and which niwaki produced it. It checks structure — every table and
+  column the queries name, the manifest keys, the `prop.flags` bit layout — and
+  then decodes one known class end to end, which is what catches an encoding
+  change that leaves the structure intact. Separately, a corrupt blob now
+  reports as a broken catalogue naming the column rather than letting a bare
+  `zlib.error` escape. Twenty-three tests cover it; five sabotages were run,
+  two survived the first pass and the tests were strengthened until none did.
+
 - **A DN went into the APIC request URL unchecked.** `get_by_dn(dn)` and the
   `scope_dn` argument of `query()`/`count()` were interpolated straight into
   `/api/mo/{dn}.json`. A DN carrying `..` segments, a `?`, a `#`, a backslash,

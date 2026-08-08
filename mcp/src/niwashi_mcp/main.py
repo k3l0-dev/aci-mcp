@@ -283,6 +283,12 @@ async def app_lifespan(server: FastMCP):
     # tokenised index keyed on the *identity* of this dict, so rebuilding it
     # per call would silently re-tokenise 15,239 entries on every query and
     # turn a 15 ms search into seconds.
+    # Before anything reads it: the catalogue's schema is private to niwaki, so
+    # a release is free to restructure it without breaking SemVer. Checked here
+    # so a mismatch is a refused startup naming what moved, never a fabric
+    # answered from silently empty fields.
+    catalog.verify_catalogue()
+
     descriptions = catalog.descriptions_index()
     logger.info(
         "Registry loaded — %d class descriptions (niwaki catalogue, APIC %s)",

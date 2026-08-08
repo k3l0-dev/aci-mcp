@@ -15,7 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 import niwashi_mcp.main as main
-from niwashi_mcp.exceptions import ConfigurationError
+from niwashi_mcp.exceptions import ConfigurationError, DescriptionsLoadError
 
 # ── _serve() — port validation ────────────────────────────────────────────────
 
@@ -205,3 +205,75 @@ async def test_lifespan_closes_backend_on_shutdown(monkeypatch):
             pass
 
     mock_backend.close.assert_called_once()
+
+
+# ── app_lifespan() — the catalogue schema guard ───────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_lifespan_verifies_the_catalogue(monkeypatch):
+    """The guard is worthless if it is never wired into startup.
+
+    `catalog.verify_catalogue()` is thoroughly tested on its own, so the only
+    thing left that can silently disable it is an edit that drops the call.
+    """
+    monkeypatch.setenv("APIC_HOST", "10.0.0.1")
+    monkeypatch.setenv("APIC_PASSWORD", "secret")
+
+    with patch("niwashi_mcp.main.load_dotenv"), \
+         patch("niwashi_mcp.main.catalog.descriptions_index", return_value={}), \
+         patch("niwashi_mcp.main.ApicClient", return_value=AsyncMock()), \
+         patch("niwashi_mcp.main.catalog.verify_catalogue") as verify:
+        async with main.app_lifespan(MagicMock()):
+            pass
+
+    verify.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_lifespan_refuses_to_start_on_a_moved_catalogue(monkeypatch):
+    """A mismatched catalogue must stop startup, not be logged and stepped over.
+
+    Continuing would serve a production fabric from silently empty fields —
+    a bridge domain with no parent, a class with no properties.
+    """
+    monkeypatch.setenv("APIC_HOST", "10.0.0.1")
+    monkeypatch.setenv("APIC_PASSWORD", "secret")
+
+    with patch("niwashi_mcp.main.load_dotenv"), \
+         patch("niwashi_mcp.main.catalog.descriptions_index", return_value={}), \
+         patch("niwashi_mcp.main.ApicClient", return_value=AsyncMock()), \
+         patch(
+             "niwashi_mcp.main.catalog.verify_catalogue",
+             side_effect=DescriptionsLoadError("niwaki 1.9 moved the 'mo' table"),
+         ), pytest.raises(DescriptionsLoadError, match="mo"):
+        async with main.app_lifespan(MagicMock()):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_lifespan_verifies_before_reading_the_catalogue(monkeypatch):
+    """Order matters: a check that runs after the first read is not a guard.
+
+    `descriptions_index()` walks all 15,452 classes. If it ran first, a moved
+    catalogue would surface as whatever that walk happens to raise.
+    """
+    monkeypatch.setenv("APIC_HOST", "10.0.0.1")
+    monkeypatch.setenv("APIC_PASSWORD", "secret")
+
+    calls: list[str] = []
+
+    with patch("niwashi_mcp.main.load_dotenv"), \
+         patch("niwashi_mcp.main.ApicClient", return_value=AsyncMock()), \
+         patch(
+             "niwashi_mcp.main.catalog.descriptions_index",
+             side_effect=lambda: calls.append("index") or {},
+         ), \
+         patch(
+             "niwashi_mcp.main.catalog.verify_catalogue",
+             side_effect=lambda: calls.append("verify"),
+         ):
+        async with main.app_lifespan(MagicMock()):
+            pass
+
+    assert calls == ["verify", "index"]

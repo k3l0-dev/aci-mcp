@@ -129,8 +129,126 @@ def apic_version() -> str:
     return row[0] if row else "unknown"
 
 
-def _unzip(blob: bytes | None) -> Any:
-    return json.loads(zlib.decompress(blob)) if blob else None
+# Every table and column the queries below name. The catalogue's schema is
+# *private* to niwaki: its public API is `Niwaki`/`AsyncNiwaki`/`models`, and
+# none of these tables appear in it. niwaki is therefore free to restructure
+# them in any 1.x release without breaking SemVer — the dependency is pinned
+# `>=1.8,<1.9` for exactly that reason, but a pin is only advice: a resolver
+# override, a `--force-reinstall`, or a monorepo constraint can all put a
+# different catalogue underneath this module.
+#
+# A renamed table fails loudly on its own (OperationalError). The dangerous
+# cases are the quiet ones — a repurposed column, a changed blob encoding —
+# where the server would answer questions about a production fabric with
+# plausible wrong data. This is checked at startup so that never happens.
+_REQUIRED_TABLES: dict[str, frozenset[str]] = {
+    "manifest": frozenset({"key", "value"}),
+    "mo": frozenset(
+        {"id", "class_name", "short_name", "label_id", "comment_id", "class_pkg"}
+        | {"identified_by", "rn_format", "is_abstract", "is_configurable"}
+        | {"residual", "dn_formats"}
+    ),
+    "prop": frozenset(
+        {"class_id", "wire_name", "label_id", "comment_id", "enum_id"}
+        | {"base_type_id", "model_type_id", "default_val", "flags"}
+    ),
+    "comment_pool": frozenset({"id", "text"}),
+    "label_pool": frozenset({"id", "text"}),
+    "type_pool": frozenset({"id", "value"}),
+    "enum": frozenset({"id", "content"}),
+}
+
+_REQUIRED_MANIFEST_KEYS = frozenset({"prop_flags", "apic_version"})
+
+# Anchor for the functional check. Chosen because a bridge domain is the most
+# stable object in the model and exercises every decode path at once: a pooled
+# label, a zlib+JSON `residual`, a zlib+JSON `dn_formats`, and the prop join.
+_PROBE_CLASS = "fvBD"
+
+
+def verify_catalogue() -> None:
+    """Fail at startup if niwaki's private catalogue schema has moved.
+
+    Structural first — every table and column the queries name, then the
+    manifest keys and the `prop.flags` bit layout — and then functional, by
+    decoding one known class end to end. The functional half is what catches an
+    encoding change: if `residual` stopped being zlib+JSON, every column would
+    still be present and every query would still run, and `containedBy` would
+    silently become empty on all 15,452 classes.
+
+    Raises:
+        DescriptionsLoadError: naming what moved and which niwaki produced it,
+            so the report is actionable rather than a stack trace from three
+            frames deeper.
+    """
+    import niwaki
+
+    version = getattr(niwaki, "__version__", "unknown")
+    conn = _connect()
+
+    present = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    for table, columns in _REQUIRED_TABLES.items():
+        if table not in present:
+            raise DescriptionsLoadError(
+                f"niwaki {version}'s catalogue has no '{table}' table. "
+                f"This server reads the catalogue's private schema; that release "
+                f"restructured it. Pin niwaki>=1.8,<1.9."
+            )
+        have = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if missing := sorted(columns - have):
+            raise DescriptionsLoadError(
+                f"niwaki {version}'s catalogue table '{table}' is missing {missing}. "
+                f"This server reads the catalogue's private schema; that release "
+                f"changed it. Pin niwaki>=1.8,<1.9."
+            )
+
+    keys = {row[0] for row in conn.execute("SELECT key FROM manifest")}
+    if missing := sorted(_REQUIRED_MANIFEST_KEYS - keys):
+        raise DescriptionsLoadError(
+            f"niwaki {version}'s catalogue manifest is missing {missing}."
+        )
+
+    _flag_bits()  # validates the prop.flags bit layout against _EXPECTED_FLAGS
+
+    # Functional: prove the decode paths still work rather than trusting that
+    # unchanged column names imply unchanged contents.
+    probe = load_schema(_PROBE_CLASS)
+    if not probe:
+        raise DescriptionsLoadError(
+            f"niwaki {version}'s catalogue does not resolve '{_PROBE_CLASS}'. "
+            f"The catalogue is present but unusable."
+        )
+    checks = {
+        "label": bool(probe.get("label")),
+        "rnFormat": bool(probe.get("rnFormat")),
+        "dnFormats": bool(probe.get("dnFormats")),
+        "containedBy": bool(probe.get("containedBy")),
+        "properties": bool(probe.get("properties")),
+    }
+    if broken := sorted(k for k, ok in checks.items() if not ok):
+        raise DescriptionsLoadError(
+            f"niwaki {version}'s catalogue resolves '{_PROBE_CLASS}' but {broken} "
+            f"came back empty — the stored encoding changed. Pin niwaki>=1.8,<1.9."
+        )
+
+
+def _unzip(blob: bytes | None, field: str = "blob") -> Any:
+    """Decode a zlib+JSON column.
+
+    The encoding is niwaki's private storage format, so a release that changed
+    it would land here. Reported as a broken catalogue rather than letting a
+    bare `zlib.error` — which says nothing about which column or which package
+    — escape from three frames down.
+    """
+    if not blob:
+        return None
+    try:
+        return json.loads(zlib.decompress(blob))
+    except (zlib.error, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise DescriptionsLoadError(
+            f"niwaki catalogue column '{field}' is not the expected zlib+JSON "
+            f"encoding ({exc}). Reinstall niwaki, or pin niwaki>=1.8,<1.9."
+        ) from exc
 
 
 @lru_cache(maxsize=4096)
@@ -255,7 +373,7 @@ def _project_property(row: sqlite3.Row, bits: dict[str, int]) -> dict[str, Any]:
 
     # options — localName of each enum value, minus the "defaultValue" marker
     # (whose localName duplicates the default and is not an accepted value).
-    values = _unzip(_pool_blob("enum", enum_id))
+    values = _unzip(_pool_blob("enum", enum_id), "enum.content")
     if values:
         seen: set[str] = set()
         options: list[str] = []
@@ -325,7 +443,7 @@ def load_schema(
 
     result["label"] = _pool("label_pool", "text", label_id) or ""
 
-    extra = _unzip(residual) or {}
+    extra = _unzip(residual, "mo.residual") or {}
 
     # containedBy is a {"pkg:Class": ""} dict in the source — normalise to keys.
     result["containedBy"] = list(extra.get("containedBy") or {})
@@ -359,7 +477,7 @@ def load_schema(
 
     # dnFormats is stored NULL when empty, but the key exists on all 15,452
     # classes in the source. Always emitted, as [] when absent from storage.
-    result["dnFormats"] = _unzip(dn_formats) or []
+    result["dnFormats"] = _unzip(dn_formats, "mo.dn_formats") or []
 
     prop_rows = _connect().execute(
         "SELECT wire_name, comment_id, enum_id, base_type_id, model_type_id, "
