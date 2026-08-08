@@ -1,6 +1,6 @@
 # Internals: Exception Hierarchy
 
-All exceptions are defined in [`mcp/src/niwashi_mcp/exceptions.py`](../../mcp/src/niwashi_mcp/exceptions.py) and inherit from a single root `AciMcpError`. This means callers can catch the whole family with one clause, or target a specific subtree.
+All exceptions are defined in [`mcp/src/niwashi_mcp/exceptions.py`](../../mcp/src/niwashi_mcp/exceptions.py) and inherit from a single root `NiwashiMcpError`. This means callers can catch the whole family with one clause, or target a specific subtree.
 
 The hierarchy is unchanged in 2.0. What changed is which failures can actually occur: the server no longer reads schema files from disk, so the failure modes of a file collection have been replaced by the failure modes of a single embedded database — see [What 2.0 changed](#what-20-changed) below.
 
@@ -10,7 +10,7 @@ The hierarchy is unchanged in 2.0. What changed is which failures can actually o
 
 ```mermaid
 classDiagram
-    class AciMcpError {
+    class NiwashiMcpError {
         <<base>>
         inherits Exception
     }
@@ -87,12 +87,12 @@ classDiagram
         Raised by the shared _request_json() path
     }
 
-    AciMcpError <|-- ConfigurationError
-    AciMcpError <|-- AuthenticationError
-    AciMcpError <|-- RegistryError
-    AciMcpError <|-- UnknownClassError
-    AciMcpError <|-- FilterError
-    AciMcpError <|-- ApicError
+    NiwashiMcpError <|-- ConfigurationError
+    NiwashiMcpError <|-- AuthenticationError
+    NiwashiMcpError <|-- RegistryError
+    NiwashiMcpError <|-- UnknownClassError
+    NiwashiMcpError <|-- FilterError
+    NiwashiMcpError <|-- ApicError
 
     RegistryError <|-- DescriptionsLoadError
     RegistryError <|-- SchemaLoadError
@@ -162,13 +162,13 @@ Case is part of the check. SQLite's default `BINARY` collation makes it structur
 ## Catching patterns
 
 ```python
-from niwashi_mcp.exceptions import AciMcpError, ApicError, UnknownClassError
+from niwashi_mcp.exceptions import NiwashiMcpError, ApicError, UnknownClassError
 
 # Catch everything from this library
 try:
     ...
-except AciMcpError as exc:
-    logger.error("aci-mcp error: %s", exc)
+except NiwashiMcpError as exc:
+    logger.error("niwashi-mcp error: %s", exc)
 
 # Catch only APIC communication errors
 try:

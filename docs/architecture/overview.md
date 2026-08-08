@@ -15,7 +15,7 @@ The five tools and their signatures are unchanged from 1.2.2. What changed in 2.
 | PyPI distribution | `niwashi-mcp` |
 | Import package | `niwashi_mcp` — source under `mcp/src/niwashi_mcp/` |
 | Console command | `niwashi-mcp` |
-| Git repository | `aci-mcp` |
+| Git repository | `niwashi-mcp` |
 
 `python main.py` from `mcp/` still starts the server through a deprecated shim that emits a `DeprecationWarning` and forwards to `niwashi_mcp.main:main`. It is scheduled for removal in 3.0; prefer `niwashi-mcp` or `python -m niwashi_mcp.main`.
 
@@ -32,7 +32,7 @@ Until 1.2.2 the server read raw jsonmeta files from a schema bundle that had to 
 | On disk | 1.83 GB | 32.8 MB |
 | Docker image | 3.97 GB | 457 MB |
 
-The catalogue is `catalog.db`, resolved at runtime as `<niwaki package dir>/query/_catalog/catalog.db` — 36,229,120 bytes, built from **APIC 6.0(9c)**, holding **15,452 classes** and 332,297 property rows. `mcp/pyproject.toml` pins the dependency to `niwaki>=1.8,<2.0`; the version installed here is 1.8.0.
+The catalogue is `catalog.db`, resolved at runtime as `<niwaki package dir>/query/_catalog/catalog.db` — 36,229,120 bytes, built from **APIC 6.0(9c)**, holding **15,452 classes** and 332,297 property rows. `mcp/pyproject.toml` pins the dependency to `niwaki>=1.8,<1.9` — a single minor, because this server reads the catalogue's *private* schema, which niwaki may restructure in any 1.x release without breaking SemVer; the version installed here is 1.8.0.
 
 Three consequences follow from the file being a build artefact inside a wheel:
 
@@ -48,7 +48,7 @@ That last point deserves care: the version logged at startup is the release the 
 
 ```mermaid
 graph TD
-    subgraph repo["aci-mcp repository"]
+    subgraph repo["niwashi-mcp repository"]
         pkg["mcp/src/niwashi_mcp/<br/>server package"]
         proj["mcp/pyproject.toml<br/>distribution niwashi-mcp"]
         shim["mcp/main.py<br/>deprecated launcher"]
@@ -234,7 +234,7 @@ sequenceDiagram
 
 Two details of that order matter in practice. The registry is built **before** any APIC contact, so a broken installation fails on `DescriptionsLoadError` rather than on a confusing authentication error. And `APIC_HOST` / `APIC_PASSWORD` are validated **before** the login attempt, so a missing variable raises `ConfigurationError` with the variable named instead of surfacing as a connection failure.
 
-The `.env` file itself is resolved in a fixed order: `ACI_MCP_ENV_FILE` if set, then `./.env`, then the repository root when the code is running from a verified checkout, then `~/.config/niwashi-mcp/.env`. A checkout is recognised by the presence of `mcp/pyproject.toml`, never by path arithmetic alone — installed into `site-packages`, that arithmetic would silently yield a directory that exists and means nothing.
+The `.env` file itself is resolved in a fixed order: `NIWASHI_MCP_ENV_FILE` if set, then `./.env`, then the repository root when the code is running from a verified checkout, then `~/.config/niwashi-mcp/.env`. A checkout is recognised by the presence of `mcp/pyproject.toml`, never by path arithmetic alone — installed into `site-packages`, that arithmetic would silently yield a directory that exists and means nothing.
 
 ---
 
@@ -293,7 +293,7 @@ Anything below is gone from the running server. It appears here only so that a r
 | `ACI_MCP_DATA_DIR` | nothing — the catalogue's location is derived from the installed package |
 | `SchemaLoadError` in practice | `DescriptionsLoadError` — the catalogue is missing or unreadable. The class is still defined but nothing raises it. |
 
-Environment variables actually read by the server are `APIC_HOST`, `APIC_USER`, `APIC_PASSWORD`, `APIC_VERIFY_SSL`, `MCP_PORT`, `MCP_API_KEYS`, and `ACI_MCP_ENV_FILE`. See [settings reference](../configuration/settings.md).
+Environment variables actually read by the server are `APIC_HOST`, `APIC_USER`, `APIC_PASSWORD`, `APIC_VERIFY_SSL`, `MCP_PORT`, `MCP_API_KEYS`, and `NIWASHI_MCP_ENV_FILE`. See [settings reference](../configuration/settings.md).
 
 ---
 

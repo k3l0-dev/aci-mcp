@@ -1,4 +1,4 @@
-# Contributing to aci-mcp
+# Contributing to niwashi-mcp
 
 Contributions are welcome — bug reports, documentation improvements,
 and pull requests alike. This guide explains how to get started.

@@ -248,7 +248,7 @@ def _handle_sighup(_signum, _frame):
 signal.signal(signal.SIGHUP, _handle_sighup)
 ```
 
-`override=True` matters: without it `load_dotenv` would leave the already-exported `MCP_API_KEYS` in place and the reload would be a no-op. `ENV_FILE` is the path resolved once at import — `$ACI_MCP_ENV_FILE`, then `./.env`, then a verified checkout's `.env`, then `~/.config/niwashi-mcp/.env`; see [auth.md](auth.md#mcp_api_keys-format).
+`override=True` matters: without it `load_dotenv` would leave the already-exported `MCP_API_KEYS` in place and the reload would be a no-op. `ENV_FILE` is the path resolved once at import — `$NIWASHI_MCP_ENV_FILE`, then `./.env`, then a verified checkout's `.env`, then `~/.config/niwashi-mcp/.env`; see [auth.md](auth.md#mcp_api_keys-format).
 
 Trigger a reload:
 
@@ -259,7 +259,7 @@ kill -HUP $(pgrep -f niwashi-mcp)
 Log output after reload:
 
 ```text
-INFO  aci-mcp  SIGHUP — API keys reloaded (2 key(s))
+INFO  niwashi-mcp  SIGHUP — API keys reloaded (2 key(s))
 ```
 
 Emptying `MCP_API_KEYS` and reloading disables authentication rather than failing — the `KeyStore` becomes empty and `ApiKeyMiddleware` reverts to its pass-through mode. That is a live change, logged as a warning, not a rejected reload.

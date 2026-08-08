@@ -4,7 +4,7 @@
 """
 tests/
 
-The aci-mcp test suite is organized into five categories, each with a
+The niwashi-mcp test suite is organized into five categories, each with a
 distinct purpose and a distinct relationship to CI:
 
   unit/         Pure-logic tests with no I/O — registry/filter.py,

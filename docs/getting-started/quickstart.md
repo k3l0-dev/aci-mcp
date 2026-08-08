@@ -39,7 +39,7 @@ requests and says so, loudly, in the first line it logs.
 
 | Order | Location |
 |---|---|
-| 1 | `$ACI_MCP_ENV_FILE`, if set — taken verbatim, whether or not the file exists |
+| 1 | `$NIWASHI_MCP_ENV_FILE`, if set — taken verbatim, whether or not the file exists |
 | 2 | `.env` in the current working directory |
 | 3 | `.env` at the repository root, when running from a checkout |
 | 4 | `~/.config/niwashi-mcp/.env` |
@@ -71,10 +71,10 @@ niwashi-mcp
 Startup looks like this (the FastMCP banner is omitted):
 
 ```text
-2026-08-08 10:58:42,939  WARNING   aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication. Set MCP_API_KEYS in .env before deploying to production.
-2026-08-08 10:58:43,311  INFO      aci-mcp  Registry loaded — 15239 class descriptions (niwaki catalogue, APIC 6.0(9c))
-2026-08-08 10:58:43,323  INFO      aci-mcp  Connected to APIC — your-apic.example.com
-[08/08/26 10:58:43] INFO     Starting MCP server 'aci-mcp' with transport 'http' (stateless) on http://0.0.0.0:8000/mcp
+2026-08-08 10:58:42,939  WARNING   niwashi-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication. Set MCP_API_KEYS in .env before deploying to production.
+2026-08-08 10:58:43,311  INFO      niwashi-mcp  Registry loaded — 15239 class descriptions (niwaki catalogue, APIC 6.0(9c))
+2026-08-08 10:58:43,323  INFO      niwashi-mcp  Connected to APIC — your-apic.example.com
+[08/08/26 10:58:43] INFO     Starting MCP server 'niwashi-mcp' with transport 'http' (stateless) on http://0.0.0.0:8000/mcp
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
 
@@ -118,7 +118,7 @@ Edit `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
-    "aci-mcp": {
+    "niwashi-mcp": {
       "type": "http",
       "url": "http://localhost:8000/mcp"
     }
@@ -127,13 +127,13 @@ Edit `claude_desktop_config.json`:
 ```
 
 The key is a client-side label of your choosing; the ready-made file at
-[`mcp/client/aci-mcp.json`](../../mcp/client/aci-mcp.json) uses `aci-mcp`.
+[`mcp/client/niwashi-mcp.json`](../../mcp/client/niwashi-mcp.json) uses `niwashi-mcp`.
 Restart Claude Desktop — the server appears under **MCP** in the tool menu.
 
 ### Claude Code (CLI)
 
 ```bash
-claude mcp add aci-mcp --transport http http://localhost:8000/mcp
+claude mcp add niwashi-mcp --transport http http://localhost:8000/mcp
 ```
 
 ### OpenCode
@@ -144,7 +144,7 @@ Add to `.opencode/config.json` in your project:
 {
   "mcp": {
     "servers": {
-      "aci-mcp": {
+      "niwashi-mcp": {
         "type": "http",
         "url": "http://localhost:8000/mcp"
       }
@@ -182,7 +182,7 @@ repository:
 Claude Code picks up every `.md` file under `.claude/`:
 
 ```bash
-cp mcp/client/SKILL.md .claude/aci-mcp.md
+cp mcp/client/SKILL.md .claude/niwashi-mcp.md
 ```
 
 ### Claude Desktop / Projects
@@ -193,8 +193,8 @@ Paste the contents into the project instructions of a
 ### OpenCode
 
 ```bash
-mkdir -p .opencode/skills/aci-mcp
-cp mcp/client/SKILL.md .opencode/skills/aci-mcp/SKILL.md
+mkdir -p .opencode/skills/niwashi-mcp
+cp mcp/client/SKILL.md .opencode/skills/niwashi-mcp/SKILL.md
 ```
 
 ---

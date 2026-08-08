@@ -1,5 +1,5 @@
 ---
-name: aci-mcp-query
+name: niwashi-mcp-query
 description: Query the ACI APIC controller via MCP tools. Use when the user asks about ACI infrastructure — faults, tenants, bridge domains, EPGs, VRFs, contracts, fabric nodes, routing, endpoints, audit logs.
 ---
 

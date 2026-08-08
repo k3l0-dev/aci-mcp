@@ -1,4 +1,4 @@
-# docker-compose.yml — Production stack: aci-mcp + Caddy TLS proxy
+# docker-compose.yml — Production stack: niwashi-mcp + Caddy TLS proxy
 #
 # Prerequisites:
 #   1. Copy ../.env.example to ../../.env (repo root) and fill in all values

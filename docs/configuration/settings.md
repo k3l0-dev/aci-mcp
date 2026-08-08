@@ -26,7 +26,7 @@ graph LR
     end
 
     subgraph shell["process environment only"]
-        X1["ACI_MCP_ENV_FILE"]
+        X1["NIWASHI_MCP_ENV_FILE"]
     end
 
     subgraph apic_client["ApicClient"]
@@ -114,7 +114,7 @@ Whitespace around commas is stripped. Empty segments are ignored. Comparison is 
 The `ApiKeyMiddleware` is always attached, regardless of `MCP_API_KEYS`. When the key store is empty (`MCP_API_KEYS` empty or unset), the middleware no-ops internally — it lets every request through instead of checking a key. A warning is logged at startup:
 
 ```text
-WARNING  aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication.
+WARNING  niwashi-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication.
 ```
 
 ---
@@ -123,11 +123,11 @@ WARNING  aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authenti
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `ACI_MCP_ENV_FILE` | No | — | Absolute path to the `.env` file to load. Must be set in the **process environment** — it selects the file, so it cannot be read from inside it. |
+| `NIWASHI_MCP_ENV_FILE` | No | — | Absolute path to the `.env` file to load. Must be set in the **process environment** — it selects the file, so it cannot be read from inside it. |
 
 ### Where `.env` is found
 
-`ACI_MCP_ENV_FILE` wins outright when set. Otherwise the first of these that
+`NIWASHI_MCP_ENV_FILE` wins outright when set. Otherwise the first of these that
 exists is used:
 
 1. `./.env` — relative to the working directory the server was started from

@@ -4,7 +4,7 @@
 """
 tests/conftest.py
 
-Shared fixtures and helpers for all aci-mcp tests.
+Shared fixtures and helpers for all niwashi-mcp tests.
 
 Provides:
   sample_imdata        — small multi-class imdata list

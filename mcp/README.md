@@ -25,7 +25,7 @@ APIC_PASSWORD=…
 Optional: `APIC_VERIFY_SSL` (default `false`), `MCP_PORT` (default `8000`),
 `MCP_API_KEYS` (comma-separated bearer tokens — **unset means no
 authentication**, and the server says so loudly at startup),
-`ACI_MCP_ENV_FILE` (explicit path to the `.env`).
+`NIWASHI_MCP_ENV_FILE` (explicit path to the `.env`).
 
 ## The five tools
 

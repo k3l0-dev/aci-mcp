@@ -80,8 +80,10 @@ niwaki. The 1.x name carried a protected mark it had no licence to use.
   78.4 % / 94.6 %, so a regression to 61 % was a green build; and nothing
   anywhere pinned the output of `get_schema()`. The net was mutation-tested
   before being committed — five separate sabotages each fail exactly one test.
-- **Explicit, overridable path resolution** via `ACI_MCP_DATA_DIR` and
-  `ACI_MCP_ENV_FILE`, with ten tests pinning the behaviour.
+- **Explicit, overridable path resolution** via `NIWASHI_MCP_ENV_FILE`, with
+  tests pinning both the override and the refusal to honour the retired
+  `ACI_MCP_*` spellings. (`ACI_MCP_DATA_DIR` was introduced and removed inside
+  this same cycle — see Removed — and never reached a release.)
 
 ### Changed
 
@@ -294,7 +296,8 @@ niwaki. The 1.x name carried a protected mark it had no licence to use.
   the procedure is recorded and was tested end to end.
 
 - `ACI_MCP_DATA_DIR` no longer exists — there is no data directory to point at.
-  `ACI_MCP_ENV_FILE` remains.
+  The `.env` override survives under its new name, `NIWASHI_MCP_ENV_FILE`.
+  Neither retired spelling is accepted as an alias.
 - 43 tests of the deleted jsonmeta reader, and its performance suite, are
   removed rather than adapted: a module that no longer exists cannot be tested.
   The 31-class oracle covers what they covered, and covers it by independent

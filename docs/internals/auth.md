@@ -144,12 +144,12 @@ Comparison is always case-sensitive.
 
 | Order | Candidate |
 |---|---|
-| 1 | `$ACI_MCP_ENV_FILE`, used verbatim when set |
+| 1 | `$NIWASHI_MCP_ENV_FILE`, used verbatim when set |
 | 2 | `./.env` in the current working directory |
 | 3 | `<repo>/.env`, only when the process is running from a verified git checkout |
 | 4 | `~/.config/niwashi-mcp/.env` |
 
-`ACI_MCP_ENV_FILE` wins outright when set, whether or not the file it names exists; otherwise the first of the remaining candidates that exists is used, and `./.env` is the fallback when none does. Since 2.0 the server is normally installed rather than run from a checkout, so candidates 1 and 4 are the ones that matter in production — a missing `.env` is not an error, and an unset `MCP_API_KEYS` disables authentication silently apart from the startup warning below. See [configuration/settings.md](../configuration/settings.md) for the full variable list.
+`NIWASHI_MCP_ENV_FILE` wins outright when set, whether or not the file it names exists; otherwise the first of the remaining candidates that exists is used, and `./.env` is the fallback when none does. Since 2.0 the server is normally installed rather than run from a checkout, so candidates 1 and 4 are the ones that matter in production — a missing `.env` is not an error, and an unset `MCP_API_KEYS` disables authentication silently apart from the startup warning below. See [configuration/settings.md](../configuration/settings.md) for the full variable list.
 
 ---
 
@@ -171,6 +171,6 @@ These paths bypass token validation entirely:
 When `MCP_API_KEYS` is unset or empty, the middleware passes all requests through without validation. A warning is logged at startup:
 
 ```text
-WARNING  aci-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication.
+WARNING  niwashi-mcp  MCP_API_KEYS is not set — server is running WITHOUT authentication.
          Set MCP_API_KEYS in .env before deploying to production.
 ```

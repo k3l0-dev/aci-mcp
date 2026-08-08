@@ -64,7 +64,7 @@ reads the first one that exists:
 
 | Order | Location |
 |---|---|
-| 1 | `$ACI_MCP_ENV_FILE` — an explicit path, which wins over everything below |
+| 1 | `$NIWASHI_MCP_ENV_FILE` — an explicit path, which wins over everything below |
 | 2 | `./.env` in the working directory |
 | 3 | `.env` at the root of a git checkout, when the server runs from one |
 | 4 | `~/.config/niwashi-mcp/.env` |
@@ -259,7 +259,7 @@ Per-tool reference with worked examples: [`docs/tools/`](docs/tools/).
 | `APIC_VERIFY_SSL` | | `false` | Set `true` to enforce TLS certificate verification |
 | `MCP_PORT` | | `8000` | HTTP port the server listens on |
 | `MCP_API_KEYS` | | — | Comma-separated bearer tokens. Unset means no authentication (development only) |
-| `ACI_MCP_ENV_FILE` | | — | Explicit path to the `.env` file to load |
+| `NIWASHI_MCP_ENV_FILE` | | — | Explicit path to the `.env` file to load |
 | `MCP_DOMAIN` | | — | Public hostname for Caddy TLS. Read by the production compose stack, not by the server |
 
 **Hot reload:** send `SIGHUP` to the process to reload `MCP_API_KEYS` from the
@@ -325,10 +325,9 @@ client config only needs its URL to keep working.
 
 | What changed | What to do |
 |---|---|
-| Distribution is `niwashi-mcp`, import package `niwashi_mcp` | Install with `uvx niwashi-mcp`; the repository is still named `aci-mcp` |
+| Distribution is `niwashi-mcp`, import package `niwashi_mcp` | Install with `uvx niwashi-mcp` |
 | `python main.py` is deprecated | Use `niwashi-mcp`, or `python -m niwashi_mcp.main`. The shim still works and goes away in 3.0 |
 | `data/` and the schema download are gone | Delete the directory; drop any `/data` volume mount from your compose file |
-| `ACI_MCP_DATA_DIR` no longer exists | Remove it. `ACI_MCP_ENV_FILE` remains |
 | `query()` and `count()` now accept 15,452 classes instead of 15,239 | Nothing — strictly more classes are valid than before |
 | `mo:MoClassId`, `mo:PropId`, `mo:StatsClassId` and `mo:StatsPropId` properties no longer carry an `options` list | Nothing. One of them listed 17,653 entries — the entire class list — into the agent's context |
 | `SchemaLoadError` can no longer be raised | A missing or unreadable catalogue raises `DescriptionsLoadError` instead |
@@ -355,9 +354,6 @@ uv sync
 uv run niwashi-mcp     # reads ../.env
 uv run pytest
 ```
-
-The repository is still called `aci-mcp` while the distribution is
-`niwashi-mcp`; the rename has not happened yet.
 
 ---
 
@@ -391,5 +387,5 @@ is required for any commercial deployment or integration.
 
 Contact: [monark.aiops@pm.me](mailto:monark.aiops@pm.me)
 
-Cisco, Cisco ACI and APIC are trademarks of Cisco Systems, Inc.  aci-mcp is an
-independent project, not affiliated with or endorsed by Cisco Systems, Inc.
+Cisco, Cisco ACI and APIC are trademarks of Cisco Systems, Inc.  niwashi-mcp
+is an independent project, not affiliated with or endorsed by Cisco Systems, Inc.

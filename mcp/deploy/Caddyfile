@@ -1,4 +1,4 @@
-# Caddyfile — TLS-terminating reverse proxy for aci-mcp
+# Caddyfile — TLS-terminating reverse proxy for niwashi-mcp
 #
 # Usage modes:
 #
