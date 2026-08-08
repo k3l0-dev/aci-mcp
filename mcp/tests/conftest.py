@@ -4,11 +4,11 @@
 """
 tests/conftest.py
 
-Shared fixtures and helpers for all aci-mcp tests.
+Shared fixtures and helpers for all niwashi-mcp tests.
 
 Provides:
   sample_imdata        — small multi-class imdata list
-  schemas_dir          — path to the local jsonmeta schema collection
+  catalogue_index      — search index rebuilt from niwaki's catalogue
   tool_ctx             — ready-to-use FastMCP context stub for tool tests
   apic_response()      — builder for realistic APIC JSON response bodies
   apic_login_response()— builder for APIC aaaLogin response bodies
@@ -18,16 +18,13 @@ Provides:
   MINIMAL_DESCRIPTIONS — small descriptions dict, always available without data/
 """
 
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
 
-from apic.client import QueryResult
-
-SCHEMAS_DIR = Path(__file__).parent.parent.parent / "data" / "schemas"
+from niwashi_mcp.apic.client import QueryResult
 
 # ── APIC response builders ────────────────────────────────────────────────────
 
@@ -240,7 +237,10 @@ class StubBackend:
                 k: v for k, v in attrs.items() if k not in self._OPERATIONAL_ATTRS
             }
         attrs["_class"] = class_name
-        if include_children and "children" in obj:
+        # Mirrors ApicClient: extract whatever children are present, not only
+        # those requested by class. Gating this on include_children made the
+        # stub agree with the bug it should have caught.
+        if "children" in obj:
             children: list[dict[str, Any]] = []
             for child_item in obj["children"]:
                 for child_cls, child_obj in child_item.items():
@@ -409,43 +409,31 @@ def sample_imdata() -> list[dict]:
     return list(_SAMPLE_IMDATA)
 
 
-@pytest.fixture
-def schemas_dir() -> Path:
-    """Path to the resolved aci-mcp/data/schemas/ jsonmeta collection.
+@pytest.fixture(scope="session")
+def catalogue_index() -> dict:
+    """The real search index, rebuilt from niwaki's catalogue.
 
-    Mirrors what `main.app_lifespan` actually passes to tool contexts in
-    production: the real collection lives one level down in a versioned
-    subdirectory (e.g. `data/schemas/mo-apic-v6.0_9c/`), and `load_schema()`
-    only ever does a direct, non-wildcard file access — resolution happens
-    once via `resolve_schemas_dir()`. A fixture that returned the unresolved
-    top-level directory would silently mismatch the real code path whenever
-    the full data/ collection happens to be present (e.g. in this repo's own
-    checkout, as opposed to a bare worktree without it).
+    Session-scoped on purpose: the build costs ~440 ms and, more importantly,
+    `descriptions.search()` caches its tokenised index on the *identity* of the
+    dict it is handed. A per-test fixture would hand out a new object each time
+    and re-tokenise 15,239 entries on every call.
     """
-    from registry.schema import resolve_schemas_dir
+    from niwashi_mcp.registry import catalog
 
-    return resolve_schemas_dir(SCHEMAS_DIR)
+    return catalog.descriptions_index()
 
 
 @pytest.fixture
-def tool_ctx(sample_imdata, schemas_dir):
+def tool_ctx(sample_imdata, catalogue_index):
     """Ready-to-use FastMCP context for tool integration tests.
 
-    Uses the real class-descriptions.json when available; falls back to
-    MINIMAL_DESCRIPTIONS so tests always run without the full data/ collection.
+    `schemas_dir` is gone: 2.0 reads the object model from the catalogue that
+    ships inside the niwaki dependency, so there is no directory to resolve and
+    no data bundle a test could be missing.
     """
-    desc_file = Path(__file__).parent.parent.parent / "data" / "class-descriptions.json"
-    if desc_file.exists():
-        from registry.descriptions import load_descriptions
-
-        descriptions = load_descriptions(desc_file)
-    else:
-        descriptions = dict(MINIMAL_DESCRIPTIONS)
-
     return make_ctx(
         {
-            "descriptions": descriptions,
+            "descriptions": catalogue_index,
             "backend": StubBackend(sample_imdata),
-            "schemas_dir": schemas_dir,
         }
     )

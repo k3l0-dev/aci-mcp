@@ -11,7 +11,7 @@ __pycache__/
 .env
 
 # Shared data — heavy artifacts
-data/schemas/
+data/
 data/cobra-sdk/
 
 # Schema collector — local tooling, never published (data collection

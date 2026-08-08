@@ -5,8 +5,7 @@
 
 import pytest
 
-from exceptions import (
-    AciMcpError,
+from niwashi_mcp.exceptions import (
     ApicAuthError,
     ApicConnectionError,
     ApicError,
@@ -16,6 +15,7 @@ from exceptions import (
     ConfigurationError,
     DescriptionsLoadError,
     FilterError,
+    NiwashiMcpError,
     RegistryError,
     SchemaLoadError,
     UnknownClassError,
@@ -39,7 +39,7 @@ def test_all_exceptions_inherit_from_base():
         ApicResponseError,
         ApicRequestError,
     ):
-        assert issubclass(cls, AciMcpError), f"{cls.__name__} must inherit AciMcpError"
+        assert issubclass(cls, NiwashiMcpError), f"{cls.__name__} must inherit NiwashiMcpError"
 
 
 def test_registry_subclasses():
@@ -58,7 +58,7 @@ def test_apic_subclasses():
 
 
 def test_base_is_exception():
-    assert issubclass(AciMcpError, Exception)
+    assert issubclass(NiwashiMcpError, Exception)
 
 
 # ── ConfigurationError ────────────────────────────────────────────────────────
@@ -70,7 +70,7 @@ def test_configuration_error_message():
 
 
 def test_configuration_error_is_catchable_as_base():
-    with pytest.raises(AciMcpError):
+    with pytest.raises(NiwashiMcpError):
         raise ConfigurationError("missing env var")
 
 
@@ -83,7 +83,7 @@ def test_authentication_error_message():
 
 
 def test_authentication_error_is_catchable_as_base():
-    with pytest.raises(AciMcpError):
+    with pytest.raises(NiwashiMcpError):
         raise AuthenticationError("bad token")
 
 

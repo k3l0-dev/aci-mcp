@@ -1,4 +1,4 @@
-title = "gitleaks config — aci-mcp"
+title = "gitleaks config — niwashi-mcp"
 
 [allowlist]
 description = "Suppress false positives from documentation placeholder values"

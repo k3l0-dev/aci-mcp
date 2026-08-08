@@ -1,0 +1,3506 @@
+{
+  "eqpt:IngrTotal5min": {
+    "contains": {},
+    "rnMap": {},
+    "identifiedBy": [],
+    "rnFormat": "CDeqptIngrTotal5min",
+    "containedBy": {
+      "eqpt:CpuP": "",
+      "l1:PhysIf": "",
+      "mgmt:MgmtIf": "",
+      "pc:AggrIf": ""
+    },
+    "superClasses": [
+      "eqpt:IngrTotal",
+      "stats:Curr",
+      "stats:Item"
+    ],
+    "subClasses": {},
+    "relationFrom": {},
+    "relationTo": {},
+    "dnFormats": [
+      "topology/pod-{id}/node-{id}/sys/aggr-[{id}]/CDeqptIngrTotal5min",
+      "sys/aggr-[{id}]/CDeqptIngrTotal5min",
+      "topology/pod-{id}/node-{id}/sys/mgmt-[{id}]/CDeqptIngrTotal5min",
+      "sys/mgmt-[{id}]/CDeqptIngrTotal5min",
+      "topology/pod-{id}/node-{id}/sys/phys-[{id}]/CDeqptIngrTotal5min",
+      "sys/phys-[{id}]/CDeqptIngrTotal5min",
+      "topology/pod-{id}/node-{id}/sys/ch/fcslot-{id}/fc/cpuport-{id}/CDeqptIngrTotal5min",
+      "sys/ch/fcslot-{id}/fc/cpuport-{id}/CDeqptIngrTotal5min",
+      "topology/pod-{id}/node-{id}/sys/ch/supslot-{id}/sup/cpuport-{id}/CDeqptIngrTotal5min",
+      "sys/ch/supslot-{id}/sup/cpuport-{id}/CDeqptIngrTotal5min"
+    ],
+    "writeAccess": [],
+    "readAccess": [
+      "admin"
+    ],
+    "faults": {},
+    "events": {},
+    "stats": {},
+    "statsGroup": {
+      "name": "eqptIngrTotal",
+      "counters": [
+        {
+          "name": "pktsRate",
+          "type": "scalar:Double",
+          "unit": "packets-per-second",
+          "label": "Total Ingress Packets rate",
+          "deprecated": false
+        },
+        {
+          "name": "util",
+          "type": "scalar:UByte",
+          "unit": "percentage",
+          "label": "Ingress Link Utilization",
+          "comment": [
+            "Ingress link utilization"
+          ],
+          "deprecated": false
+        },
+        {
+          "name": "pkts",
+          "type": "scalar:Uint64",
+          "unit": "packets",
+          "label": "Total Ingress Packets",
+          "comment": [
+            "Total ingress packets"
+          ],
+          "deprecated": false
+        },
+        {
+          "name": "bytesRate",
+          "type": "scalar:Double",
+          "unit": "bytes-per-second",
+          "label": "Total Ingress Bytes rate",
+          "deprecated": false
+        },
+        {
+          "name": "bytes",
+          "type": "scalar:Uint64",
+          "unit": "bytes",
+          "label": "Total Ingress Bytes",
+          "comment": [
+            "Total ingress bytes"
+          ],
+          "deprecated": false
+        }
+      ]
+    },
+    "isAbstract": false,
+    "isConfigurable": false,
+    "isContextRoot": false,
+    "isNxosConverged": false,
+    "isDeprecated": false,
+    "isHidden": false,
+    "isEncrypted": false,
+    "isExportable": false,
+    "isPersistent": false,
+    "isSubjectToQuota": false,
+    "isObservable": false,
+    "hasStats": false,
+    "isStat": true,
+    "isFaultable": false,
+    "isDomainable": false,
+    "isHealthScorable": false,
+    "shouldCollectHealthStats": false,
+    "healthCollectionSource": "faults",
+    "hasEventRules": false,
+    "abstractionLayer": "regular",
+    "apicNxProcessing": false,
+    "monitoringPolicySource": "Parent",
+    "isCreatableDeletable": "never",
+    "platformFlavors": [
+      "apic"
+    ],
+    "classId": "3164",
+    "className": "IngrTotal5min",
+    "classPkg": "eqpt",
+    "featureTag": "",
+    "moCategory": "StatsCurrent",
+    "label": "current Ingress stats in 5 minute",
+    "comment": [
+      "A class that represents the most current statistics for  Ingress in a 5 minute sampling interval.  This class updates every 10 seconds."
+    ],
+    "properties": {
+      "bytesAvg": {
+        "comment": [
+          "Total  Ingress  Bytes.  This is the average value read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8621",
+        "propLocalId": "2909",
+        "label": "Total Ingress Bytes average value",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesBase": {
+        "comment": [
+          "Total  Ingress  Bytes.  This is the cumulative value of the counter after the last reset of the hardware counter.  Note that this value continues through each interval without resetting to zero.  Used for internal purposes."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8616",
+        "propLocalId": "2904",
+        "label": "Total Ingress Bytes baseline",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesCum": {
+        "comment": [
+          "Total  Ingress  Bytes.  The total sum of the values read.  Note that this value continues through each interval without resetting to zero."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8617",
+        "propLocalId": "2905",
+        "label": "Total Ingress Bytes cumulative",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesLast": {
+        "comment": [
+          "Total  Ingress  Bytes.  This is the most current value read by the counter."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8615",
+        "propLocalId": "2903",
+        "label": "Total Ingress Bytes current value",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesMax": {
+        "comment": [
+          "Total  Ingress  Bytes.  This is the largest value read by the counter during the collection interval.  This value is only overwritten if the most current value is larger than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 4, the previous value is overwritten with 4.  If the third reading is smaller than 4, the value remains at 4.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8620",
+        "propLocalId": "2908",
+        "label": "Total Ingress Bytes maximum value",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesMin": {
+        "comment": [
+          "Total  Ingress  Bytes.  This is the smallest value read by the counter during the collection interval.  This value is only overwritten if the most current value is smaller than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 2, the previous value is overwritten with 2.  If the third reading is larger than 2, the value remains at 2.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8619",
+        "propLocalId": "2907",
+        "label": "Total Ingress Bytes minimum value",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesPer": {
+        "comment": [
+          "Total  Ingress  Bytes.  The total sum of the values read during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8618",
+        "propLocalId": "2906",
+        "label": "Total Ingress Bytes periodic",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRate": {
+        "comment": [
+          "Total  Ingress  Bytes.  This is the rate of the counter during the collection interval.  The rate is calculated by dividing the periodic value by the length of the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8626",
+        "propLocalId": "2914",
+        "label": "Total Ingress Bytes rate",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRateAvg": {
+        "comment": [
+          "Total  Ingress  Bytes rate.  This is the average value read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8645",
+        "propLocalId": "2924",
+        "label": "Total Ingress Bytes rate average value",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRateLast": {
+        "comment": [
+          "Total  Ingress  Bytes rate.  This is the most current value read by the counter."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8642",
+        "propLocalId": "2921",
+        "label": "Total Ingress Bytes rate current value",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRateMax": {
+        "comment": [
+          "Total  Ingress  Bytes rate.  This is the largest value read by the counter during the collection interval.  This value is only overwritten if the most current value is larger than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 4, the previous value is overwritten with 4.  If the third reading is smaller than 4, the value remains at 4.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8644",
+        "propLocalId": "2923",
+        "label": "Total Ingress Bytes rate maximum value",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRateMin": {
+        "comment": [
+          "Total  Ingress  Bytes rate.  This is the smallest value read by the counter during the collection interval.  This value is only overwritten if the most current value is smaller than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 2, the previous value is overwritten with 2.  If the third reading is larger than 2, the value remains at 2.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8643",
+        "propLocalId": "2922",
+        "label": "Total Ingress Bytes rate minimum value",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRateSpct": {
+        "comment": [
+          "Total  Ingress  Bytes rate.  This is the number of missed and/or incorrect values read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8646",
+        "propLocalId": "2925",
+        "label": "Total Ingress Bytes rate suspect count",
+        "baseType": "scalar:Uint16",
+        "modelType": "scalar:Uint16",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRateThr": {
+        "comment": [
+          "Total  Ingress  Bytes rate.  This indicates the properties of the counter that crossed the threshold during the collection interval.  Note that this value resets at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8648",
+        "propLocalId": "2927",
+        "label": "Total Ingress Bytes rate thresholded flags",
+        "baseType": "scalar:Bitmask64",
+        "modelType": "stats:ThresholdedMask",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2199023255552",
+            "localName": "avgCrit",
+            "platformFlavors": [],
+            "label": "avg severity critical "
+          },
+          {
+            "value": "68719476736",
+            "localName": "avgHigh",
+            "platformFlavors": [],
+            "label": "avg crossed high threshold "
+          },
+          {
+            "value": "137438953472",
+            "localName": "avgLow",
+            "platformFlavors": [],
+            "label": "avg crossed low threshold "
+          },
+          {
+            "value": "1099511627776",
+            "localName": "avgMajor",
+            "platformFlavors": [],
+            "label": "avg severity major "
+          },
+          {
+            "value": "549755813888",
+            "localName": "avgMinor",
+            "platformFlavors": [],
+            "label": "avg severity minor "
+          },
+          {
+            "value": "34359738368",
+            "localName": "avgRecovering",
+            "platformFlavors": [],
+            "label": "avg recovering "
+          },
+          {
+            "value": "274877906944",
+            "localName": "avgWarn",
+            "platformFlavors": [],
+            "label": "avg severity warning "
+          },
+          {
+            "value": "8192",
+            "localName": "cumulativeCrit",
+            "platformFlavors": [],
+            "label": "cumulative severity critical "
+          },
+          {
+            "value": "256",
+            "localName": "cumulativeHigh",
+            "platformFlavors": [],
+            "label": "cumulative crossed high threshold "
+          },
+          {
+            "value": "512",
+            "localName": "cumulativeLow",
+            "platformFlavors": [],
+            "label": "cumulative crossed low threshold "
+          },
+          {
+            "value": "4096",
+            "localName": "cumulativeMajor",
+            "platformFlavors": [],
+            "label": "cumulative severity major "
+          },
+          {
+            "value": "2048",
+            "localName": "cumulativeMinor",
+            "platformFlavors": [],
+            "label": "cumulative severity minor "
+          },
+          {
+            "value": "128",
+            "localName": "cumulativeRecovering",
+            "platformFlavors": [],
+            "label": "cumulative recovering "
+          },
+          {
+            "value": "1024",
+            "localName": "cumulativeWarn",
+            "platformFlavors": [],
+            "label": "cumulative severity warning "
+          },
+          {
+            "value": "unspecified",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "64",
+            "localName": "lastReadingCrit",
+            "platformFlavors": [],
+            "label": "lastReading severity critical "
+          },
+          {
+            "value": "2",
+            "localName": "lastReadingHigh",
+            "platformFlavors": [],
+            "label": "lastReading crossed high threshold "
+          },
+          {
+            "value": "4",
+            "localName": "lastReadingLow",
+            "platformFlavors": [],
+            "label": "lastReading crossed low threshold "
+          },
+          {
+            "value": "32",
+            "localName": "lastReadingMajor",
+            "platformFlavors": [],
+            "label": "lastReading severity major "
+          },
+          {
+            "value": "16",
+            "localName": "lastReadingMinor",
+            "platformFlavors": [],
+            "label": "lastReading severity minor "
+          },
+          {
+            "value": "1",
+            "localName": "lastReadingRecovering",
+            "platformFlavors": [],
+            "label": "lastReading recovering "
+          },
+          {
+            "value": "8",
+            "localName": "lastReadingWarn",
+            "platformFlavors": [],
+            "label": "lastReading severity warning "
+          },
+          {
+            "value": "17179869184",
+            "localName": "maxCrit",
+            "platformFlavors": [],
+            "label": "max severity critical "
+          },
+          {
+            "value": "536870912",
+            "localName": "maxHigh",
+            "platformFlavors": [],
+            "label": "max crossed high threshold "
+          },
+          {
+            "value": "1073741824",
+            "localName": "maxLow",
+            "platformFlavors": [],
+            "label": "max crossed low threshold "
+          },
+          {
+            "value": "8589934592",
+            "localName": "maxMajor",
+            "platformFlavors": [],
+            "label": "max severity major "
+          },
+          {
+            "value": "4294967296",
+            "localName": "maxMinor",
+            "platformFlavors": [],
+            "label": "max severity minor "
+          },
+          {
+            "value": "268435456",
+            "localName": "maxRecovering",
+            "platformFlavors": [],
+            "label": "max recovering "
+          },
+          {
+            "value": "2147483648",
+            "localName": "maxWarn",
+            "platformFlavors": [],
+            "label": "max severity warning "
+          },
+          {
+            "value": "134217728",
+            "localName": "minCrit",
+            "platformFlavors": [],
+            "label": "min severity critical "
+          },
+          {
+            "value": "4194304",
+            "localName": "minHigh",
+            "platformFlavors": [],
+            "label": "min crossed high threshold "
+          },
+          {
+            "value": "8388608",
+            "localName": "minLow",
+            "platformFlavors": [],
+            "label": "min crossed low threshold "
+          },
+          {
+            "value": "67108864",
+            "localName": "minMajor",
+            "platformFlavors": [],
+            "label": "min severity major "
+          },
+          {
+            "value": "33554432",
+            "localName": "minMinor",
+            "platformFlavors": [],
+            "label": "min severity minor "
+          },
+          {
+            "value": "2097152",
+            "localName": "minRecovering",
+            "platformFlavors": [],
+            "label": "min recovering "
+          },
+          {
+            "value": "16777216",
+            "localName": "minWarn",
+            "platformFlavors": [],
+            "label": "min severity warning "
+          },
+          {
+            "value": "1048576",
+            "localName": "periodicCrit",
+            "platformFlavors": [],
+            "label": "periodic severity critical "
+          },
+          {
+            "value": "32768",
+            "localName": "periodicHigh",
+            "platformFlavors": [],
+            "label": "periodic crossed high threshold "
+          },
+          {
+            "value": "65536",
+            "localName": "periodicLow",
+            "platformFlavors": [],
+            "label": "periodic crossed low threshold "
+          },
+          {
+            "value": "524288",
+            "localName": "periodicMajor",
+            "platformFlavors": [],
+            "label": "periodic severity major "
+          },
+          {
+            "value": "262144",
+            "localName": "periodicMinor",
+            "platformFlavors": [],
+            "label": "periodic severity minor "
+          },
+          {
+            "value": "16384",
+            "localName": "periodicRecovering",
+            "platformFlavors": [],
+            "label": "periodic recovering "
+          },
+          {
+            "value": "131072",
+            "localName": "periodicWarn",
+            "platformFlavors": [],
+            "label": "periodic severity warning "
+          },
+          {
+            "value": "36028797018963968",
+            "localName": "rateCrit",
+            "platformFlavors": [],
+            "label": "rate severity critical "
+          },
+          {
+            "value": "1125899906842624",
+            "localName": "rateHigh",
+            "platformFlavors": [],
+            "label": "rate crossed high threshold "
+          },
+          {
+            "value": "2251799813685248",
+            "localName": "rateLow",
+            "platformFlavors": [],
+            "label": "rate crossed low threshold "
+          },
+          {
+            "value": "18014398509481984",
+            "localName": "rateMajor",
+            "platformFlavors": [],
+            "label": "rate severity major "
+          },
+          {
+            "value": "9007199254740992",
+            "localName": "rateMinor",
+            "platformFlavors": [],
+            "label": "rate severity minor "
+          },
+          {
+            "value": "562949953421312",
+            "localName": "rateRecovering",
+            "platformFlavors": [],
+            "label": "rate recovering "
+          },
+          {
+            "value": "4503599627370496",
+            "localName": "rateWarn",
+            "platformFlavors": [],
+            "label": "rate severity warning "
+          },
+          {
+            "value": "281474976710656",
+            "localName": "trendCrit",
+            "platformFlavors": [],
+            "label": "trend severity critical "
+          },
+          {
+            "value": "8796093022208",
+            "localName": "trendHigh",
+            "platformFlavors": [],
+            "label": "trend crossed high threshold "
+          },
+          {
+            "value": "17592186044416",
+            "localName": "trendLow",
+            "platformFlavors": [],
+            "label": "trend crossed low threshold "
+          },
+          {
+            "value": "140737488355328",
+            "localName": "trendMajor",
+            "platformFlavors": [],
+            "label": "trend severity major "
+          },
+          {
+            "value": "70368744177664",
+            "localName": "trendMinor",
+            "platformFlavors": [],
+            "label": "trend severity minor "
+          },
+          {
+            "value": "4398046511104",
+            "localName": "trendRecovering",
+            "platformFlavors": [],
+            "label": "trend recovering "
+          },
+          {
+            "value": "35184372088832",
+            "localName": "trendWarn",
+            "platformFlavors": [],
+            "label": "trend severity warning "
+          },
+          {
+            "value": "0",
+            "localName": "unspecified",
+            "platformFlavors": [],
+            "label": " "
+          }
+        ],
+        "default": "unspecified",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRateTr": {
+        "comment": [
+          "Total  Ingress  Bytes rate.  This is the trending value of the counter.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8650",
+        "propLocalId": "2929",
+        "label": "Total Ingress Bytes rate trend",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRateTrBase": {
+        "comment": [
+          "Total  Ingress  Bytes rate.  This is the cumulative value of the counter from the previous collection interval.  Used for internal purposes."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8649",
+        "propLocalId": "2928",
+        "label": "Total Ingress Bytes rate trend baseline",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesRateTtl": {
+        "comment": [
+          "Total  Ingress  Bytes rate.  This is the total sum of all values read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8647",
+        "propLocalId": "2926",
+        "label": "Total Ingress Bytes rate total sum",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesSpct": {
+        "comment": [
+          "Total  Ingress  Bytes.  This is the number of missed and/or incorrect values read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8622",
+        "propLocalId": "2910",
+        "label": "Total Ingress Bytes suspect count",
+        "baseType": "scalar:Uint16",
+        "modelType": "scalar:Uint16",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesThr": {
+        "comment": [
+          "Total  Ingress  Bytes.  This indicates the properties of the counter that crossed the threshold during the collection interval.  Note that this value resets at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8623",
+        "propLocalId": "2911",
+        "label": "Total Ingress Bytes thresholded flags",
+        "baseType": "scalar:Bitmask64",
+        "modelType": "stats:ThresholdedMask",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2199023255552",
+            "localName": "avgCrit",
+            "platformFlavors": [],
+            "label": "avg severity critical "
+          },
+          {
+            "value": "68719476736",
+            "localName": "avgHigh",
+            "platformFlavors": [],
+            "label": "avg crossed high threshold "
+          },
+          {
+            "value": "137438953472",
+            "localName": "avgLow",
+            "platformFlavors": [],
+            "label": "avg crossed low threshold "
+          },
+          {
+            "value": "1099511627776",
+            "localName": "avgMajor",
+            "platformFlavors": [],
+            "label": "avg severity major "
+          },
+          {
+            "value": "549755813888",
+            "localName": "avgMinor",
+            "platformFlavors": [],
+            "label": "avg severity minor "
+          },
+          {
+            "value": "34359738368",
+            "localName": "avgRecovering",
+            "platformFlavors": [],
+            "label": "avg recovering "
+          },
+          {
+            "value": "274877906944",
+            "localName": "avgWarn",
+            "platformFlavors": [],
+            "label": "avg severity warning "
+          },
+          {
+            "value": "8192",
+            "localName": "cumulativeCrit",
+            "platformFlavors": [],
+            "label": "cumulative severity critical "
+          },
+          {
+            "value": "256",
+            "localName": "cumulativeHigh",
+            "platformFlavors": [],
+            "label": "cumulative crossed high threshold "
+          },
+          {
+            "value": "512",
+            "localName": "cumulativeLow",
+            "platformFlavors": [],
+            "label": "cumulative crossed low threshold "
+          },
+          {
+            "value": "4096",
+            "localName": "cumulativeMajor",
+            "platformFlavors": [],
+            "label": "cumulative severity major "
+          },
+          {
+            "value": "2048",
+            "localName": "cumulativeMinor",
+            "platformFlavors": [],
+            "label": "cumulative severity minor "
+          },
+          {
+            "value": "128",
+            "localName": "cumulativeRecovering",
+            "platformFlavors": [],
+            "label": "cumulative recovering "
+          },
+          {
+            "value": "1024",
+            "localName": "cumulativeWarn",
+            "platformFlavors": [],
+            "label": "cumulative severity warning "
+          },
+          {
+            "value": "unspecified",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "64",
+            "localName": "lastReadingCrit",
+            "platformFlavors": [],
+            "label": "lastReading severity critical "
+          },
+          {
+            "value": "2",
+            "localName": "lastReadingHigh",
+            "platformFlavors": [],
+            "label": "lastReading crossed high threshold "
+          },
+          {
+            "value": "4",
+            "localName": "lastReadingLow",
+            "platformFlavors": [],
+            "label": "lastReading crossed low threshold "
+          },
+          {
+            "value": "32",
+            "localName": "lastReadingMajor",
+            "platformFlavors": [],
+            "label": "lastReading severity major "
+          },
+          {
+            "value": "16",
+            "localName": "lastReadingMinor",
+            "platformFlavors": [],
+            "label": "lastReading severity minor "
+          },
+          {
+            "value": "1",
+            "localName": "lastReadingRecovering",
+            "platformFlavors": [],
+            "label": "lastReading recovering "
+          },
+          {
+            "value": "8",
+            "localName": "lastReadingWarn",
+            "platformFlavors": [],
+            "label": "lastReading severity warning "
+          },
+          {
+            "value": "17179869184",
+            "localName": "maxCrit",
+            "platformFlavors": [],
+            "label": "max severity critical "
+          },
+          {
+            "value": "536870912",
+            "localName": "maxHigh",
+            "platformFlavors": [],
+            "label": "max crossed high threshold "
+          },
+          {
+            "value": "1073741824",
+            "localName": "maxLow",
+            "platformFlavors": [],
+            "label": "max crossed low threshold "
+          },
+          {
+            "value": "8589934592",
+            "localName": "maxMajor",
+            "platformFlavors": [],
+            "label": "max severity major "
+          },
+          {
+            "value": "4294967296",
+            "localName": "maxMinor",
+            "platformFlavors": [],
+            "label": "max severity minor "
+          },
+          {
+            "value": "268435456",
+            "localName": "maxRecovering",
+            "platformFlavors": [],
+            "label": "max recovering "
+          },
+          {
+            "value": "2147483648",
+            "localName": "maxWarn",
+            "platformFlavors": [],
+            "label": "max severity warning "
+          },
+          {
+            "value": "134217728",
+            "localName": "minCrit",
+            "platformFlavors": [],
+            "label": "min severity critical "
+          },
+          {
+            "value": "4194304",
+            "localName": "minHigh",
+            "platformFlavors": [],
+            "label": "min crossed high threshold "
+          },
+          {
+            "value": "8388608",
+            "localName": "minLow",
+            "platformFlavors": [],
+            "label": "min crossed low threshold "
+          },
+          {
+            "value": "67108864",
+            "localName": "minMajor",
+            "platformFlavors": [],
+            "label": "min severity major "
+          },
+          {
+            "value": "33554432",
+            "localName": "minMinor",
+            "platformFlavors": [],
+            "label": "min severity minor "
+          },
+          {
+            "value": "2097152",
+            "localName": "minRecovering",
+            "platformFlavors": [],
+            "label": "min recovering "
+          },
+          {
+            "value": "16777216",
+            "localName": "minWarn",
+            "platformFlavors": [],
+            "label": "min severity warning "
+          },
+          {
+            "value": "1048576",
+            "localName": "periodicCrit",
+            "platformFlavors": [],
+            "label": "periodic severity critical "
+          },
+          {
+            "value": "32768",
+            "localName": "periodicHigh",
+            "platformFlavors": [],
+            "label": "periodic crossed high threshold "
+          },
+          {
+            "value": "65536",
+            "localName": "periodicLow",
+            "platformFlavors": [],
+            "label": "periodic crossed low threshold "
+          },
+          {
+            "value": "524288",
+            "localName": "periodicMajor",
+            "platformFlavors": [],
+            "label": "periodic severity major "
+          },
+          {
+            "value": "262144",
+            "localName": "periodicMinor",
+            "platformFlavors": [],
+            "label": "periodic severity minor "
+          },
+          {
+            "value": "16384",
+            "localName": "periodicRecovering",
+            "platformFlavors": [],
+            "label": "periodic recovering "
+          },
+          {
+            "value": "131072",
+            "localName": "periodicWarn",
+            "platformFlavors": [],
+            "label": "periodic severity warning "
+          },
+          {
+            "value": "36028797018963968",
+            "localName": "rateCrit",
+            "platformFlavors": [],
+            "label": "rate severity critical "
+          },
+          {
+            "value": "1125899906842624",
+            "localName": "rateHigh",
+            "platformFlavors": [],
+            "label": "rate crossed high threshold "
+          },
+          {
+            "value": "2251799813685248",
+            "localName": "rateLow",
+            "platformFlavors": [],
+            "label": "rate crossed low threshold "
+          },
+          {
+            "value": "18014398509481984",
+            "localName": "rateMajor",
+            "platformFlavors": [],
+            "label": "rate severity major "
+          },
+          {
+            "value": "9007199254740992",
+            "localName": "rateMinor",
+            "platformFlavors": [],
+            "label": "rate severity minor "
+          },
+          {
+            "value": "562949953421312",
+            "localName": "rateRecovering",
+            "platformFlavors": [],
+            "label": "rate recovering "
+          },
+          {
+            "value": "4503599627370496",
+            "localName": "rateWarn",
+            "platformFlavors": [],
+            "label": "rate severity warning "
+          },
+          {
+            "value": "281474976710656",
+            "localName": "trendCrit",
+            "platformFlavors": [],
+            "label": "trend severity critical "
+          },
+          {
+            "value": "8796093022208",
+            "localName": "trendHigh",
+            "platformFlavors": [],
+            "label": "trend crossed high threshold "
+          },
+          {
+            "value": "17592186044416",
+            "localName": "trendLow",
+            "platformFlavors": [],
+            "label": "trend crossed low threshold "
+          },
+          {
+            "value": "140737488355328",
+            "localName": "trendMajor",
+            "platformFlavors": [],
+            "label": "trend severity major "
+          },
+          {
+            "value": "70368744177664",
+            "localName": "trendMinor",
+            "platformFlavors": [],
+            "label": "trend severity minor "
+          },
+          {
+            "value": "4398046511104",
+            "localName": "trendRecovering",
+            "platformFlavors": [],
+            "label": "trend recovering "
+          },
+          {
+            "value": "35184372088832",
+            "localName": "trendWarn",
+            "platformFlavors": [],
+            "label": "trend severity warning "
+          },
+          {
+            "value": "0",
+            "localName": "unspecified",
+            "platformFlavors": [],
+            "label": " "
+          }
+        ],
+        "default": "unspecified",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesTr": {
+        "comment": [
+          "Total  Ingress  Bytes.  This is the trending value of the counter.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8625",
+        "propLocalId": "2913",
+        "label": "Total Ingress Bytes trend",
+        "baseType": "scalar:Sint64",
+        "modelType": "scalar:Sint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "bytesTrBase": {
+        "comment": [
+          "Total  Ingress  Bytes.  This is the cumulative value of the counter from the previous collection interval.  Used for internal purposes."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8624",
+        "propLocalId": "2912",
+        "label": "Total Ingress Bytes trend baseline",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "childAction": {
+        "comment": [
+          "Delete or ignore. For internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "4",
+        "propLocalId": "5",
+        "label": "childAction",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationChildAction",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "16384",
+            "localName": "deleteAll",
+            "platformFlavors": [],
+            "label": "deleteAll "
+          },
+          {
+            "value": "8192",
+            "localName": "deleteNonPresent",
+            "platformFlavors": [],
+            "label": "deleteNonPresent "
+          },
+          {
+            "value": "4096",
+            "localName": "ignore",
+            "platformFlavors": [],
+            "label": "ignore "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "cnt": {
+        "comment": [
+          "The number of readings made within the current sample."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "16212",
+        "propLocalId": "87",
+        "label": "Number of Collections During this Interval",
+        "baseType": "scalar:Uint16",
+        "modelType": "scalar:Uint16",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "dn": {
+        "comment": [
+          "A tag or metadata is a non-hierarchical keyword or term assigned to the fabric module."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "1",
+        "propLocalId": "2",
+        "label": "dn",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "lastCollOffset": {
+        "comment": [
+          ""
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "111",
+        "propLocalId": "86",
+        "label": "Collection Length",
+        "baseType": "scalar:Uint32",
+        "modelType": "scalar:Uint32",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "modTs": {
+        "comment": [
+          "The time when this object was last modified."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "7",
+        "propLocalId": "7",
+        "label": "modTs",
+        "baseType": "scalar:Date",
+        "modelType": "mo:TStamp",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "never",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "0",
+            "localName": "never",
+            "platformFlavors": [],
+            "label": "never "
+          }
+        ],
+        "default": "never",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsAvg": {
+        "comment": [
+          "Total  Ingress  Packets.  This is the average value read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8669",
+        "propLocalId": "2942",
+        "label": "Total Ingress Packets average value",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsBase": {
+        "comment": [
+          "Total  Ingress  Packets.  This is the cumulative value of the counter after the last reset of the hardware counter.  Note that this value continues through each interval without resetting to zero.  Used for internal purposes."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8664",
+        "propLocalId": "2937",
+        "label": "Total Ingress Packets baseline",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsCum": {
+        "comment": [
+          "Total  Ingress  Packets.  The total sum of the values read.  Note that this value continues through each interval without resetting to zero."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8665",
+        "propLocalId": "2938",
+        "label": "Total Ingress Packets cumulative",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsLast": {
+        "comment": [
+          "Total  Ingress  Packets.  This is the most current value read by the counter."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8663",
+        "propLocalId": "2936",
+        "label": "Total Ingress Packets current value",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsMax": {
+        "comment": [
+          "Total  Ingress  Packets.  This is the largest value read by the counter during the collection interval.  This value is only overwritten if the most current value is larger than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 4, the previous value is overwritten with 4.  If the third reading is smaller than 4, the value remains at 4.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8668",
+        "propLocalId": "2941",
+        "label": "Total Ingress Packets maximum value",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsMin": {
+        "comment": [
+          "Total  Ingress  Packets.  This is the smallest value read by the counter during the collection interval.  This value is only overwritten if the most current value is smaller than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 2, the previous value is overwritten with 2.  If the third reading is larger than 2, the value remains at 2.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8667",
+        "propLocalId": "2940",
+        "label": "Total Ingress Packets minimum value",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsPer": {
+        "comment": [
+          "Total  Ingress  Packets.  The total sum of the values read during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8666",
+        "propLocalId": "2939",
+        "label": "Total Ingress Packets periodic",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRate": {
+        "comment": [
+          "Total  Ingress  Packets.  This is the rate of the counter during the collection interval.  The rate is calculated by dividing the periodic value by the length of the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8674",
+        "propLocalId": "2947",
+        "label": "Total Ingress Packets rate",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRateAvg": {
+        "comment": [
+          "Total  Ingress  Packets rate.  This is the average value read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15246",
+        "propLocalId": "2957",
+        "label": "Total Ingress Packets rate average value",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRateLast": {
+        "comment": [
+          "Total  Ingress  Packets rate.  This is the most current value read by the counter."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15243",
+        "propLocalId": "2954",
+        "label": "Total Ingress Packets rate current value",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRateMax": {
+        "comment": [
+          "Total  Ingress  Packets rate.  This is the largest value read by the counter during the collection interval.  This value is only overwritten if the most current value is larger than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 4, the previous value is overwritten with 4.  If the third reading is smaller than 4, the value remains at 4.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15245",
+        "propLocalId": "2956",
+        "label": "Total Ingress Packets rate maximum value",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRateMin": {
+        "comment": [
+          "Total  Ingress  Packets rate.  This is the smallest value read by the counter during the collection interval.  This value is only overwritten if the most current value is smaller than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 2, the previous value is overwritten with 2.  If the third reading is larger than 2, the value remains at 2.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15244",
+        "propLocalId": "2955",
+        "label": "Total Ingress Packets rate minimum value",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRateSpct": {
+        "comment": [
+          "Total  Ingress  Packets rate.  This is the number of missed and/or incorrect values read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15247",
+        "propLocalId": "2958",
+        "label": "Total Ingress Packets rate suspect count",
+        "baseType": "scalar:Uint16",
+        "modelType": "scalar:Uint16",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRateThr": {
+        "comment": [
+          "Total  Ingress  Packets rate.  This indicates the properties of the counter that crossed the threshold during the collection interval.  Note that this value resets at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15249",
+        "propLocalId": "2960",
+        "label": "Total Ingress Packets rate thresholded flags",
+        "baseType": "scalar:Bitmask64",
+        "modelType": "stats:ThresholdedMask",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2199023255552",
+            "localName": "avgCrit",
+            "platformFlavors": [],
+            "label": "avg severity critical "
+          },
+          {
+            "value": "68719476736",
+            "localName": "avgHigh",
+            "platformFlavors": [],
+            "label": "avg crossed high threshold "
+          },
+          {
+            "value": "137438953472",
+            "localName": "avgLow",
+            "platformFlavors": [],
+            "label": "avg crossed low threshold "
+          },
+          {
+            "value": "1099511627776",
+            "localName": "avgMajor",
+            "platformFlavors": [],
+            "label": "avg severity major "
+          },
+          {
+            "value": "549755813888",
+            "localName": "avgMinor",
+            "platformFlavors": [],
+            "label": "avg severity minor "
+          },
+          {
+            "value": "34359738368",
+            "localName": "avgRecovering",
+            "platformFlavors": [],
+            "label": "avg recovering "
+          },
+          {
+            "value": "274877906944",
+            "localName": "avgWarn",
+            "platformFlavors": [],
+            "label": "avg severity warning "
+          },
+          {
+            "value": "8192",
+            "localName": "cumulativeCrit",
+            "platformFlavors": [],
+            "label": "cumulative severity critical "
+          },
+          {
+            "value": "256",
+            "localName": "cumulativeHigh",
+            "platformFlavors": [],
+            "label": "cumulative crossed high threshold "
+          },
+          {
+            "value": "512",
+            "localName": "cumulativeLow",
+            "platformFlavors": [],
+            "label": "cumulative crossed low threshold "
+          },
+          {
+            "value": "4096",
+            "localName": "cumulativeMajor",
+            "platformFlavors": [],
+            "label": "cumulative severity major "
+          },
+          {
+            "value": "2048",
+            "localName": "cumulativeMinor",
+            "platformFlavors": [],
+            "label": "cumulative severity minor "
+          },
+          {
+            "value": "128",
+            "localName": "cumulativeRecovering",
+            "platformFlavors": [],
+            "label": "cumulative recovering "
+          },
+          {
+            "value": "1024",
+            "localName": "cumulativeWarn",
+            "platformFlavors": [],
+            "label": "cumulative severity warning "
+          },
+          {
+            "value": "unspecified",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "64",
+            "localName": "lastReadingCrit",
+            "platformFlavors": [],
+            "label": "lastReading severity critical "
+          },
+          {
+            "value": "2",
+            "localName": "lastReadingHigh",
+            "platformFlavors": [],
+            "label": "lastReading crossed high threshold "
+          },
+          {
+            "value": "4",
+            "localName": "lastReadingLow",
+            "platformFlavors": [],
+            "label": "lastReading crossed low threshold "
+          },
+          {
+            "value": "32",
+            "localName": "lastReadingMajor",
+            "platformFlavors": [],
+            "label": "lastReading severity major "
+          },
+          {
+            "value": "16",
+            "localName": "lastReadingMinor",
+            "platformFlavors": [],
+            "label": "lastReading severity minor "
+          },
+          {
+            "value": "1",
+            "localName": "lastReadingRecovering",
+            "platformFlavors": [],
+            "label": "lastReading recovering "
+          },
+          {
+            "value": "8",
+            "localName": "lastReadingWarn",
+            "platformFlavors": [],
+            "label": "lastReading severity warning "
+          },
+          {
+            "value": "17179869184",
+            "localName": "maxCrit",
+            "platformFlavors": [],
+            "label": "max severity critical "
+          },
+          {
+            "value": "536870912",
+            "localName": "maxHigh",
+            "platformFlavors": [],
+            "label": "max crossed high threshold "
+          },
+          {
+            "value": "1073741824",
+            "localName": "maxLow",
+            "platformFlavors": [],
+            "label": "max crossed low threshold "
+          },
+          {
+            "value": "8589934592",
+            "localName": "maxMajor",
+            "platformFlavors": [],
+            "label": "max severity major "
+          },
+          {
+            "value": "4294967296",
+            "localName": "maxMinor",
+            "platformFlavors": [],
+            "label": "max severity minor "
+          },
+          {
+            "value": "268435456",
+            "localName": "maxRecovering",
+            "platformFlavors": [],
+            "label": "max recovering "
+          },
+          {
+            "value": "2147483648",
+            "localName": "maxWarn",
+            "platformFlavors": [],
+            "label": "max severity warning "
+          },
+          {
+            "value": "134217728",
+            "localName": "minCrit",
+            "platformFlavors": [],
+            "label": "min severity critical "
+          },
+          {
+            "value": "4194304",
+            "localName": "minHigh",
+            "platformFlavors": [],
+            "label": "min crossed high threshold "
+          },
+          {
+            "value": "8388608",
+            "localName": "minLow",
+            "platformFlavors": [],
+            "label": "min crossed low threshold "
+          },
+          {
+            "value": "67108864",
+            "localName": "minMajor",
+            "platformFlavors": [],
+            "label": "min severity major "
+          },
+          {
+            "value": "33554432",
+            "localName": "minMinor",
+            "platformFlavors": [],
+            "label": "min severity minor "
+          },
+          {
+            "value": "2097152",
+            "localName": "minRecovering",
+            "platformFlavors": [],
+            "label": "min recovering "
+          },
+          {
+            "value": "16777216",
+            "localName": "minWarn",
+            "platformFlavors": [],
+            "label": "min severity warning "
+          },
+          {
+            "value": "1048576",
+            "localName": "periodicCrit",
+            "platformFlavors": [],
+            "label": "periodic severity critical "
+          },
+          {
+            "value": "32768",
+            "localName": "periodicHigh",
+            "platformFlavors": [],
+            "label": "periodic crossed high threshold "
+          },
+          {
+            "value": "65536",
+            "localName": "periodicLow",
+            "platformFlavors": [],
+            "label": "periodic crossed low threshold "
+          },
+          {
+            "value": "524288",
+            "localName": "periodicMajor",
+            "platformFlavors": [],
+            "label": "periodic severity major "
+          },
+          {
+            "value": "262144",
+            "localName": "periodicMinor",
+            "platformFlavors": [],
+            "label": "periodic severity minor "
+          },
+          {
+            "value": "16384",
+            "localName": "periodicRecovering",
+            "platformFlavors": [],
+            "label": "periodic recovering "
+          },
+          {
+            "value": "131072",
+            "localName": "periodicWarn",
+            "platformFlavors": [],
+            "label": "periodic severity warning "
+          },
+          {
+            "value": "36028797018963968",
+            "localName": "rateCrit",
+            "platformFlavors": [],
+            "label": "rate severity critical "
+          },
+          {
+            "value": "1125899906842624",
+            "localName": "rateHigh",
+            "platformFlavors": [],
+            "label": "rate crossed high threshold "
+          },
+          {
+            "value": "2251799813685248",
+            "localName": "rateLow",
+            "platformFlavors": [],
+            "label": "rate crossed low threshold "
+          },
+          {
+            "value": "18014398509481984",
+            "localName": "rateMajor",
+            "platformFlavors": [],
+            "label": "rate severity major "
+          },
+          {
+            "value": "9007199254740992",
+            "localName": "rateMinor",
+            "platformFlavors": [],
+            "label": "rate severity minor "
+          },
+          {
+            "value": "562949953421312",
+            "localName": "rateRecovering",
+            "platformFlavors": [],
+            "label": "rate recovering "
+          },
+          {
+            "value": "4503599627370496",
+            "localName": "rateWarn",
+            "platformFlavors": [],
+            "label": "rate severity warning "
+          },
+          {
+            "value": "281474976710656",
+            "localName": "trendCrit",
+            "platformFlavors": [],
+            "label": "trend severity critical "
+          },
+          {
+            "value": "8796093022208",
+            "localName": "trendHigh",
+            "platformFlavors": [],
+            "label": "trend crossed high threshold "
+          },
+          {
+            "value": "17592186044416",
+            "localName": "trendLow",
+            "platformFlavors": [],
+            "label": "trend crossed low threshold "
+          },
+          {
+            "value": "140737488355328",
+            "localName": "trendMajor",
+            "platformFlavors": [],
+            "label": "trend severity major "
+          },
+          {
+            "value": "70368744177664",
+            "localName": "trendMinor",
+            "platformFlavors": [],
+            "label": "trend severity minor "
+          },
+          {
+            "value": "4398046511104",
+            "localName": "trendRecovering",
+            "platformFlavors": [],
+            "label": "trend recovering "
+          },
+          {
+            "value": "35184372088832",
+            "localName": "trendWarn",
+            "platformFlavors": [],
+            "label": "trend severity warning "
+          },
+          {
+            "value": "0",
+            "localName": "unspecified",
+            "platformFlavors": [],
+            "label": " "
+          }
+        ],
+        "default": "unspecified",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRateTr": {
+        "comment": [
+          "Total  Ingress  Packets rate.  This is the trending value of the counter.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15251",
+        "propLocalId": "2962",
+        "label": "Total Ingress Packets rate trend",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRateTrBase": {
+        "comment": [
+          "Total  Ingress  Packets rate.  This is the cumulative value of the counter from the previous collection interval.  Used for internal purposes."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15250",
+        "propLocalId": "2961",
+        "label": "Total Ingress Packets rate trend baseline",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsRateTtl": {
+        "comment": [
+          "Total  Ingress  Packets rate.  This is the total sum of all values read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15248",
+        "propLocalId": "2959",
+        "label": "Total Ingress Packets rate total sum",
+        "baseType": "scalar:Double",
+        "modelType": "scalar:Double",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsSpct": {
+        "comment": [
+          "Total  Ingress  Packets.  This is the number of missed and/or incorrect values read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8670",
+        "propLocalId": "2943",
+        "label": "Total Ingress Packets suspect count",
+        "baseType": "scalar:Uint16",
+        "modelType": "scalar:Uint16",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsThr": {
+        "comment": [
+          "Total  Ingress  Packets.  This indicates the properties of the counter that crossed the threshold during the collection interval.  Note that this value resets at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8671",
+        "propLocalId": "2944",
+        "label": "Total Ingress Packets thresholded flags",
+        "baseType": "scalar:Bitmask64",
+        "modelType": "stats:ThresholdedMask",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2199023255552",
+            "localName": "avgCrit",
+            "platformFlavors": [],
+            "label": "avg severity critical "
+          },
+          {
+            "value": "68719476736",
+            "localName": "avgHigh",
+            "platformFlavors": [],
+            "label": "avg crossed high threshold "
+          },
+          {
+            "value": "137438953472",
+            "localName": "avgLow",
+            "platformFlavors": [],
+            "label": "avg crossed low threshold "
+          },
+          {
+            "value": "1099511627776",
+            "localName": "avgMajor",
+            "platformFlavors": [],
+            "label": "avg severity major "
+          },
+          {
+            "value": "549755813888",
+            "localName": "avgMinor",
+            "platformFlavors": [],
+            "label": "avg severity minor "
+          },
+          {
+            "value": "34359738368",
+            "localName": "avgRecovering",
+            "platformFlavors": [],
+            "label": "avg recovering "
+          },
+          {
+            "value": "274877906944",
+            "localName": "avgWarn",
+            "platformFlavors": [],
+            "label": "avg severity warning "
+          },
+          {
+            "value": "8192",
+            "localName": "cumulativeCrit",
+            "platformFlavors": [],
+            "label": "cumulative severity critical "
+          },
+          {
+            "value": "256",
+            "localName": "cumulativeHigh",
+            "platformFlavors": [],
+            "label": "cumulative crossed high threshold "
+          },
+          {
+            "value": "512",
+            "localName": "cumulativeLow",
+            "platformFlavors": [],
+            "label": "cumulative crossed low threshold "
+          },
+          {
+            "value": "4096",
+            "localName": "cumulativeMajor",
+            "platformFlavors": [],
+            "label": "cumulative severity major "
+          },
+          {
+            "value": "2048",
+            "localName": "cumulativeMinor",
+            "platformFlavors": [],
+            "label": "cumulative severity minor "
+          },
+          {
+            "value": "128",
+            "localName": "cumulativeRecovering",
+            "platformFlavors": [],
+            "label": "cumulative recovering "
+          },
+          {
+            "value": "1024",
+            "localName": "cumulativeWarn",
+            "platformFlavors": [],
+            "label": "cumulative severity warning "
+          },
+          {
+            "value": "unspecified",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "64",
+            "localName": "lastReadingCrit",
+            "platformFlavors": [],
+            "label": "lastReading severity critical "
+          },
+          {
+            "value": "2",
+            "localName": "lastReadingHigh",
+            "platformFlavors": [],
+            "label": "lastReading crossed high threshold "
+          },
+          {
+            "value": "4",
+            "localName": "lastReadingLow",
+            "platformFlavors": [],
+            "label": "lastReading crossed low threshold "
+          },
+          {
+            "value": "32",
+            "localName": "lastReadingMajor",
+            "platformFlavors": [],
+            "label": "lastReading severity major "
+          },
+          {
+            "value": "16",
+            "localName": "lastReadingMinor",
+            "platformFlavors": [],
+            "label": "lastReading severity minor "
+          },
+          {
+            "value": "1",
+            "localName": "lastReadingRecovering",
+            "platformFlavors": [],
+            "label": "lastReading recovering "
+          },
+          {
+            "value": "8",
+            "localName": "lastReadingWarn",
+            "platformFlavors": [],
+            "label": "lastReading severity warning "
+          },
+          {
+            "value": "17179869184",
+            "localName": "maxCrit",
+            "platformFlavors": [],
+            "label": "max severity critical "
+          },
+          {
+            "value": "536870912",
+            "localName": "maxHigh",
+            "platformFlavors": [],
+            "label": "max crossed high threshold "
+          },
+          {
+            "value": "1073741824",
+            "localName": "maxLow",
+            "platformFlavors": [],
+            "label": "max crossed low threshold "
+          },
+          {
+            "value": "8589934592",
+            "localName": "maxMajor",
+            "platformFlavors": [],
+            "label": "max severity major "
+          },
+          {
+            "value": "4294967296",
+            "localName": "maxMinor",
+            "platformFlavors": [],
+            "label": "max severity minor "
+          },
+          {
+            "value": "268435456",
+            "localName": "maxRecovering",
+            "platformFlavors": [],
+            "label": "max recovering "
+          },
+          {
+            "value": "2147483648",
+            "localName": "maxWarn",
+            "platformFlavors": [],
+            "label": "max severity warning "
+          },
+          {
+            "value": "134217728",
+            "localName": "minCrit",
+            "platformFlavors": [],
+            "label": "min severity critical "
+          },
+          {
+            "value": "4194304",
+            "localName": "minHigh",
+            "platformFlavors": [],
+            "label": "min crossed high threshold "
+          },
+          {
+            "value": "8388608",
+            "localName": "minLow",
+            "platformFlavors": [],
+            "label": "min crossed low threshold "
+          },
+          {
+            "value": "67108864",
+            "localName": "minMajor",
+            "platformFlavors": [],
+            "label": "min severity major "
+          },
+          {
+            "value": "33554432",
+            "localName": "minMinor",
+            "platformFlavors": [],
+            "label": "min severity minor "
+          },
+          {
+            "value": "2097152",
+            "localName": "minRecovering",
+            "platformFlavors": [],
+            "label": "min recovering "
+          },
+          {
+            "value": "16777216",
+            "localName": "minWarn",
+            "platformFlavors": [],
+            "label": "min severity warning "
+          },
+          {
+            "value": "1048576",
+            "localName": "periodicCrit",
+            "platformFlavors": [],
+            "label": "periodic severity critical "
+          },
+          {
+            "value": "32768",
+            "localName": "periodicHigh",
+            "platformFlavors": [],
+            "label": "periodic crossed high threshold "
+          },
+          {
+            "value": "65536",
+            "localName": "periodicLow",
+            "platformFlavors": [],
+            "label": "periodic crossed low threshold "
+          },
+          {
+            "value": "524288",
+            "localName": "periodicMajor",
+            "platformFlavors": [],
+            "label": "periodic severity major "
+          },
+          {
+            "value": "262144",
+            "localName": "periodicMinor",
+            "platformFlavors": [],
+            "label": "periodic severity minor "
+          },
+          {
+            "value": "16384",
+            "localName": "periodicRecovering",
+            "platformFlavors": [],
+            "label": "periodic recovering "
+          },
+          {
+            "value": "131072",
+            "localName": "periodicWarn",
+            "platformFlavors": [],
+            "label": "periodic severity warning "
+          },
+          {
+            "value": "36028797018963968",
+            "localName": "rateCrit",
+            "platformFlavors": [],
+            "label": "rate severity critical "
+          },
+          {
+            "value": "1125899906842624",
+            "localName": "rateHigh",
+            "platformFlavors": [],
+            "label": "rate crossed high threshold "
+          },
+          {
+            "value": "2251799813685248",
+            "localName": "rateLow",
+            "platformFlavors": [],
+            "label": "rate crossed low threshold "
+          },
+          {
+            "value": "18014398509481984",
+            "localName": "rateMajor",
+            "platformFlavors": [],
+            "label": "rate severity major "
+          },
+          {
+            "value": "9007199254740992",
+            "localName": "rateMinor",
+            "platformFlavors": [],
+            "label": "rate severity minor "
+          },
+          {
+            "value": "562949953421312",
+            "localName": "rateRecovering",
+            "platformFlavors": [],
+            "label": "rate recovering "
+          },
+          {
+            "value": "4503599627370496",
+            "localName": "rateWarn",
+            "platformFlavors": [],
+            "label": "rate severity warning "
+          },
+          {
+            "value": "281474976710656",
+            "localName": "trendCrit",
+            "platformFlavors": [],
+            "label": "trend severity critical "
+          },
+          {
+            "value": "8796093022208",
+            "localName": "trendHigh",
+            "platformFlavors": [],
+            "label": "trend crossed high threshold "
+          },
+          {
+            "value": "17592186044416",
+            "localName": "trendLow",
+            "platformFlavors": [],
+            "label": "trend crossed low threshold "
+          },
+          {
+            "value": "140737488355328",
+            "localName": "trendMajor",
+            "platformFlavors": [],
+            "label": "trend severity major "
+          },
+          {
+            "value": "70368744177664",
+            "localName": "trendMinor",
+            "platformFlavors": [],
+            "label": "trend severity minor "
+          },
+          {
+            "value": "4398046511104",
+            "localName": "trendRecovering",
+            "platformFlavors": [],
+            "label": "trend recovering "
+          },
+          {
+            "value": "35184372088832",
+            "localName": "trendWarn",
+            "platformFlavors": [],
+            "label": "trend severity warning "
+          },
+          {
+            "value": "0",
+            "localName": "unspecified",
+            "platformFlavors": [],
+            "label": " "
+          }
+        ],
+        "default": "unspecified",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsTr": {
+        "comment": [
+          "Total  Ingress  Packets.  This is the trending value of the counter.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8673",
+        "propLocalId": "2946",
+        "label": "Total Ingress Packets trend",
+        "baseType": "scalar:Sint64",
+        "modelType": "scalar:Sint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "pktsTrBase": {
+        "comment": [
+          "Total  Ingress  Packets.  This is the cumulative value of the counter from the previous collection interval.  Used for internal purposes."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8672",
+        "propLocalId": "2945",
+        "label": "Total Ingress Packets trend baseline",
+        "baseType": "scalar:Uint64",
+        "modelType": "scalar:Uint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "repIntvEnd": {
+        "comment": [
+          ""
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "110",
+        "propLocalId": "85",
+        "label": "Reporting End Time",
+        "baseType": "scalar:Date",
+        "modelType": "scalar:Date",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "repIntvStart": {
+        "comment": [
+          ""
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "109",
+        "propLocalId": "84",
+        "label": "Reporting Start Time",
+        "baseType": "scalar:Date",
+        "modelType": "scalar:Date",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "rn": {
+        "comment": [
+          "Identifies an object from its siblings within the context of its parent object. The distinguished name contains a sequence of relative names."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "2",
+        "propLocalId": "3",
+        "label": "rn",
+        "baseType": "reference:BinRN",
+        "modelType": "reference:BinRN",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "status": {
+        "comment": [
+          "The upgrade status. This property is for internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3",
+        "propLocalId": "4",
+        "label": "status",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationStatus",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2",
+            "localName": "created",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be created. An error is returned if the object already exists.  \nIn the return value of a setter method: indicates that an object has been created.  \n"
+            ],
+            "label": "created "
+          },
+          {
+            "value": "8",
+            "localName": "deleted",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be deleted.  \nIn the return value of a setter method: indicates that an object has been deleted.\n"
+            ],
+            "label": "deleted "
+          },
+          {
+            "value": "4",
+            "localName": "modified",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be modified  \nIn the return value of a setter method: indicates that an object has been modified.\n"
+            ],
+            "label": "modified "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "utilAvg": {
+        "comment": [
+          "Ingress  Link  Utilization.  This is the average value read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8693",
+        "propLocalId": "2972",
+        "label": "Ingress Link Utilization average value",
+        "baseType": "scalar:UByte",
+        "modelType": "scalar:UByte",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "utilLast": {
+        "comment": [
+          "Ingress  Link  Utilization.  This is the most current value read by the counter."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8690",
+        "propLocalId": "2969",
+        "label": "Ingress Link Utilization current value",
+        "baseType": "scalar:UByte",
+        "modelType": "scalar:UByte",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "utilMax": {
+        "comment": [
+          "Ingress  Link  Utilization.  This is the largest value read by the counter during the collection interval.  This value is only overwritten if the most current value is larger than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 4, the previous value is overwritten with 4.  If the third reading is smaller than 4, the value remains at 4.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8692",
+        "propLocalId": "2971",
+        "label": "Ingress Link Utilization maximum value",
+        "baseType": "scalar:UByte",
+        "modelType": "scalar:UByte",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "utilMin": {
+        "comment": [
+          "Ingress  Link  Utilization.  This is the smallest value read by the counter during the collection interval.  This value is only overwritten if the most current value is smaller than the previous value.  For example, if the value of the first reading is 3 and the value of the second reading is 2, the previous value is overwritten with 2.  If the third reading is larger than 2, the value remains at 2.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8691",
+        "propLocalId": "2970",
+        "label": "Ingress Link Utilization minimum value",
+        "baseType": "scalar:UByte",
+        "modelType": "scalar:UByte",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "utilSpct": {
+        "comment": [
+          "Ingress  Link  Utilization.  This is the number of missed and/or incorrect values read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8694",
+        "propLocalId": "2973",
+        "label": "Ingress Link Utilization suspect count",
+        "baseType": "scalar:Uint16",
+        "modelType": "scalar:Uint16",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "utilThr": {
+        "comment": [
+          "Ingress  Link  Utilization.  This indicates the properties of the counter that crossed the threshold during the collection interval.  Note that this value resets at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8696",
+        "propLocalId": "2975",
+        "label": "Ingress Link Utilization thresholded flags",
+        "baseType": "scalar:Bitmask64",
+        "modelType": "stats:ThresholdedMask",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2199023255552",
+            "localName": "avgCrit",
+            "platformFlavors": [],
+            "label": "avg severity critical "
+          },
+          {
+            "value": "68719476736",
+            "localName": "avgHigh",
+            "platformFlavors": [],
+            "label": "avg crossed high threshold "
+          },
+          {
+            "value": "137438953472",
+            "localName": "avgLow",
+            "platformFlavors": [],
+            "label": "avg crossed low threshold "
+          },
+          {
+            "value": "1099511627776",
+            "localName": "avgMajor",
+            "platformFlavors": [],
+            "label": "avg severity major "
+          },
+          {
+            "value": "549755813888",
+            "localName": "avgMinor",
+            "platformFlavors": [],
+            "label": "avg severity minor "
+          },
+          {
+            "value": "34359738368",
+            "localName": "avgRecovering",
+            "platformFlavors": [],
+            "label": "avg recovering "
+          },
+          {
+            "value": "274877906944",
+            "localName": "avgWarn",
+            "platformFlavors": [],
+            "label": "avg severity warning "
+          },
+          {
+            "value": "8192",
+            "localName": "cumulativeCrit",
+            "platformFlavors": [],
+            "label": "cumulative severity critical "
+          },
+          {
+            "value": "256",
+            "localName": "cumulativeHigh",
+            "platformFlavors": [],
+            "label": "cumulative crossed high threshold "
+          },
+          {
+            "value": "512",
+            "localName": "cumulativeLow",
+            "platformFlavors": [],
+            "label": "cumulative crossed low threshold "
+          },
+          {
+            "value": "4096",
+            "localName": "cumulativeMajor",
+            "platformFlavors": [],
+            "label": "cumulative severity major "
+          },
+          {
+            "value": "2048",
+            "localName": "cumulativeMinor",
+            "platformFlavors": [],
+            "label": "cumulative severity minor "
+          },
+          {
+            "value": "128",
+            "localName": "cumulativeRecovering",
+            "platformFlavors": [],
+            "label": "cumulative recovering "
+          },
+          {
+            "value": "1024",
+            "localName": "cumulativeWarn",
+            "platformFlavors": [],
+            "label": "cumulative severity warning "
+          },
+          {
+            "value": "unspecified",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "64",
+            "localName": "lastReadingCrit",
+            "platformFlavors": [],
+            "label": "lastReading severity critical "
+          },
+          {
+            "value": "2",
+            "localName": "lastReadingHigh",
+            "platformFlavors": [],
+            "label": "lastReading crossed high threshold "
+          },
+          {
+            "value": "4",
+            "localName": "lastReadingLow",
+            "platformFlavors": [],
+            "label": "lastReading crossed low threshold "
+          },
+          {
+            "value": "32",
+            "localName": "lastReadingMajor",
+            "platformFlavors": [],
+            "label": "lastReading severity major "
+          },
+          {
+            "value": "16",
+            "localName": "lastReadingMinor",
+            "platformFlavors": [],
+            "label": "lastReading severity minor "
+          },
+          {
+            "value": "1",
+            "localName": "lastReadingRecovering",
+            "platformFlavors": [],
+            "label": "lastReading recovering "
+          },
+          {
+            "value": "8",
+            "localName": "lastReadingWarn",
+            "platformFlavors": [],
+            "label": "lastReading severity warning "
+          },
+          {
+            "value": "17179869184",
+            "localName": "maxCrit",
+            "platformFlavors": [],
+            "label": "max severity critical "
+          },
+          {
+            "value": "536870912",
+            "localName": "maxHigh",
+            "platformFlavors": [],
+            "label": "max crossed high threshold "
+          },
+          {
+            "value": "1073741824",
+            "localName": "maxLow",
+            "platformFlavors": [],
+            "label": "max crossed low threshold "
+          },
+          {
+            "value": "8589934592",
+            "localName": "maxMajor",
+            "platformFlavors": [],
+            "label": "max severity major "
+          },
+          {
+            "value": "4294967296",
+            "localName": "maxMinor",
+            "platformFlavors": [],
+            "label": "max severity minor "
+          },
+          {
+            "value": "268435456",
+            "localName": "maxRecovering",
+            "platformFlavors": [],
+            "label": "max recovering "
+          },
+          {
+            "value": "2147483648",
+            "localName": "maxWarn",
+            "platformFlavors": [],
+            "label": "max severity warning "
+          },
+          {
+            "value": "134217728",
+            "localName": "minCrit",
+            "platformFlavors": [],
+            "label": "min severity critical "
+          },
+          {
+            "value": "4194304",
+            "localName": "minHigh",
+            "platformFlavors": [],
+            "label": "min crossed high threshold "
+          },
+          {
+            "value": "8388608",
+            "localName": "minLow",
+            "platformFlavors": [],
+            "label": "min crossed low threshold "
+          },
+          {
+            "value": "67108864",
+            "localName": "minMajor",
+            "platformFlavors": [],
+            "label": "min severity major "
+          },
+          {
+            "value": "33554432",
+            "localName": "minMinor",
+            "platformFlavors": [],
+            "label": "min severity minor "
+          },
+          {
+            "value": "2097152",
+            "localName": "minRecovering",
+            "platformFlavors": [],
+            "label": "min recovering "
+          },
+          {
+            "value": "16777216",
+            "localName": "minWarn",
+            "platformFlavors": [],
+            "label": "min severity warning "
+          },
+          {
+            "value": "1048576",
+            "localName": "periodicCrit",
+            "platformFlavors": [],
+            "label": "periodic severity critical "
+          },
+          {
+            "value": "32768",
+            "localName": "periodicHigh",
+            "platformFlavors": [],
+            "label": "periodic crossed high threshold "
+          },
+          {
+            "value": "65536",
+            "localName": "periodicLow",
+            "platformFlavors": [],
+            "label": "periodic crossed low threshold "
+          },
+          {
+            "value": "524288",
+            "localName": "periodicMajor",
+            "platformFlavors": [],
+            "label": "periodic severity major "
+          },
+          {
+            "value": "262144",
+            "localName": "periodicMinor",
+            "platformFlavors": [],
+            "label": "periodic severity minor "
+          },
+          {
+            "value": "16384",
+            "localName": "periodicRecovering",
+            "platformFlavors": [],
+            "label": "periodic recovering "
+          },
+          {
+            "value": "131072",
+            "localName": "periodicWarn",
+            "platformFlavors": [],
+            "label": "periodic severity warning "
+          },
+          {
+            "value": "36028797018963968",
+            "localName": "rateCrit",
+            "platformFlavors": [],
+            "label": "rate severity critical "
+          },
+          {
+            "value": "1125899906842624",
+            "localName": "rateHigh",
+            "platformFlavors": [],
+            "label": "rate crossed high threshold "
+          },
+          {
+            "value": "2251799813685248",
+            "localName": "rateLow",
+            "platformFlavors": [],
+            "label": "rate crossed low threshold "
+          },
+          {
+            "value": "18014398509481984",
+            "localName": "rateMajor",
+            "platformFlavors": [],
+            "label": "rate severity major "
+          },
+          {
+            "value": "9007199254740992",
+            "localName": "rateMinor",
+            "platformFlavors": [],
+            "label": "rate severity minor "
+          },
+          {
+            "value": "562949953421312",
+            "localName": "rateRecovering",
+            "platformFlavors": [],
+            "label": "rate recovering "
+          },
+          {
+            "value": "4503599627370496",
+            "localName": "rateWarn",
+            "platformFlavors": [],
+            "label": "rate severity warning "
+          },
+          {
+            "value": "281474976710656",
+            "localName": "trendCrit",
+            "platformFlavors": [],
+            "label": "trend severity critical "
+          },
+          {
+            "value": "8796093022208",
+            "localName": "trendHigh",
+            "platformFlavors": [],
+            "label": "trend crossed high threshold "
+          },
+          {
+            "value": "17592186044416",
+            "localName": "trendLow",
+            "platformFlavors": [],
+            "label": "trend crossed low threshold "
+          },
+          {
+            "value": "140737488355328",
+            "localName": "trendMajor",
+            "platformFlavors": [],
+            "label": "trend severity major "
+          },
+          {
+            "value": "70368744177664",
+            "localName": "trendMinor",
+            "platformFlavors": [],
+            "label": "trend severity minor "
+          },
+          {
+            "value": "4398046511104",
+            "localName": "trendRecovering",
+            "platformFlavors": [],
+            "label": "trend recovering "
+          },
+          {
+            "value": "35184372088832",
+            "localName": "trendWarn",
+            "platformFlavors": [],
+            "label": "trend severity warning "
+          },
+          {
+            "value": "0",
+            "localName": "unspecified",
+            "platformFlavors": [],
+            "label": " "
+          }
+        ],
+        "default": "unspecified",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "utilTr": {
+        "comment": [
+          "Ingress  Link  Utilization.  This is the trending value of the counter.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8698",
+        "propLocalId": "2977",
+        "label": "Ingress Link Utilization trend",
+        "baseType": "scalar:SByte",
+        "modelType": "scalar:SByte",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "utilTrBase": {
+        "comment": [
+          "Ingress  Link  Utilization.  This is the cumulative value of the counter from the previous collection interval.  Used for internal purposes."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8697",
+        "propLocalId": "2976",
+        "label": "Ingress Link Utilization trend baseline",
+        "baseType": "scalar:UByte",
+        "modelType": "scalar:UByte",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "utilTtl": {
+        "comment": [
+          "Ingress  Link  Utilization.  This is the total sum of all values read by the counter during the collection interval.  Note that this value resets to 0 at the beginning of each interval."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8695",
+        "propLocalId": "2974",
+        "label": "Ingress Link Utilization total sum",
+        "baseType": "scalar:Sint64",
+        "modelType": "scalar:Sint64",
+        "needsPropDelimiters": false,
+        "uitype": "number",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      }
+    }
+  }
+}

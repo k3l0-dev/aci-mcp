@@ -36,7 +36,7 @@ jobs:
         run: |
           uv sync --frozen --dev
           uv run --frozen pytest tests/ --ignore=tests/perf \
-            --cov=. --cov-report=term-missing --cov-report=xml -q
+            --cov=niwashi_mcp --cov-report=term-missing --cov-report=xml -q
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
@@ -66,9 +66,13 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
 
+      # --no-emit-project: since 2.0 the project is an installable package, so
+      # uv export emits it as `-e .`. pip-audit resolves with hashes required,
+      # and an editable directory has no single file to hash — it fails before
+      # auditing anything. The project's own code is not what this step audits.
       - name: Audit mcp/ (including dev dependencies)
         working-directory: mcp
-        run: uv export --frozen | uvx pip-audit -r /dev/stdin
+        run: uv export --frozen --no-emit-project | uvx pip-audit -r /dev/stdin
 
   build:
     name: Docker build
@@ -77,4 +81,4 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Build Docker image
-        run: docker build -f mcp/deploy/Dockerfile . -t aci-mcp:ci
+        run: docker build -f mcp/deploy/Dockerfile . -t niwashi-mcp:ci

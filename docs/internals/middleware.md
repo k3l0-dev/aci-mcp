@@ -1,6 +1,6 @@
 # Internals: Middleware Stack
 
-Three middleware layers are registered in `_serve()` in `mcp/main.py`, outermost first:
+Three middleware layers are registered in `_serve()` in `mcp/src/niwashi_mcp/main.py`, outermost first:
 
 ```python
 middleware = [
@@ -8,11 +8,21 @@ middleware = [
     Middleware(OAuthDiscoveryMiddleware),
     Middleware(ApiKeyMiddleware, key_store=key_store),
 ]
+
+await mcp.run_http_async(
+    host="0.0.0.0",
+    port=port,
+    stateless_http=True,
+    json_response=True,
+    middleware=middleware,
+)
 ```
+
+The stack is unchanged in 2.0 — none of these layers touches the ACI object model. Only the module paths moved, into the installable `niwashi_mcp` package.
 
 Request flow (outermost → innermost):
 
-```
+```text
 HealthMiddleware
     │  (pass non-/health requests)
 OAuthDiscoveryMiddleware
@@ -23,6 +33,7 @@ FastMCP dispatcher
 ```
 
 The order is load-bearing:
+
 - `HealthMiddleware` must be first so `/health` is answered before any auth runs
 - `OAuthDiscoveryMiddleware` must precede `ApiKeyMiddleware` so discovery paths are served before token validation
 
@@ -30,7 +41,7 @@ The order is load-bearing:
 
 ## HealthMiddleware
 
-**Source:** `mcp/middleware/health.py`
+**Source:** `mcp/src/niwashi_mcp/middleware/health.py`
 
 A pure ASGI middleware (no Starlette `BaseHTTPMiddleware` dependency). It short-circuits any HTTP request to `/health` before auth or discovery middleware run.
 
@@ -38,7 +49,7 @@ A pure ASGI middleware (no Starlette `BaseHTTPMiddleware` dependency). It short-
 
 Any HTTP request to `/health` receives:
 
-```
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Content-Length: 16
@@ -50,11 +61,11 @@ All other requests (including non-HTTP ASGI events such as WebSocket upgrades) p
 
 ### Why pure ASGI
 
-`BaseHTTPMiddleware` buffers the request body and adds overhead. `HealthMiddleware` talks directly to the ASGI `send` callable — it sends one `http.response.start` event and one `http.response.body` event and returns. Zero allocations beyond the two pre-built byte literals.
+`BaseHTTPMiddleware` buffers the request body and adds overhead. `HealthMiddleware` talks directly to the ASGI `send` callable — it sends one `http.response.start` event and one `http.response.body` event and returns. The body and the header list are module-level constants, encoded once at import, so a probe every 30 seconds costs nothing but the two `send()` calls.
 
 ### Docker healthcheck
 
-The `docker-compose.yml` uses this endpoint:
+`mcp/deploy/docker-compose.yml` probes this endpoint:
 
 ```yaml
 healthcheck:
@@ -71,7 +82,7 @@ Caddy waits for the healthcheck to pass (`service_healthy`) before accepting tra
 
 ## OAuthDiscoveryMiddleware
 
-**Source:** `mcp/middleware/oauth.py`
+**Source:** `mcp/src/niwashi_mcp/middleware/oauth.py`
 
 Implements the [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728) OAuth 2.0 Protected Resource Metadata discovery endpoint, required by the MCP 2025-03-26 specification.
 
@@ -100,7 +111,7 @@ _PROTECTED_RESOURCE_PATHS = frozenset({
 
 Headers:
 
-```
+```http
 HTTP/1.1 200 OK
 Content-Type: application/json
 Cache-Control: no-store
@@ -114,7 +125,7 @@ All non-discovery paths pass through to `ApiKeyMiddleware` unchanged.
 
 ## ApiKeyMiddleware
 
-**Source:** `mcp/middleware/auth.py`
+**Source:** `mcp/src/niwashi_mcp/middleware/auth.py`
 
 Validates bearer tokens on every request. Uses `KeyStore` for hot-reloadable keys and `RateLimiter` for per-IP brute-force protection.
 
@@ -127,9 +138,8 @@ flowchart TD
 
     MW --> EMPTY{KeyStore empty?}
     EMPTY -->|"yes (dev mode)"| PASSTHROUGH["call_next — no auth"]
-    EMPTY -->|"no (production)"| BYPASS
+    EMPTY -->|"no (production)"| PATH{Unauthenticated path?}
 
-    BYPASS --> PATH{Unauthenticated path?}
     PATH -->|"/.well-known/* or /register"| PASSTHROUGH
     PATH -->|"other"| AUTH
 
@@ -138,8 +148,8 @@ flowchart TD
     CALL -->|"AuthenticationError raised"| RATELIMIT
 
     RATELIMIT --> RL{Rate limit exceeded?}
-    RL -->|"yes"| R429["return 429\nRetry-After: 60"]
-    RL -->|"no"| R401["return 401\nWWW-Authenticate: Bearer resource_metadata=..."]
+    RL -->|"yes"| R429["return 429<br/>Retry-After: 60"]
+    RL -->|"no"| R401["return 401<br/>WWW-Authenticate: Bearer resource_metadata=..."]
 
     PASSTHROUGH --> RESP["Response"]
 ```
@@ -160,7 +170,7 @@ def _authenticate(token: str | None, keys: frozenset[str]) -> None:
 
 Two header forms are accepted (in priority order):
 
-```
+```text
 Authorization: Bearer <token>    ← checked first
 X-API-Key: <token>               ← fallback whenever Authorization doesn't
                                    start with "Bearer " (absent, empty, or
@@ -183,7 +193,7 @@ def _is_valid(token: str, keys: frozenset[str]) -> bool:
 
 ### 401 response
 
-```
+```http
 HTTP/1.1 401 Unauthorized
 Content-Type: application/json
 WWW-Authenticate: Bearer resource_metadata="https://mcp.yourdomain.com/.well-known/oauth-protected-resource"
@@ -197,7 +207,7 @@ The `resource_metadata` URL in `WWW-Authenticate` points clients to the OAuth di
 
 Fixed-window per-IP counter. Default: 30 failed auth attempts per 60-second window.
 
-```
+```text
 GET /mcp  (no token)  →  401  (attempt 1/30)
 GET /mcp  (no token)  →  401  (attempt 30/30)
 GET /mcp  (no token)  →  429  Retry-After: 60
@@ -222,26 +232,37 @@ In-flight requests that already called `KeyStore.get()` continue with the snapsh
 
 ## SIGHUP hot-reload
 
-The server registers a `SIGHUP` signal handler that reloads `MCP_API_KEYS` from `.env` without restarting:
+`_serve()` registers a `SIGHUP` handler that re-reads the env file and swaps the key set without restarting the process:
 
 ```python
 def _handle_sighup(_signum, _frame):
     load_dotenv(ENV_FILE, override=True)
     new_keys = load_api_keys()
     key_store.reload(new_keys)
+    n = len(new_keys)
+    if n:
+        logger.info("SIGHUP — API keys reloaded (%d key(s))", n)
+    else:
+        logger.warning("SIGHUP — MCP_API_KEYS is empty after reload, auth disabled")
+
+signal.signal(signal.SIGHUP, _handle_sighup)
 ```
+
+`override=True` matters: without it `load_dotenv` would leave the already-exported `MCP_API_KEYS` in place and the reload would be a no-op. `ENV_FILE` is the path resolved once at import — `$NIWASHI_MCP_ENV_FILE`, then `./.env`, then a verified checkout's `.env`, then `~/.config/niwashi-mcp/.env`; see [auth.md](auth.md#mcp_api_keys-format).
 
 Trigger a reload:
 
 ```bash
-kill -HUP $(pgrep -f "python main.py")
+kill -HUP $(pgrep -f niwashi-mcp)
 ```
 
 Log output after reload:
 
+```text
+INFO  niwashi-mcp  SIGHUP — API keys reloaded (2 key(s))
 ```
-INFO  aci-mcp  SIGHUP — API keys reloaded (2 key(s))
-```
+
+Emptying `MCP_API_KEYS` and reloading disables authentication rather than failing — the `KeyStore` becomes empty and `ApiKeyMiddleware` reverts to its pass-through mode. That is a live change, logged as a warning, not a rejected reload.
 
 ### Zero-downtime key rotation
 

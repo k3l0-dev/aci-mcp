@@ -14,7 +14,7 @@ Thresholds:
 
 import time
 
-from registry.filter import build_filter
+from niwashi_mcp.registry.filter import build_filter
 
 
 def test_single_call_is_sub_millisecond():

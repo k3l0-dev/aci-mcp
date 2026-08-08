@@ -41,9 +41,9 @@ from pathlib import Path
 # Make the mcp/ package importable without installation.
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from registry.descriptions import load_descriptions, search
+from niwashi_mcp.registry import catalog
+from niwashi_mcp.registry.descriptions import search
 
-DESCRIPTIONS_FILE = Path(__file__).parent.parent.parent / "data" / "class-descriptions.json"
 GOLDEN_FILE = Path(__file__).parent / "fixtures" / "search_golden.json"
 RESULT_WINDOW = 10
 
@@ -128,7 +128,7 @@ def main() -> None:
     parser.add_argument("--verbose", "-v", action="store_true", help="Print misses and near-misses")
     args = parser.parse_args()
 
-    descriptions = load_descriptions(DESCRIPTIONS_FILE)
+    descriptions = catalog.descriptions_index()
     golden = json.loads(GOLDEN_FILE.read_text())
     queries = golden["queries"]
 

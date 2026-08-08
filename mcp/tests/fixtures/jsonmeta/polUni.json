@@ -1,0 +1,763 @@
+{
+  "pol:Uni": {
+    "contains": {
+      "aaa:RbacAnnotation": "",
+      "aaa:RbacEp": "",
+      "aaa:UserEp": "",
+      "aaa:UserSessionEp": "",
+      "ap:PluginPolContainer": "",
+      "cloud:DomP": "",
+      "cloud:ResourceGroup": "",
+      "cloud:SvcDefCont": "",
+      "config:BackupStatusCont": "",
+      "ctrlr:Inst": "",
+      "dbg:DebugP": "",
+      "extdev:GroupP": "",
+      "fabric:Inst": "",
+      "fabric:RogueExceptionMacCont": "",
+      "fault:Counts": "",
+      "fault:Delegate": "",
+      "fc:DomP": "",
+      "fv:AppCtxRefCont": "",
+      "fv:BDDef": "",
+      "fv:CtxDef": "",
+      "fv:ESgSelDefAggrCont": "",
+      "fv:EpCPCont": "",
+      "fv:EpPCont": "",
+      "fv:FailedXlateCont": "",
+      "fv:Tenant": "",
+      "health:Inst": "",
+      "hostprot:Namespace": "",
+      "hostprot:NamespaceDef": "",
+      "hostprot:PolDef": "",
+      "infra:Infra": "",
+      "l2ext:DomP": "",
+      "l3ext:DomP": "",
+      "license:FeatureCont": "",
+      "monitor:Inst": "",
+      "notif:Cont": "",
+      "phys:DomP": "",
+      "pki:ExportEncryptionKey": "",
+      "pki:FabricCommunicationEp": "",
+      "pki:FabricSelfCAEp": "",
+      "pki:SchedulerCert": "",
+      "pki:SchedulerToken": "",
+      "planner:Cont": "",
+      "pol:NdoProfile": "",
+      "qos:DscpTransCont": "",
+      "quota:Cont": "",
+      "tag:AliasDef": "",
+      "tag:Annotation": "",
+      "tag:Def": "",
+      "tag:Tag": "",
+      "ui:PageUsage": "",
+      "ui:SettingsCont": "",
+      "vmm:ProvP": "",
+      "vmm:TenantCont": "",
+      "vns:SDEPpInfo": "",
+      "vns:SHSEPpInfo": "",
+      "vns:SLDevInst": "",
+      "vns:ScriptHandlerState": "",
+      "vns:VDev": ""
+    },
+    "rnMap": {
+      "RInst-": "vns:SLDevInst",
+      "alias-": "tag:AliasDef",
+      "annotationKey-": "tag:Annotation",
+      "backupst": "config:BackupStatusCont",
+      "bd-": "fv:BDDef",
+      "clouddomp": "cloud:DomP",
+      "controller": "ctrlr:Inst",
+      "ctx-": "fv:CtxDef",
+      "ctxrefcont": "fv:AppCtxRefCont",
+      "dbg": "dbg:DebugP",
+      "dp-": "hostprot:PolDef",
+      "dscptranscont": "qos:DscpTransCont",
+      "epcpcont": "fv:EpCPCont",
+      "epp": "fv:EpPCont",
+      "exportcryptkey": "pki:ExportEncryptionKey",
+      "fabric": "fabric:Inst",
+      "fabselfca": "pki:FabricSelfCAEp",
+      "fabsslcomm": "pki:FabricCommunicationEp",
+      "failedxlatecont": "fv:FailedXlateCont",
+      "fc-": "fc:DomP",
+      "fd-": "fault:Delegate",
+      "features": "license:FeatureCont",
+      "fltCnts": "fault:Counts",
+      "grp-": "extdev:GroupP",
+      "health": "health:Inst",
+      "infra": "infra:Infra",
+      "l2dom-": "l2ext:DomP",
+      "l3dom-": "l3ext:DomP",
+      "ldev-": "vns:SDEPpInfo",
+      "monitor": "monitor:Inst",
+      "ndo-": "pol:NdoProfile",
+      "notifications": "notif:Cont",
+      "ns-": "hostprot:Namespace",
+      "nsdef-": "hostprot:NamespaceDef",
+      "phys-": "phys:DomP",
+      "planner": "planner:Cont",
+      "pluginPolContainer": "ap:PluginPolContainer",
+      "quotacont": "quota:Cont",
+      "rbacDom-": "aaa:RbacAnnotation",
+      "rbacdb": "aaa:RbacEp",
+      "resgrp-": "cloud:ResourceGroup",
+      "roguemaccont": "fabric:RogueExceptionMacCont",
+      "schedulercert": "pki:SchedulerCert",
+      "schedulertoken": "pki:SchedulerToken",
+      "selaggrcont": "fv:ESgSelDefAggrCont",
+      "shldev-": "vns:SHSEPpInfo",
+      "svcdefcont": "cloud:SvcDefCont",
+      "tag-": "tag:Def",
+      "tagKey-": "tag:Tag",
+      "ten-": "vns:ScriptHandlerState",
+      "tn-": "fv:Tenant",
+      "tnref-": "vmm:TenantCont",
+      "uipageusage": "ui:PageUsage",
+      "uisettingscont": "ui:SettingsCont",
+      "userext": "aaa:UserEp",
+      "usersessext": "aaa:UserSessionEp",
+      "vDev-": "vns:VDev",
+      "vmmp-": "vmm:ProvP"
+    },
+    "identifiedBy": [],
+    "rnFormat": "uni",
+    "containedBy": {
+      "ctx:Application": "",
+      "top:Root": ""
+    },
+    "superClasses": [
+      "pol:Dom",
+      "pol:Cont",
+      "pol:Obj",
+      "naming:NamedObject"
+    ],
+    "subClasses": {},
+    "relationFrom": {},
+    "relationTo": {},
+    "dnFormats": [
+      "uni"
+    ],
+    "writeAccess": [
+      "admin"
+    ],
+    "readAccess": [
+      "aaa",
+      "access-connectivity",
+      "access-equipment",
+      "access-protocol",
+      "access-qos",
+      "admin",
+      "fabric-connectivity",
+      "fabric-equipment",
+      "fabric-protocol",
+      "nw-svc-params",
+      "nw-svc-policy",
+      "ops",
+      "tenant-connectivity",
+      "tenant-epg",
+      "tenant-ext-connectivity",
+      "tenant-ext-protocol",
+      "tenant-network-profile",
+      "tenant-protocol",
+      "tenant-qos",
+      "tenant-security",
+      "vmm-policy"
+    ],
+    "faults": {},
+    "events": {
+      "E4213064": "creation||pol:Uni",
+      "E4213065": "modification||pol:Uni",
+      "E4213066": "deletion||pol:Uni"
+    },
+    "stats": {},
+    "isAbstract": false,
+    "isConfigurable": true,
+    "isContextRoot": false,
+    "isNxosConverged": false,
+    "isDeprecated": false,
+    "isHidden": false,
+    "isEncrypted": false,
+    "isExportable": true,
+    "isPersistent": true,
+    "isSubjectToQuota": false,
+    "isObservable": true,
+    "hasStats": false,
+    "isStat": false,
+    "isFaultable": false,
+    "isDomainable": false,
+    "isHealthScorable": true,
+    "shouldCollectHealthStats": false,
+    "healthCollectionSource": "faults",
+    "hasEventRules": false,
+    "abstractionLayer": "ambiguous",
+    "apicNxProcessing": false,
+    "monitoringPolicySource": "Default",
+    "isCreatableDeletable": "never",
+    "platformFlavors": [],
+    "classId": "4602",
+    "className": "Uni",
+    "classPkg": "pol",
+    "featureTag": "",
+    "moCategory": "Regular",
+    "label": "Policy Universe",
+    "comment": [
+      "Represents policy definition/resolution universe."
+    ],
+    "properties": {
+      "annotation": {
+        "comment": [
+          "User annotation. Suggested format orchestrator:value"
+        ],
+        "isConfigurable": true,
+        "propGlobalId": "37949",
+        "propLocalId": "8719",
+        "label": "Annotation",
+        "baseType": "string:Basic",
+        "modelType": "mo:Annotation",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 0,
+            "max": 128,
+            "regexs": [
+              {
+                "regex": "^[a-zA-Z0-9_.:-]+$",
+                "type": "include"
+              }
+            ]
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "childAction": {
+        "comment": [
+          "Delete or ignore. For internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "4",
+        "propLocalId": "5",
+        "label": "childAction",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationChildAction",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "16384",
+            "localName": "deleteAll",
+            "platformFlavors": [],
+            "label": "deleteAll "
+          },
+          {
+            "value": "8192",
+            "localName": "deleteNonPresent",
+            "platformFlavors": [],
+            "label": "deleteNonPresent "
+          },
+          {
+            "value": "4096",
+            "localName": "ignore",
+            "platformFlavors": [],
+            "label": "ignore "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "dn": {
+        "comment": [
+          "A tag or metadata is a non-hierarchical keyword or term assigned to the fabric module."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "1",
+        "propLocalId": "2",
+        "label": "dn",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "extMngdBy": {
+        "comment": [
+          "Indicates which orchestrator is managing this MO"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "40088",
+        "propLocalId": "8023",
+        "label": "Managed By",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ExtMngdByType",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "undefined",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "1",
+            "localName": "msc",
+            "platformFlavors": [],
+            "label": "msc "
+          },
+          {
+            "value": "0",
+            "localName": "undefined",
+            "platformFlavors": [],
+            "label": "undefined "
+          }
+        ],
+        "default": "undefined",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "lcOwn": {
+        "comment": [
+          "A value that indicates how this object was created. For internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "9",
+        "propLocalId": "9",
+        "label": "lcOwn",
+        "baseType": "scalar:Enum8",
+        "modelType": "mo:Owner",
+        "needsPropDelimiters": false,
+        "uitype": "enum",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "local",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "4",
+            "localName": "implicit",
+            "platformFlavors": [],
+            "label": "Implicit "
+          },
+          {
+            "value": "0",
+            "localName": "local",
+            "platformFlavors": [],
+            "label": "Local "
+          },
+          {
+            "value": "1",
+            "localName": "policy",
+            "platformFlavors": [],
+            "label": "Policy "
+          },
+          {
+            "value": "2",
+            "localName": "replica",
+            "platformFlavors": [],
+            "label": "Replica "
+          },
+          {
+            "value": "3",
+            "localName": "resolveOnBehalf",
+            "platformFlavors": [],
+            "label": "ResolvedOnBehalf "
+          }
+        ],
+        "default": "local",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "modTs": {
+        "comment": [
+          "The time when this object was last modified."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "7",
+        "propLocalId": "7",
+        "label": "modTs",
+        "baseType": "scalar:Date",
+        "modelType": "mo:TStamp",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "never",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          },
+          {
+            "value": "0",
+            "localName": "never",
+            "platformFlavors": [],
+            "label": "never "
+          }
+        ],
+        "default": "never",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "monPolDn": {
+        "comment": [
+          "The monitoring policy attached to this observable object."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "14794",
+        "propLocalId": "228",
+        "label": "Monitoring policy",
+        "baseType": "reference:BinRef",
+        "modelType": "reference:BinRef",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "name": {
+        "comment": [
+          "null"
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15234",
+        "propLocalId": "13",
+        "label": "Name",
+        "baseType": "string:Basic",
+        "modelType": "naming:Name",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": true,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "nameAlias": {
+        "isConfigurable": true,
+        "propGlobalId": "28417",
+        "propLocalId": "6719",
+        "label": "Display Name",
+        "baseType": "string:Basic",
+        "modelType": "naming:NameAlias",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 0,
+            "max": 63,
+            "regexs": [
+              {
+                "regex": "^[a-zA-Z0-9_.-]+$",
+                "type": "include"
+              }
+            ]
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "ownerKey": {
+        "comment": [
+          "The key for enabling clients to own their data for entity correlation."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15235",
+        "propLocalId": "4100",
+        "label": "ownerKey",
+        "baseType": "string:Basic",
+        "modelType": "naming:Descr",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": true,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "ownerTag": {
+        "comment": [
+          "A tag for enabling clients to add their own data. For example, to indicate who created this object."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "15236",
+        "propLocalId": "4101",
+        "label": "ownerTag",
+        "baseType": "string:Basic",
+        "modelType": "naming:Descr",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": true,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "rn": {
+        "comment": [
+          "Identifies an object from its siblings within the context of its parent object. The distinguished name contains a sequence of relative names."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "2",
+        "propLocalId": "3",
+        "label": "rn",
+        "baseType": "reference:BinRN",
+        "modelType": "reference:BinRN",
+        "needsPropDelimiters": true,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "status": {
+        "comment": [
+          "The upgrade status. This property is for internal use only."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "3",
+        "propLocalId": "4",
+        "label": "status",
+        "baseType": "scalar:Bitmask32",
+        "modelType": "mo:ModificationStatus",
+        "needsPropDelimiters": false,
+        "uitype": "bitmask",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validValues": [
+          {
+            "value": "2",
+            "localName": "created",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be created. An error is returned if the object already exists.  \nIn the return value of a setter method: indicates that an object has been created.  \n"
+            ],
+            "label": "created "
+          },
+          {
+            "value": "8",
+            "localName": "deleted",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be deleted.  \nIn the return value of a setter method: indicates that an object has been deleted.\n"
+            ],
+            "label": "deleted "
+          },
+          {
+            "value": "4",
+            "localName": "modified",
+            "platformFlavors": [],
+            "comment": [
+              "In a setter method: specifies that an object should be modified  \nIn the return value of a setter method: indicates that an object has been modified.\n"
+            ],
+            "label": "modified "
+          }
+        ],
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "uid": {
+        "comment": [
+          "A unique identifier for this object."
+        ],
+        "isConfigurable": false,
+        "propGlobalId": "8",
+        "propLocalId": "8",
+        "label": "uid",
+        "baseType": "scalar:Uint16",
+        "modelType": "scalar:Uint16",
+        "needsPropDelimiters": false,
+        "uitype": "auto",
+        "createOnly": false,
+        "readWrite": false,
+        "readOnly": true,
+        "isNaming": false,
+        "secure": false,
+        "implicit": true,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      },
+      "userdom": {
+        "isConfigurable": true,
+        "propGlobalId": "60657",
+        "propLocalId": "13244",
+        "label": "userdom",
+        "baseType": "string:Basic",
+        "modelType": "mo:UserDomType",
+        "needsPropDelimiters": false,
+        "uitype": "string",
+        "createOnly": false,
+        "readWrite": true,
+        "readOnly": false,
+        "isNaming": false,
+        "secure": false,
+        "implicit": false,
+        "mandatory": false,
+        "isOverride": false,
+        "isLike": false,
+        "validators": [
+          {
+            "min": 0,
+            "max": 1024,
+            "regexs": [
+              {
+                "regex": "^[a-zA-Z0-9_.:-]+$",
+                "type": "include"
+              }
+            ]
+          }
+        ],
+        "validValues": [
+          {
+            "value": "all",
+            "localName": "defaultValue",
+            "platformFlavors": [],
+            "label": " "
+          }
+        ],
+        "default": "all",
+        "platformFlavors": [],
+        "isNxosConverged": false,
+        "isDeprecated": false,
+        "isHidden": false
+      }
+    }
+  }
+}

@@ -14,7 +14,7 @@ Thresholds (on a modern laptop, no parallelism):
 
 import time
 
-from registry.descriptions import search
+from niwashi_mcp.registry.descriptions import search
 
 
 class TestSearchPerf:

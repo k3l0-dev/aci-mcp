@@ -26,9 +26,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from eval_search import GOLDEN_FILE, evaluate
 
-from registry.descriptions import load_descriptions
-
-DESCRIPTIONS_FILE = Path(__file__).parent.parent.parent.parent / "data" / "class-descriptions.json"
+from niwashi_mcp.registry import catalog
 
 # Floor, not a target: the measured result as of the v2 rewrite is
 # Recall@1=78.4%/Recall@5=94.6% on the 74-query golden set (see the module
@@ -39,17 +37,12 @@ DESCRIPTIONS_FILE = Path(__file__).parent.parent.parent.parent / "data" / "class
 MIN_RECALL_AT_1 = 0.60
 MIN_RECALL_AT_5 = 0.85
 
-pytestmark = pytest.mark.skipif(
-    not DESCRIPTIONS_FILE.exists(),
-    reason="data/class-descriptions.json not available — clone the full repo data/ to run this",
-)
-
 
 @pytest.fixture(scope="module")
 def golden_metrics() -> dict:
     import json
 
-    descriptions = load_descriptions(DESCRIPTIONS_FILE)
+    descriptions = catalog.descriptions_index()
     queries = json.loads(GOLDEN_FILE.read_text())["queries"]
     return evaluate(descriptions, queries, limit=10, verbose=False)
 

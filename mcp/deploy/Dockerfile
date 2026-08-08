@@ -13,21 +13,21 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Install dependencies before copying source to leverage Docker layer cache
-COPY mcp/pyproject.toml mcp/uv.lock ./
+COPY mcp/pyproject.toml mcp/uv.lock mcp/README.md ./
 RUN uv sync --frozen --no-dev
 
 # Copy application source and shared data
-COPY mcp/main.py mcp/exceptions.py ./
-COPY mcp/apic/ ./apic/
-COPY mcp/middleware/ ./middleware/
-COPY mcp/registry/ ./registry/
-COPY data/ /data/
+# The package is installed rather than copied file-by-file, so the image runs
+# exactly what a `pip install` produces — no drift between container and wheel.
+COPY mcp/src/ ./src/
+RUN uv pip install --no-deps .
+# No data bundle: the ACI object model ships inside the niwaki dependency.
 
 # Run as non-root
 RUN groupadd --system app && useradd --system --gid app app
-RUN chown -R app:app /app /data
+RUN chown -R app:app /app
 USER app
 
 EXPOSE 8000
 
-CMD ["python", "main.py"]
+CMD ["niwashi-mcp"]

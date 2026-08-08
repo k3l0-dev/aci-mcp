@@ -4,7 +4,8 @@
 
 | Version | Supported |
 |---|---|
-| 1.x | ✅ |
+| 2.x | ✅ |
+| 1.x | ✗ — superseded by 2.0 |
 | < 1.0 | ✗ |
 
 ## Reporting a vulnerability
@@ -12,7 +13,7 @@
 **Do not open a public GitHub issue for security vulnerabilities.**
 
 Report vulnerabilities by email to **monark.aiops@pm.me** with the subject
-line `[aci-mcp] Security Vulnerability`.
+line `[niwashi-mcp] Security Vulnerability`.
 
 Include:
 - Description of the vulnerability

@@ -2,6 +2,10 @@
 
 Discover ACI class names by keyword. **Always call this first** — never assume a class name.
 
+Search runs entirely in memory. The index is built once at server startup from
+the catalogue embedded in the `niwaki` package; no APIC round trip and no file
+read happen per call.
+
 ---
 
 ## Signature
@@ -26,7 +30,7 @@ List of dicts, sorted by relevance score (descending):
   {
     "class_name": "fvBD",
     "label": "Bridge Domain",
-    "comment": "A bridge domain is a unique layer 2 forwarding domain that contains one or more subnets."
+    "comment": "A bridge domain is a unique layer 2 forwarding domain that contains one or more subnets. Each bridge domain must be linked to a context."
   }
 ]
 ```
@@ -38,6 +42,19 @@ List of dicts, sorted by relevance score (descending):
 | `comment` | One-sentence description from the APIC schema |
 
 An empty list means no class matched the keyword. Refine or broaden the search term.
+
+---
+
+## What the index covers
+
+The index holds **15,239** classes; the catalogue holds **15,452**. The 213
+classes that are missing carry no label, no comment, and no discriminating
+property label, so there is nothing to index them by.
+
+Those 213 remain fully usable: `get_schema()` describes them and `query()` /
+`count()` accept them. Only keyword discovery cannot reach them. If a class name
+comes from a `contains` list, a DN, or a design document, pass it straight to
+`get_schema()` rather than treating a search miss as proof it does not exist.
 
 ---
 
@@ -70,9 +87,15 @@ Ties are broken deterministically: fewer class-name tokens, then a shorter
 class name, then alphabetical — so `fvBD` reliably beats a more specific
 variant like `fvABDPol` when both would otherwise tie.
 
-For the full mechanics, worked examples, and measured gains (current:
-Recall@1 78.4% / Recall@5 94.6% on a 74-query golden set — up from a 15.4%
-Recall@1 naive baseline), see [internals/search-algorithm.md](../internals/search-algorithm.md).
+Measured on the 74-query golden set: **Recall@1 78.4%, Recall@5 94.6%,
+MRR 0.846**. The naive substring baseline the algorithm replaced scored
+Recall@1 15.4% on the earlier 39-query set. The scorer, its synonym table, and
+its structural priors are unchanged in 2.0 — only the source the index is built
+from moved, and the metrics are asserted as equalities rather than floors so any
+movement reads as a rebuild bug rather than a scoring trade-off.
+
+For the full mechanics, worked examples, and the axis-by-axis history, see
+[internals/search-algorithm.md](../internals/search-algorithm.md).
 
 ---
 
@@ -86,38 +109,61 @@ search_classes("bridge domain")
 # Find all tenant-related classes
 search_classes("tenant", limit=20)
 
-# Partial class name (you remember part of it)
-search_classes("fvAEP")
+# The class name itself — spacing, dashes and case are squashed before matching
+search_classes("fvbd")            # → fvBD
 
 # Operational data
-search_classes("fault")
-search_classes("audit log")
+search_classes("fault instance")  # → faultInst
+search_classes("fault record")    # → faultRecord
+search_classes("audit log")       # → aaaModLR
 
 # Network topology
-search_classes("node")
-search_classes("path endpoint")
+search_classes("fabric node")     # → fabricNode
 
 # Functional / property-level query — matches via the class's own property labels
-search_classes("ARP flooding")   # → fvBD (arpFlood property)
-search_classes("dead interval")  # → ospfIfPol (deadIntvl property)
+search_classes("ARP flooding")    # → fvBD (arpFlood property)
+search_classes("dead interval")   # → ospfIfPol (deadIntvl property)
 ```
+
+### Name the object, not the family
+
+ACI names thousands of classes around the same few words, so a bare noun tends
+to land on the family rather than on the class you want. Adding the second word
+of the object's real name is what separates them:
+
+| Too broad | Lands on | Precise | Lands on |
+|---|---|---|---|
+| `fault` | `faultCounts` and other counters | `fault instance` | `faultInst` |
+| `node` | `tracerouteNode`, `dhcpClientNode` | `fabric node` | `fabricNode` |
+| `endpoint group` | `igmpsnoopEpgRec` | `application endpoint group` | `fvAEPg` |
+| `interface policy` | `bfdRsIfPol` and its siblings | `ospf interface policy` | `ospfIfPol` |
+| `layer 3` | `l3extOut` | `vrf` | `fvCtx` |
+
+The broad query is not wrong — the class you want is usually still in the top 10
+— but read the returned `label` before committing to a name rather than taking
+the first result on faith.
 
 ---
 
 ## Common searches
 
-| You want | Use keyword |
-|---|---|
-| Bridge domains | `bridge domain` |
-| Tenants | `tenant` |
-| EPGs | `endpoint group` |
-| Contracts | `contract` |
-| VRFs | `vrf` or `layer 3` |
-| Faults | `fault` |
-| Fabric nodes | `node` or `fabric node` |
-| Interface policies | `interface policy` |
-| Physical ports | `path endpoint` |
-| Subnets | `subnet` |
+Each of these returns the listed class as the **first** result:
+
+| You want | Use keyword | First result |
+|---|---|---|
+| Bridge domains | `bridge domain` | `fvBD` |
+| Tenants | `tenant` | `fvTenant` |
+| EPGs | `application endpoint group` | `fvAEPg` |
+| Contracts | `contract` | `vzBrCP` |
+| Contract subjects | `contract subject` | `vzSubj` |
+| VRFs | `vrf` | `fvCtx` |
+| Subnets | `subnet` | `fvSubnet` |
+| Faults | `fault instance` | `faultInst` |
+| Audit records | `audit log` | `aaaModLR` |
+| Fabric nodes | `fabric node` | `fabricNode` |
+| Physical domains | `physical domain` | `physDomP` |
+| Access port policy groups | `access port policy group` | `infraAccPortGrp` |
+| Endpoints | `client endpoint` | `fvCEp` |
 
 ---
 
@@ -127,5 +173,5 @@ search_classes("dead interval")  # → ospfIfPol (deadIntvl property)
 - **No match** → returns `[]`
 - **`limit <= 0`** → clamped to `1` rather than passed through — a search always returns at least one result if any class matches at all
 - **`limit > 50`** → silently capped at 50
-- Search is **case-insensitive** — `"BRIDGE"` and `"bridge"` produce the same results
-- Results are deterministic — identical input always produces identical output, regardless of registry load order
+- Search is **case-insensitive** — `"BRIDGE"` and `"bridge"` produce the same results. Note that this applies to *searching* only: `get_schema`, `query`, and `count` match class names exactly, so copy `class_name` from the result rather than retyping it.
+- Results are deterministic — identical input always produces identical output, regardless of index build order

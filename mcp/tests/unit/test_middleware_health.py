@@ -12,7 +12,11 @@ import json
 
 import pytest
 
-from middleware.health import _HEALTH_BODY, _HEALTH_HEADERS, HealthMiddleware
+from niwashi_mcp.middleware.health import (
+    _HEALTH_BODY,
+    _HEALTH_HEADERS,
+    HealthMiddleware,
+)
 
 
 async def _call(mw: HealthMiddleware, scope: dict) -> list[dict]:

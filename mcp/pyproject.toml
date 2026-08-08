@@ -1,7 +1,7 @@
 [project]
-name = "aci-mcp"
-version = "1.2.2"
-description = "Schema-driven FastMCP server for Cisco ACI APIC"
+name = "niwashi-mcp"
+version = "2.0.0"
+description = "Schema-driven MCP server for Cisco ACI (APIC)"
 readme = "README.md"
 license = {text = "PolyForm-Noncommercial-1.0.0"}
 requires-python = ">=3.12"
@@ -11,7 +11,7 @@ authors = [
 maintainers = [
     {name = "Khalid El-Ouiali", email = "monark.aiops@pm.me"},
 ]
-keywords = ["mcp", "cisco", "aci", "apic", "network-automation", "llm"]
+keywords = ["mcp", "cisco", "aci", "apic", "network-automation", "llm", "niwaki"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -25,15 +25,32 @@ classifiers = [
 dependencies = [
     "fastmcp>=3.4.5,<4.0",
     "httpx>=0.27,<1.0",
+    # Pinned to a single minor, not `<2.0`: this server reads the *private*
+    # SQLite schema of niwaki's embedded catalogue (see registry/catalog.py —
+    # the fields it needs have no public accessor yet). That schema is not
+    # covered by niwaki's SemVer contract, so a 1.9 could restructure it
+    # legitimately. `catalog.verify_catalogue()` refuses startup if it ever
+    # does; this pin keeps the resolver from getting there in the first place.
+    "niwaki>=1.8,<1.9",
     "python-dotenv>=1.0,<2.0",
 ]
 
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/niwashi_mcp"]
+
+[project.scripts]
+niwashi-mcp = "niwashi_mcp.main:main"
+
 [project.urls]
-Homepage = "https://github.com/k3l0-dev/aci-mcp"
-Repository = "https://github.com/k3l0-dev/aci-mcp"
-Documentation = "https://github.com/k3l0-dev/aci-mcp/tree/main/docs"
-Changelog = "https://github.com/k3l0-dev/aci-mcp/blob/main/CHANGELOG.md"
-"Bug Tracker" = "https://github.com/k3l0-dev/aci-mcp/issues"
+Homepage = "https://github.com/k3l0-dev/niwashi-mcp"
+Repository = "https://github.com/k3l0-dev/niwashi-mcp"
+Documentation = "https://github.com/k3l0-dev/niwashi-mcp/tree/main/docs"
+Changelog = "https://github.com/k3l0-dev/niwashi-mcp/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/k3l0-dev/niwashi-mcp/issues"
 "Commercial License" = "mailto:monark.aiops@pm.me"
 
 [tool.pytest.ini_options]
@@ -47,6 +64,8 @@ testpaths = ["tests"]
 addopts = ["-m", "not live"]
 markers = [
     "live: requires a reachable real APIC (see tests/live/conftest.py)",
+    "baseline: asserts behaviour equals tests/baseline/baseline.json (drift net)",
+    "catalog: exercises the niwaki catalogue adapter (registry/catalog.py)",
 ]
 
 [tool.ruff.lint]

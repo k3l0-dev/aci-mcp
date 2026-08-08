@@ -55,7 +55,7 @@ query(
 | `limit` | `int` | `20` | Maximum objects to return per page. Clamped to `[1, 200]` — values below 1 are raised to 1 rather than passed to the APIC as an invalid page-size. Also the page size used internally when `fetch_all=True`. |
 | `page` | `int` | — | 0-based page number for paginated result sets. Ignored when `fetch_all=True`. |
 | `order_by` | `str` | — | APIC ordering expression, e.g. `"faultInst.severity\|desc"`. |
-| `fetch_all` | `bool` | `False` | Walk every page (using `limit` as page size) and return the complete matching set in one call — the reliable way to answer a max/min/total/all-of question over a whole class instead of paging manually. Stops early only if a safety cap (thousands of objects) is hit, in which case `complete` is `False` in the response; narrow the query (e.g. `scope_dn`) and combine results. |
+| `fetch_all` | `bool` | `False` | Walk every page (using `limit` as page size) and return the complete matching set in one call — the reliable way to answer a max/min/total/all-of question over a whole class instead of paging manually. Stops early only if a safety cap is hit — 25 pages or 5,000 objects, whichever comes first — in which case `complete` is `False` in the response; narrow the query (e.g. `scope_dn`) and combine results. |
 
 ### Children and subtrees
 
@@ -116,7 +116,7 @@ An **envelope dict** — not a bare list:
 | `total_available` | `int` | True match count, fabric- or subtree-wide — independent of how many were actually fetched |
 | `truncated` | `bool` | `total_available > returned` — a default-page result is a **partial page**, not the whole matching set. Never conclude a max/min/total/complete-list answer from a truncated result. |
 | `next_page` | `int \| None` | `page + 1` when truncated and `fetch_all` was not used; `None` otherwise |
-| `complete` | `bool` | `False` only if `fetch_all=True` hit the safety cap before exhausting all matches |
+| `complete` | `bool` | `False` only if `fetch_all=True` hit the safety cap (25 pages / 5,000 objects) before exhausting all matches |
 | `note` | `str \| None` | Guidance text, present only when truncated or capped |
 
 Any code written against the older (pre-envelope) shape of this doc needs updating: `result["results"][0]["dn"]`, not `result[0]["dn"]`.
@@ -127,7 +127,7 @@ Any code written against the older (pre-envelope) shape of this doc needs updati
 
 | Exception | Condition |
 |---|---|
-| `UnknownClassError` | `class_name` is neither in the 15k-class descriptions registry nor resolvable to a schema file. Includes `.suggestions` (list) and `.registry_size` (int). A class with a schema file but no descriptions entry is allowed through with a warning instead of raising. |
+| `UnknownClassError` | `class_name` is not in the catalogue — the single source of truth for whether an ACI class exists (15,452 classes). Includes `.suggestions` (list, drawn from the search index) and `.registry_size` (int — the 15,239-entry search index, which is smaller than the validated universe). The 213 catalogue classes absent from the search index validate normally: 2.0 removed the two-tier fallback and the warning it used to emit on them. |
 | `FilterError` | `class_name` or a `filters` key contains characters outside the expected ACI identifier format. Filter *values* are always escaped, never rejected — this can only be raised by an identifier, not a value. |
 | `ApicRequestError` | APIC returned a non-2xx, non-auth response — e.g. 400 for a malformed `filter_expr`, or a transient 5xx that never recovered. Carries the HTTP status and, when present, the APIC error text. |
 

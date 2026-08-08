@@ -1,4 +1,4 @@
-# Contributing to aci-mcp
+# Contributing to niwashi-mcp
 
 Contributions are welcome — bug reports, documentation improvements,
 and pull requests alike. This guide explains how to get started.
@@ -16,15 +16,15 @@ and pull requests alike. This guide explains how to get started.
 - **Submit a pull request** — see the workflow below.
 
 Not sure where to start? Look for issues labelled
-[`good first issue`](https://github.com/k3l0-dev/aci-mcp/labels/good%20first%20issue).
+[`good first issue`](https://github.com/k3l0-dev/niwashi-mcp/labels/good%20first%20issue).
 
 ---
 
 ## Development setup
 
 ```bash
-git clone https://github.com/k3l0-dev/aci-mcp.git
-cd aci-mcp/mcp
+git clone https://github.com/k3l0-dev/niwashi-mcp.git
+cd niwashi-mcp/mcp
 uv sync
 cp ../.env.example ../.env   # fill in APIC_HOST, APIC_USER, APIC_PASSWORD
 ```
@@ -113,5 +113,5 @@ For commercial licensing inquiries:
 
 ## Questions
 
-Open a [GitHub Discussion](https://github.com/k3l0-dev/aci-mcp/discussions)
+Open a [GitHub Discussion](https://github.com/k3l0-dev/niwashi-mcp/discussions)
 for anything not covered here.

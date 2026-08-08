@@ -25,8 +25,8 @@ import pytest
 import pytest_asyncio
 from dotenv import load_dotenv
 
-from apic.client import ApicClient
-from exceptions import ApicAuthError, ApicConnectionError
+from niwashi_mcp.apic.client import ApicClient
+from niwashi_mcp.exceptions import ApicAuthError, ApicConnectionError
 
 # tests/live/conftest.py -> tests/live -> tests -> mcp -> repo root
 REPO_ROOT = Path(__file__).parent.parent.parent.parent

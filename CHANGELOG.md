@@ -7,7 +7,303 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+Nothing yet.
+
+---
+
+## [2.0.0] - 2026-08-08
+
+**The data layer is now niwaki's embedded catalogue.** The server reads the ACI
+object model from one SQLite database shipping inside the `niwaki` dependency
+instead of 15,452 raw jsonmeta files, which is what makes it installable with
+`uvx niwashi-mcp` rather than requiring a git checkout and a 98.8 MB schema
+bundle. The five tools keep their signatures; parity with the 1.x projection was
+proven class by class against a frozen jsonmeta oracle before the old path was
+deleted.
+
+The package is renamed **`niwashi-mcp`** — 庭師, the gardener who tends the
+niwaki. The 1.x name carried a protected mark it had no licence to use.
+
+### Changed — the retired name
+
+- **Every public identifier drops the retired name.** `AciMcpError` becomes
+  `NiwashiMcpError` (and with it the base of the whole exception hierarchy),
+  `ACI_MCP_ENV_FILE` becomes `NIWASHI_MCP_ENV_FILE`, the FastMCP server
+  announces itself as `niwashi-mcp` in the MCP handshake, and the logger tree
+  moves from `aci-mcp` / `aci-mcp.apic` / `aci-mcp.auth` to `niwashi-mcp.*`.
+
+  The reason is narrower and harder than trademark caution: **`aci-mcp` is
+  already taken on PyPI** by an unrelated project (Aipolabs, `1.0.0b13`). The
+  name was never available. A partial rename would have left this server
+  announcing a name that resolves to somebody else's package.
+
+  `NIWASHI_MCP_ENV_FILE` costs nobody anything — it was introduced inside the
+  2.0 cycle and has never appeared in a tagged release. The other three shipped
+  in 1.2.2, which was installable only from a git checkout; renaming them now
+  rather than later is the difference between one breaking change and two.
+
+  Retired names are **not** accepted as aliases. `ACI_MCP_ENV_FILE` and
+  `ACI_MCP_DATA_DIR` are both ignored, and a test asserts it — an alias that
+  silently steered path resolution is the one failure mode nobody notices. The
+  2.0 removal of `ACI_MCP_DATA_DIR` had until now been recorded only in a
+  source comment.
+
+### Added
+
+- **The niwaki catalogue adapter (`registry/catalog.py`), not yet wired in.**
+  It reads the object model from the SQLite catalogue shipped inside the
+  `niwaki` dependency and is the only module in the codebase that knows niwaki
+  exists — which is what keeps the migration reviewable and the rollback cheap.
+  The server still runs entirely on the jsonmeta path, so this can be proven or
+  disproven at no cost.
+
+  Measured against the live corpus: **1,500 classes compared, zero unexpected
+  divergence**; the only difference is the `options` list on `mo:*` register
+  properties, which niwaki drops deliberately (one `mo:MoClassId` carries
+  17,653 entries into an agent's context). The rebuilt search index is
+  **byte-identical** to `class-descriptions.json` — 15,239 entries, including
+  the 213-class gap, which turns out to be a property of the collector's filter
+  rather than an accident.
+
+  Twenty-five tests cover it, and were mutation-tested before being committed:
+  six sabotages — a leaked readable name, an unfiltered `defaultValue`, a
+  truncated `dnFormats`, `prop_labels` as a string, a case-insensitive lookup,
+  an omitted empty key — each fail the test that targets them.
+- **A behavioural baseline, recorded before any 2.0 change was made.** The five
+  tools keep their signatures across this migration, so a defect in the swap
+  would be silent — a changed field shape, a drifted ranking, a truncated list —
+  and every pre-existing test would still pass. `mcp/tests/baseline/` now
+  records what the implementation does and asserts *equality* against it: the
+  whole descriptions index by digest, `get_schema()` for 38 stratified classes,
+  and the exact top-5 of all 74 golden queries. Two gaps made this necessary:
+  the search floors sat at 60 % / 85 % while the implementation delivers
+  78.4 % / 94.6 %, so a regression to 61 % was a green build; and nothing
+  anywhere pinned the output of `get_schema()`. The net was mutation-tested
+  before being committed — five separate sabotages each fail exactly one test.
+- **Explicit, overridable path resolution** via `NIWASHI_MCP_ENV_FILE`, with
+  tests pinning both the override and the refusal to honour the retired
+  `ACI_MCP_*` spellings. (`ACI_MCP_DATA_DIR` was introduced and removed inside
+  this same cycle — see Removed — and never reached a release.)
+
+### Changed
+
+- **BREAKING — `get_schema` and class validation now read the catalogue.** The
+  jsonmeta directory is no longer resolved, opened or consulted at runtime, and
+  `schemas_dir` is gone from the server's lifespan context.
+
+  Measured against the recorded pre-2.0 baseline, on 38 stratified classes:
+  **zero drift on the plain schema**, and a single divergence on
+  `property_details` — `actionAeSubj`, whose `mo:MoClassId` register loses its
+  17,653-entry `options` list. That class is in the sample deliberately, and the
+  exception is asserted to be exactly itself: the test fails both if the drift
+  disappears (a stale allowlist entry) and if it spreads to any other field.
+
+- **BREAKING — class validation has one source of truth, and the class universe
+  opens from 15,239 to 15,452.** `query()` and `count()` used to validate in two
+  tiers — the descriptions index, then a fallback to the schema files — because
+  the two collections disagreed by 213 classes and a class absent from the first
+  could still be perfectly queryable. Both now come from the same catalogue, so
+  the fallback is gone along with the warning it emitted on 213 valid classes.
+  Those 213 remain validatable but not searchable, which is a property of the
+  index filter rather than an accident.
+
+  Case sensitivity is now structural: SQLite's BINARY collation makes `fvBd`
+  resolving to `fvBD` impossible, where the previous reader needed an explicit
+  guard against case-insensitive filesystems doing exactly that.
+
+- **`search_classes` now runs on the catalogue-rebuilt index.** The server no
+  longer reads `data/class-descriptions.json` at startup; it rebuilds the index
+  from niwaki's catalogue instead. Because that index is byte-identical, search
+  quality is unchanged **exactly** — Recall@1 78.4 %, Recall@5 94.6 %,
+  MRR 0.846, and every one of the 74 golden queries returns the same top-5 in
+  the same order. Those are asserted as equalities, not floors: any movement is
+  a rebuild bug, not a scoring trade-off. The scorer itself — `_score`, the
+  curated synonym table, the structural priors — is untouched.
+
+  Startup now logs the APIC release the catalogue was built from. From 2.0 that
+  version is pinned by a dependency rather than chosen by the operator, so a
+  silent niwaki upgrade would otherwise change the object model an agent
+  reasons about with no trace.
+
+  Index construction costs ~440 ms once at startup, against ~34 ms to parse the
+  JSON file it replaces, inside a lifespan that already performs an APIC
+  authentication round trip. Steady-state search latency is unchanged (~14 ms).
+
+- **BREAKING — the distribution is now `niwashi-mcp` and the import package is
+  `niwashi_mcp`.** The code moved from a flat `mcp/` layout to
+  `mcp/src/niwashi_mcp/`, which is what makes the server installable — and so
+  what makes `uvx` possible, the whole point of 2.0. Publishing the flat layout
+  would have claimed `exceptions`, `main`, `registry`, `middleware` and `apic`
+  as top-level PyPI modules; a test now proves none of them is importable from
+  an installed environment. `python main.py` still works through a deprecation
+  shim scheduled for removal in 3.0.
+
+  On the name: `cisco-aci-mcp` was the earlier plan and is dropped — Cisco's
+  published trademark policy forbids using its marks "as or as part of a
+  product name". `aci-mcp-server` is no better: Cisco does not own "ACI" alone,
+  but ACI Worldwide does, live in classes 9 and 42, and enforces it. `niwashi`
+  (庭師, the gardener) carries no third-party mark in any register searched and
+  matches the existing `niwaki` family. Compatibility with Cisco ACI is stated
+  in the summary, keywords and README — the construction trademark owners
+  themselves publish as acceptable.
+
 ### Fixed
+
+- **`query()` could never report the end of a result set.** `truncated`
+  compared the total to the size of the page in hand rather than to the offset
+  consumed, so it was permanently true: page 2 of 45 objects returned 5 and
+  still claimed more remained, and so did page 99 returning nothing. Since
+  `SKILL.md` and `docs/tools/query.md` both instruct an agent to *page until
+  `truncated` is false*, an agent following the documented procedure looped
+  until it exhausted its turn budget — one APIC call per iteration — and
+  returned nothing. No test had ever called `query()` past page 0; six now do,
+  including one that walks the documented loop to exhaustion.
+
+- **`get_schema()` could return 7.8 MB in a single call.** `dnFormats` and
+  `containedBy` are unbounded in the object model — a class that attaches to
+  almost any managed object enumerates one entry per possible parent — and
+  seven classes are extreme: `faultDelegate` carries 64,313 DN templates,
+  `faultCounts` 31,271, `faultInst` 24,151. Serialised that is 2.6 MB to 7.8 MB
+  of JSON, roughly 800 k to 2 M tokens, for one tool result. They are not
+  obscure classes and the tool's own documented workflow walks into them:
+  `search_classes("fault")` ranks `faultCounts` first, and the next prescribed
+  step is `get_schema` on it. Both lists are now sampled to `list_limit`
+  entries (25 by default, clamped to `1..500`) with a `dnFormatsTruncated` /
+  `containedByTruncated` marker carrying `{returned, total, note}`, so the cut
+  is disclosed rather than silent. `faultDelegate` drops from 7.8 MB to 3.5 KB
+  and the other 15,445 classes come back byte-identical, with no marker. No
+  information is lost that an agent can act on: the 64,313 templates differ
+  only in their parent prefix and all end in the same relative name, which
+  `rnFormat` already carries in full. The bound sits at the tool surface, not
+  in `registry.catalog`, so the data layer stays the faithful projection the
+  baseline parity tests verify against the 1.x jsonmeta oracle. Forty-one tests
+  cover it — including one that walks all 15,452 classes to prove none escape —
+  and five sabotages were each caught before it was committed.
+
+- **`rsp_subtree_include` returned no children.** Asking for children set the
+  APIC `rsp-subtree-include` parameter but never `rsp-subtree`, which the APIC
+  requires alongside it, so the fabric answered without the child objects; the
+  extraction step then gated on a flag the caller had not set and dropped
+  whatever did come back. The request now defaults `rsp-subtree=children` when
+  an include is asked for, and extraction keys off the response actually
+  containing children rather than off the request that asked for them.
+
+- **The server bound every interface, without authentication, while the README
+  said localhost.** `0.0.0.0` was hardcoded with no way to change it. The
+  documented quickstart therefore put an unauthenticated server holding APIC
+  credentials — usually admin-capable — on every interface of the machine, with
+  a log line as the only guard. It now binds `127.0.0.1` by default, `MCP_HOST`
+  selects the interface, and a routable bind with `MCP_API_KEYS` unset is
+  **refused** rather than warned about. `MCP_ALLOW_NO_AUTH=true` accepts the
+  risk explicitly and logs that it was deliberate. The production path
+  (`docker-compose`, which uses `expose:`) was never affected — only the
+  documented one.
+
+- **`APIC_VERIFY_SSL=false` passed in silence.** The first thing the server
+  does is POST the APIC username and password to `/api/aaaLogin.json`; without
+  verification it does so to whatever answers, so an ARP or DNS spoof on the
+  management network collects the credential in clear. The default stays false
+  — an APIC ships self-signed, and demanding verification would make the server
+  unusable on most fabrics — but startup now names the risk instead of leaving
+  it to be inferred from four documentation lines that called it a lab
+  convenience.
+
+- **The niwaki dependency was pinned as if the coupling were its public API.**
+  `registry/catalog.py` reads the catalogue's SQLite schema directly — `mo`,
+  `prop`, `comment_pool`, `label_pool`, `type_pool`, `enum`, `manifest` — none
+  of which appear in niwaki's public surface (`Niwaki`, `AsyncNiwaki`,
+  `models`). A 1.9 could therefore restructure any of it and remain perfectly
+  within SemVer, while `niwaki>=1.8,<2.0` would happily install it. Some of
+  those changes fail loudly; the ones worth guarding are the quiet ones — a
+  repurposed column, a changed blob encoding — where every query still runs and
+  the server answers questions about a production fabric from silently empty
+  fields, reporting that a bridge domain has no parent. The pin is now
+  `>=1.8,<1.9`, and because a pin is only advice (a resolver override or a
+  `--force-reinstall` gets past it), `catalog.verify_catalogue()` runs before
+  anything reads the catalogue and refuses startup on a mismatch, naming what
+  moved and which niwaki produced it. It checks structure — every table and
+  column the queries name, the manifest keys, the `prop.flags` bit layout — and
+  then decodes one known class end to end, which is what catches an encoding
+  change that leaves the structure intact. Separately, a corrupt blob now
+  reports as a broken catalogue naming the column rather than letting a bare
+  `zlib.error` escape. Twenty-three tests cover it; five sabotages were run,
+  two survived the first pass and the tests were strengthened until none did.
+
+- **A DN went into the APIC request URL unchecked.** `get_by_dn(dn)` and the
+  `scope_dn` argument of `query()`/`count()` were interpolated straight into
+  `/api/mo/{dn}.json`. A DN carrying `..` segments, a `?`, a `#`, a backslash,
+  a newline or a NUL could therefore walk out of `/api/mo/` and reach another
+  APIC endpoint, or split the request — with the server's own APIC session,
+  which is the point: the caller borrows an authenticated session they do not
+  hold. DNs are now validated before interpolation and a malformed one is
+  rejected with `FilterError` naming the offending field, rather than being
+  sent to the fabric.
+
+- **Eleven tests were silently skipping — the search guarantees were not being
+  checked at all.** Deleting `data/class-descriptions.json` in the same release
+  that removed the data plane left every test that compared against it in a
+  `pytest.skip` branch: index equality, the recall and MRR assertions, the
+  per-query top-5, and the quality floors. They reported green by not running.
+  All of them now compare against the pre-2.0 recording in
+  `tests/baseline/baseline.json` instead of a deleted file. Verified: 0 skipped,
+  and a deliberate index regression fails 9 of them.
+- **The source distribution was malformed and could not build a wheel.**
+  `readme = "../README.md"` produced an archive entry named
+  `niwashi_mcp-2.0.0/../README.md`, a path escaping the archive root: `tar`
+  refuses to extract it and several tools reject such archives outright. The
+  package now carries its own `mcp/README.md`, and `uv build` rebuilds the
+  wheel *from the sdist*, which is what proves the sdist is complete.
+- **Path resolution no longer breaks when the package is installed.** The data
+  and `.env` locations were derived from `__file__`, which only worked from a
+  git checkout; installed, that arithmetic walked out of `site-packages` onto a
+  meaningless directory. Because a missing `.env` is not an error and a missing
+  schema directory merely yields empty results, the failure was silent. A
+  checkout is now *verified* by its layout rather than assumed, and an
+  invariant test asserts no resolved path may ever point inside
+  `site-packages`.
+- `get_schema`'s documented exception is retargeted. `SchemaLoadError` meant
+  "a jsonmeta file exists but is malformed", a condition that can no longer
+  arise. The failure that replaces it — the niwaki catalogue missing or
+  unreadable — is a real one and needed naming, so it is reported as
+  `DescriptionsLoadError` with a reinstall hint rather than leaving a
+  documented exception that nothing can raise.
+- The container looked for the data bundle in `/app/data/` while the image
+  copies it to `/data/`, which would have broken startup. The image now also
+  installs the package rather than copying modules one by one, so it runs
+  exactly what a wheel produces.
+
+### Removed
+
+- **BREAKING — the data plane is gone.** `data/schemas/` (1.7 GB),
+  `data/class-descriptions.json` (11 MB, previously tracked in git),
+  `scripts/download-schemas.sh` and the jsonmeta reader
+  (`registry/schema.py`, 361 lines) are all deleted. Installing no longer means
+  cloning a repository and downloading a 98.8 MB bundle: **`uvx niwashi-mcp`
+  starts on a machine with no checkout**, which is the entire point of 2.0.
+
+  The container drops from **3.97 GB to 457 MB** — 8.7x smaller — because it no
+  longer carries the schema corpus. Deployments that mounted `/data` lose that
+  mount point; there is nothing left to mount.
+
+  Parity remains verifiable, deliberately and by two independent means.
+  `tests/fixtures/jsonmeta/` freezes 31 raw APIC 6.0(9c) class files (2.4 MB)
+  and `tests/fixtures/jsonmeta_oracle.py` keeps the 1.x projection as a **test
+  oracle**, so the expected output is *derived* from the vendor's own files
+  rather than read back from a snapshot this project recorded of itself — a
+  snapshot cannot catch an error made identically in both the recording and the
+  implementation. For the full corpus, the `reference/pre-2.0-jsonmeta` branch
+  and the v1.0.0 release asset together reconstruct the complete comparison;
+  the procedure is recorded and was tested end to end.
+
+- `ACI_MCP_DATA_DIR` no longer exists — there is no data directory to point at.
+  The `.env` override survives under its new name, `NIWASHI_MCP_ENV_FILE`.
+  Neither retired spelling is accepted as an alias.
+- 43 tests of the deleted jsonmeta reader, and its performance suite, are
+  removed rather than adapted: a module that no longer exists cannot be tested.
+  The 31-class oracle covers what they covered, and covers it by independent
+  derivation rather than by reading the implementation back to itself.
+
+### Fixed (1.x)
 
 - The README described the project as "the first open-source MCP server for
   Cisco ACI". It is neither: at least eight other ACI/APIC MCP servers predate
@@ -546,12 +842,13 @@ First public open-source release.
 
 ---
 
-[Unreleased]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.2...HEAD
-[1.2.2]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.1...v1.2.2
-[1.2.1]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.0...v1.2.1
-[1.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.3.0...v1.0.0
-[0.3.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/k3l0-dev/aci-mcp/releases/tag/v0.1.0
+[Unreleased]: https://github.com/k3l0-dev/niwashi-mcp/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.2.2...v2.0.0
+[1.2.2]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v0.3.0...v1.0.0
+[0.3.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/k3l0-dev/niwashi-mcp/releases/tag/v0.1.0
