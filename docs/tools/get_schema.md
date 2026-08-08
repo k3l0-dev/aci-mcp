@@ -15,6 +15,7 @@ get_schema(
     class_name: str,
     include_property_details: bool = False,
     properties_filter: list[str] | None = None,
+    list_limit: int = 25,
 ) -> dict[str, Any]
 ```
 
@@ -23,6 +24,7 @@ get_schema(
 | `class_name` | `str` | — | Exact ACI class name from `search_classes()`. **Case-sensitive** — see [Case sensitivity](#case-sensitivity). |
 | `include_property_details` | `bool` | `False` | Include `property_details` for **every** property. Prefer `properties_filter` unless you truly need all. |
 | `properties_filter` | `list[str]` | — | Include `property_details` only for these property names. The token-efficient path — unknown names are silently skipped, and the caller's order is preserved. |
+| `list_limit` | `int` | `25` | How many `dnFormats` and `containedBy` entries to return. Clamped to `1..500`. Only the seven universal classes ever reach it — see [Sampled lists](#sampled-lists). |
 
 ---
 
@@ -36,8 +38,8 @@ the class actually has something to report:
 |---|---|---|---|
 | `identifiedBy` | `list[str]` | yes | Attributes that uniquely identify an instance — use these as `filters` keys in `query()`. Empty for classes with a fixed RN (`fvRsCtx` → `rsctx`). |
 | `rnFormat` | `str` | yes | Relative-name template, e.g. `"BD-{name}"` |
-| `containedBy` | `list[str]` | yes | Parent class names in `pkg:Class` notation — use a parent object's `dn` as `scope_dn` |
-| `dnFormats` | `list[str]` | yes | Complete DN templates — see [Reading dnFormats](#reading-dnformats) |
+| `containedBy` | `list[str]` | yes | Parent class names in `pkg:Class` notation — use a parent object's `dn` as `scope_dn`. Sampled to `list_limit` on universal classes — see [Sampled lists](#sampled-lists) |
+| `dnFormats` | `list[str]` | yes | DN templates — see [Reading dnFormats](#reading-dnformats). Sampled to `list_limit` on universal classes |
 | `properties` | `list[str]` | yes | Sorted list of all attribute names available on the class |
 | `isAbstract` | `bool` | yes | `true` when the class cannot be directly instantiated |
 | `isConfigurable` | `bool` | yes | `true` when objects can be created/modified via APIC |
@@ -48,6 +50,8 @@ the class actually has something to report:
 | `relationTo` | `dict` | no — 1,017 classes | Outgoing Rs relations: `{relClass: {targetClass, cardinality}}`. Keys and `targetClass` keep `pkg:Class` colon notation (unlike `contains`); `cardinality` is always empty — see [Reading relationTo](#reading-relationto) |
 | `relationFrom` | `dict` | no — 994 classes | Incoming Rt relations: `{relClass: {sourceClass}}`, also in colon notation |
 | `property_details` | `dict` | no — on request | Compact per-property constraints. **Present only** when `include_property_details=True` or `properties_filter` is set. |
+| `dnFormatsTruncated` | `dict` | no — 7 classes at the default | `{returned, total, note}`, present only when `dnFormats` was sampled — see [Sampled lists](#sampled-lists) |
+| `containedByTruncated` | `dict` | no — 7 classes at the default | `{returned, total, note}`, present only when `containedBy` was sampled |
 
 Returns `{}` when the class is not in the catalogue — see
 [When get_schema returns {}](#when-get_schema-returns-).
@@ -194,8 +198,8 @@ bds = await query("fvBD", scope_dn=scope)
 
 The full path template, built by chaining every ancestor's `rnFormat`. The key
 is present on all 15,452 classes; it is `[]` for the classes that genuinely
-have no template, and it is never truncated — `faultInst` returns all 24,151 of
-its templates and `faultDelegate` all 64,313.
+have no template, and it is sampled on the seven classes that carry thousands
+of templates — see [Sampled lists](#sampled-lists).
 
 Each `{...}` placeholder is named after the *schema's own* identifying
 attribute, not a human-friendly label. Two placeholders legitimately read the
@@ -208,6 +212,54 @@ template exactly (or `rnFormat` for just the last component), substituting only
 the literal values. Never rename a placeholder to something more descriptive,
 and never reconstruct or paraphrase a DN template from memory — the template is
 the anti-hallucination anchor, and it stops being one the moment it is rewritten.
+
+---
+
+## Sampled lists
+
+`dnFormats` and `containedBy` are unbounded in the object model: a class that
+can hang off almost any managed object enumerates one entry per possible
+parent. Seven classes are extreme, and they are exactly the ones agents reach
+for most:
+
+| Class | `dnFormats` | `containedBy` | Raw JSON |
+|---|---:|---:|---:|
+| `faultDelegate` | 64,313 | 2,801 | 7.8 MB |
+| `tagAnnotation` | 42,098 | 2,828 | 5.1 MB |
+| `tagTag` | 42,070 | 2,827 | 4.7 MB |
+| `aaaRbacAnnotation` | 41,926 | 2,770 | 4.9 MB |
+| `healthInst` | 31,279 | 3,061 | 3.1 MB |
+| `faultCounts` | 31,271 | 3,052 | 3.2 MB |
+| `faultInst` | 24,151 | 1,895 | 2.6 MB |
+
+A 3.2 MB tool result is roughly 800 k tokens, and it is two ordinary calls
+away: `search_classes("fault")` ranks `faultCounts` first. So `get_schema`
+returns the first `list_limit` entries (25 by default) and discloses the cut:
+
+```json
+"dnFormats": ["uni/fabric/moncommon/ratelimitp/fd-[{affected}]-fault-{code}", "…"],
+"dnFormatsTruncated": {
+  "returned": 25,
+  "total": 64313,
+  "note": "sample of 64313 DN patterns. They differ only in the parent prefix and all end in the same relative name — 'rnFormat' carries it in full. Raise list_limit (max 500) for a larger sample."
+}
+```
+
+That brings `faultDelegate` from 7.8 MB to 3.5 KB — a factor of 2,330 — and the
+remaining 15,445 classes come back byte-identical, with no marker.
+
+**Nothing actionable is lost.** Every one of `faultDelegate`'s 64,313 templates
+is `{some parent dn}/fd-[{affected}]-fault-{code}`; they differ only in the
+prefix, and the suffix is already `rnFormat` in full. Concatenate the parent DN
+with `rnFormat` rather than searching the list for a matching entry. Likewise a
+truncated `containedBy` means "attaches to nearly anything" — scope the query
+by the parent you care about instead of reading the list.
+
+Raise `list_limit` (clamped to `1..500`) only when a `*Truncated` marker tells
+you the sample was too small. The bound is applied at the tool surface, not in
+the data layer: `registry.catalog.load_schema()` still returns the complete
+projection, which is what the [baseline parity tests](../../mcp/tests/baseline/README.md)
+verify against the 1.x jsonmeta oracle.
 
 ---
 

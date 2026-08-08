@@ -237,7 +237,10 @@ class StubBackend:
                 k: v for k, v in attrs.items() if k not in self._OPERATIONAL_ATTRS
             }
         attrs["_class"] = class_name
-        if include_children and "children" in obj:
+        # Mirrors ApicClient: extract whatever children are present, not only
+        # those requested by class. Gating this on include_children made the
+        # stub agree with the bug it should have caught.
+        if "children" in obj:
             children: list[dict[str, Any]] = []
             for child_item in obj["children"]:
                 for child_cls, child_obj in child_item.items():

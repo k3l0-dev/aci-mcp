@@ -153,6 +153,81 @@ ENV_FILE = (
     or Path.cwd() / ".env"
 )
 
+# ── Schema list bounding ──────────────────────────────────────────────────────
+
+# `dnFormats` and `containedBy` are unbounded in the object model: a class that
+# can hang off almost any MO enumerates one entry per possible parent. The seven
+# worst offenders are exactly the ones an agent reaches for most — faultInst,
+# faultCounts, faultDelegate, healthInst, tagTag, tagAnnotation,
+# aaaRbacAnnotation — and get_schema("faultDelegate") serialises to 7.8 MB of
+# JSON across 64,313 dnFormats. Handed to an LLM that is roughly 2M tokens for
+# one call.
+#
+# The enumeration carries almost no signal: every faultDelegate DN is
+# "{some parent dn}/fd-[{affected}]-fault-{code}", and that suffix is already in
+# `rnFormat`. A sample plus the true total says the same thing in 2 KB, so the
+# tool returns a sample by default and reports what it withheld.
+#
+# 99% of classes have ≤ 158 dnFormats and ≤ 40 containedBy entries; at the
+# default of 25 the median class (2 dnFormats, 1 parent) is untouched.
+_SCHEMA_LIST_SAMPLE = 25
+
+# Ceiling on the opt-in. The full list stays reachable — capped at 500 entries,
+# a faultDelegate schema is ~60 KB instead of 7.8 MB, so no value of list_limit
+# can put the caller back in the failure mode this bound exists to prevent.
+_SCHEMA_LIST_MAX = 500
+
+# Bounded here rather than in `catalog.load_schema` on purpose: the data layer
+# stays a faithful projection of the object model (which is what the baseline
+# parity tests verify against the 1.x jsonmeta oracle), and the token budget is
+# treated as what it is — a presentation concern of the MCP surface.
+#
+# The note is worded per key because the totals count different things: a class
+# with 24,151 dnFormats has 1,895 parents, and saying "parents" under dnFormats
+# would hand the agent a wrong number it has no way to check.
+_BOUNDED_SCHEMA_LISTS = {
+    "dnFormats": (
+        "sample of {total} DN patterns. They differ only in the parent prefix and "
+        "all end in the same relative name — 'rnFormat' carries it in full."
+    ),
+    "containedBy": "sample of {total} parent classes.",
+}
+
+
+def _bound_schema_lists(schema: dict[str, Any], limit: int) -> dict[str, Any]:
+    """Trim the unbounded schema lists to `limit`, recording what was withheld.
+
+    Mutates and returns `schema` — the dict is freshly built per call by
+    `catalog.load_schema`, so there is no shared state to corrupt.
+
+    A truncated list gains a sibling key, e.g. `dnFormatsTruncated`:
+
+        {"returned": 25, "total": 64313,
+         "note": "sample of 64313 DN patterns. They differ only in the parent
+                  prefix and all end in the same relative name — 'rnFormat'
+                  carries it in full. Raise list_limit (max 500) for a larger
+                  sample."}
+
+    Lists at or under the limit are left alone and get no marker, so the common
+    class is byte-identical to what it was before the bound existed.
+    """
+    for key, note in _BOUNDED_SCHEMA_LISTS.items():
+        values = schema.get(key)
+        if not isinstance(values, list) or len(values) <= limit:
+            continue
+        total = len(values)
+        schema[key] = values[:limit]
+        schema[f"{key}Truncated"] = {
+            "returned": limit,
+            "total": total,
+            "note": (
+                f"{note.format(total=total)} "
+                f"Raise list_limit (max {_SCHEMA_LIST_MAX}) for a larger sample."
+            ),
+        }
+    return schema
+
+
 # ── Tool parameter coercion ───────────────────────────────────────────────────
 
 
@@ -429,6 +504,7 @@ async def get_schema(
     ctx: Context,
     include_property_details: bool = False,
     properties_filter: _JsonList | None = None,
+    list_limit: int = _SCHEMA_LIST_SAMPLE,
 ) -> dict[str, Any]:
     """Return the structural schema for an ACI class.
 
@@ -439,11 +515,21 @@ async def get_schema(
                         use these as filter keys in query()
       rnFormat       — relative-name template showing identifier placeholders
       containedBy    — parent class name(s) in "pkg:Class" notation;
-                        fetch the parent object and use its dn as scope_dn
+                        fetch the parent object and use its dn as scope_dn.
+                        Sampled to list_limit entries on classes that attach
+                        to many parents — see dnFormats below.
       contains       — sorted list of child class names this object may hold,
                         in flat notation (e.g. "fvSubnet", "tagTag") ready to
                         pass to get_schema(), query(), or include_children
-      dnFormats      — complete DN pattern examples for this class
+      dnFormats      — DN pattern examples for this class.  Universal classes
+                        (faultInst, healthInst, tagTag, faultDelegate …) attach
+                        to thousands of parents and enumerate one pattern each,
+                        so this list is sampled to list_limit entries.  When
+                        that happens a `dnFormatsTruncated` key appears
+                        alongside it, carrying {returned, total, note}; the same
+                        applies to `containedByTruncated`.  The sample loses
+                        nothing actionable — every pattern ends in the same
+                        suffix, which is what `rnFormat` already gives you.
       relationTo     — outgoing Rs relations: {relClass: {targetClass, cardinality}}
                         Keys and targetClass keep their "pkg:Class" colon
                         notation — unlike `contains`, they are NOT flattened,
@@ -481,6 +567,10 @@ async def get_schema(
         properties_filter: Names of the properties to include in property_details.
                     This is the token-efficient path — ask only for the properties
                     you care about.  Unknown names are silently skipped.
+        list_limit: How many `dnFormats` and `containedBy` entries to return
+                    (default 25, clamped to 1..500).  Only the handful of
+                    universal classes ever hit it; leave it alone unless a
+                    `*Truncated` marker tells you the sample was too small.
 
     Returns:
         Schema dict as described above, or an empty dict when the class file
@@ -499,6 +589,7 @@ async def get_schema(
         properties_filter=properties_filter,
     )
     if schema:
+        _bound_schema_lists(schema, max(1, min(list_limit, _SCHEMA_LIST_MAX)))
         await ctx.info(f"get_schema({class_name!r}) → OK")
     else:
         await ctx.warning(f"get_schema({class_name!r}) → not found")

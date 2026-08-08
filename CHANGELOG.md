@@ -120,6 +120,35 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
   returned nothing. No test had ever called `query()` past page 0; six now do,
   including one that walks the documented loop to exhaustion.
 
+- **`get_schema()` could return 7.8 MB in a single call.** `dnFormats` and
+  `containedBy` are unbounded in the object model — a class that attaches to
+  almost any managed object enumerates one entry per possible parent — and
+  seven classes are extreme: `faultDelegate` carries 64,313 DN templates,
+  `faultCounts` 31,271, `faultInst` 24,151. Serialised that is 2.6 MB to 7.8 MB
+  of JSON, roughly 800 k to 2 M tokens, for one tool result. They are not
+  obscure classes and the tool's own documented workflow walks into them:
+  `search_classes("fault")` ranks `faultCounts` first, and the next prescribed
+  step is `get_schema` on it. Both lists are now sampled to `list_limit`
+  entries (25 by default, clamped to `1..500`) with a `dnFormatsTruncated` /
+  `containedByTruncated` marker carrying `{returned, total, note}`, so the cut
+  is disclosed rather than silent. `faultDelegate` drops from 7.8 MB to 3.5 KB
+  and the other 15,445 classes come back byte-identical, with no marker. No
+  information is lost that an agent can act on: the 64,313 templates differ
+  only in their parent prefix and all end in the same relative name, which
+  `rnFormat` already carries in full. The bound sits at the tool surface, not
+  in `registry.catalog`, so the data layer stays the faithful projection the
+  baseline parity tests verify against the 1.x jsonmeta oracle. Forty-one tests
+  cover it — including one that walks all 15,452 classes to prove none escape —
+  and five sabotages were each caught before it was committed.
+
+- **`rsp_subtree_include` returned no children.** Asking for children set the
+  APIC `rsp-subtree-include` parameter but never `rsp-subtree`, which the APIC
+  requires alongside it, so the fabric answered without the child objects; the
+  extraction step then gated on a flag the caller had not set and dropped
+  whatever did come back. The request now defaults `rsp-subtree=children` when
+  an include is asked for, and extraction keys off the response actually
+  containing children rather than off the request that asked for them.
+
 - **The server bound every interface, without authentication, while the README
   said localhost.** `0.0.0.0` was hardcoded with no way to change it. The
   documented quickstart therefore put an unauthenticated server holding APIC
@@ -139,6 +168,16 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
   unusable on most fabrics — but startup now names the risk instead of leaving
   it to be inferred from four documentation lines that called it a lab
   convenience.
+
+- **A DN went into the APIC request URL unchecked.** `get_by_dn(dn)` and the
+  `scope_dn` argument of `query()`/`count()` were interpolated straight into
+  `/api/mo/{dn}.json`. A DN carrying `..` segments, a `?`, a `#`, a backslash,
+  a newline or a NUL could therefore walk out of `/api/mo/` and reach another
+  APIC endpoint, or split the request — with the server's own APIC session,
+  which is the point: the caller borrows an authenticated session they do not
+  hold. DNs are now validated before interpolation and a malformed one is
+  rejected with `FilterError` naming the offending field, rather than being
+  sent to the fabric.
 
 - **Eleven tests were silently skipping — the search guarantees were not being
   checked at all.** Deleting `data/class-descriptions.json` in the same release

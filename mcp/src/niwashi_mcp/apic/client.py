@@ -32,6 +32,7 @@ from niwashi_mcp.exceptions import (
     ApicConnectionError,
     ApicRequestError,
     ApicResponseError,
+    FilterError,
 )
 from niwashi_mcp.registry.filter import build_filter
 
@@ -81,6 +82,60 @@ def _extract_apic_error_text(resp: httpx.Response) -> str:
         return body["imdata"][0]["error"]["attributes"]["text"]
     except (ValueError, KeyError, IndexError, TypeError):
         return ""
+
+
+# Characters and shapes that must never reach the path of an APIC URL. A DN is
+# interpolated straight into `/api/mo/{dn}.json`, so anything that can leave
+# that path segment changes *which endpoint* the server's authenticated session
+# reaches — not merely which object it asks for.
+#
+# Measured before the guard existed: `uni/tn-OT/../../api/aaaListDomains`
+# resolved to `https://apic/api/mo/api/aaaListDomains.json`. A DN arrives from
+# an LLM, and an LLM's input can be attacker-influenced, so this is a
+# confused-deputy hazard rather than a theoretical one.
+_DN_FORBIDDEN = ("?", "#", "\\", "\n", "\r", "\t", "\x00")
+
+
+def validate_dn(dn: str, *, field: str = "dn") -> str:
+    """Return `dn` unchanged, or raise if it could leave its URL path segment.
+
+    Deliberately a rejection rather than a sanitisation: silently rewriting a
+    DN would answer a question the caller did not ask, which is the failure
+    mode this whole server is built to avoid. A malformed DN is a mistake worth
+    surfacing.
+
+    Args:
+        dn: The distinguished name to check.
+        field: Parameter name to quote in the error, so the caller knows which
+            argument to fix.
+
+    Raises:
+        FilterError: The DN is empty, absolute, contains a traversal segment,
+            or carries a character that would escape the path.
+    """
+    if not dn or not dn.strip():
+        raise FilterError(f"{field} must not be empty")
+
+    if dn.startswith("/"):
+        raise FilterError(
+            f"{field} must be relative, got {dn!r} — an ACI DN never starts with '/'"
+        )
+
+    for char in _DN_FORBIDDEN:
+        if char in dn:
+            raise FilterError(
+                f"{field} contains {char!r}, which would escape the URL path: {dn!r}"
+            )
+
+    # `..` is only a traversal as a whole segment; it is legitimate inside a
+    # name (a tenant may be called `a..b`), so match segments, not substrings.
+    if any(segment == ".." for segment in dn.split("/")):
+        raise FilterError(
+            f"{field} contains a '..' path segment, which would target a "
+            f"different APIC endpoint: {dn!r}"
+        )
+
+    return dn
 
 
 @dataclass
@@ -214,7 +269,7 @@ class ApicClient:
         params: dict[str, str] = {"page-size": str(limit)}
 
         if scope_dn:
-            url = f"{self._base}/api/mo/{scope_dn}.json"
+            url = f"{self._base}/api/mo/{validate_dn(scope_dn, field='scope_dn')}.json"
             params["query-target"] = "subtree"
             params["target-subtree-class"] = class_name
         else:
@@ -235,6 +290,12 @@ class ApicClient:
             params["rsp-subtree-class"] = ",".join(include_children)
         if rsp_subtree_include:
             params["rsp-subtree-include"] = rsp_subtree_include
+            # rsp-subtree-include selects *which* categories come back; it does
+            # not ask for a subtree at all. Sent alone the APIC returns the
+            # bare objects, so "give me BDs with their faults" silently became
+            # "give me the BDs that have faults" — and the agent concluded
+            # there were none.
+            params.setdefault("rsp-subtree", "children")
         if time_range:
             params["time-range"] = time_range
         if config_only:
@@ -252,7 +313,12 @@ class ApicClient:
             for cls, obj in item.items():
                 attrs: dict[str, Any] = dict(obj.get("attributes", {}))
                 attrs["_class"] = cls
-                if include_children and "children" in obj:
+                # Extract whatever children the APIC actually returned, not
+                # only those this call asked for by class. rsp-subtree-include
+                # produces children too (faults, health, audit-logs) and gating
+                # on include_children dropped them on the floor, with the
+                # object itself arriving intact — a silent partial answer.
+                if "children" in obj:
                     children: list[dict[str, Any]] = []
                     for child_item in obj["children"]:
                         for child_cls, child_obj in child_item.items():
@@ -575,7 +641,7 @@ class ApicClient:
             ApicConnectionError / ApicAuthError / ApicRequestError / ApicResponseError on
             or protocol failures (see _request_json).
         """
-        url = f"{self._base}/api/mo/{dn}.json"
+        url = f"{self._base}/api/mo/{validate_dn(dn)}.json"
         params: dict[str, str] = {}
         if config_only:
             params["rsp-prop-include"] = "config-only"
@@ -592,7 +658,8 @@ class ApicClient:
         for cls, obj in imdata[0].items():
             attrs: dict[str, Any] = dict(obj.get("attributes", {}))
             attrs["_class"] = cls
-            if include_children and "children" in obj:
+            # Same rule as query_class: take whatever children came back.
+            if "children" in obj:
                 children: list[dict[str, Any]] = []
                 for child_item in obj["children"]:
                     for child_cls, child_obj in child_item.items():
@@ -673,7 +740,7 @@ class ApicClient:
         """
         params: dict[str, str] = {"page-size": "1"}
         if scope_dn:
-            url = f"{self._base}/api/mo/{scope_dn}.json"
+            url = f"{self._base}/api/mo/{validate_dn(scope_dn, field='scope_dn')}.json"
             params["query-target"] = "subtree"
             params["target-subtree-class"] = class_name
         else:

@@ -188,6 +188,23 @@ it. When stating a DN pattern in an answer, quote `dnFormats` (or `rnFormat`
 for just the last component) exactly, substituting only the literal values
 — never reconstruct or paraphrase a DN template from memory.
 
+**When the list is a sample.** A handful of universal classes — `faultInst`,
+`faultCounts`, `faultDelegate`, `healthInst`, `tagTag`, `tagAnnotation`,
+`aaaRbacAnnotation` — attach to thousands of parents and enumerate one DN
+pattern per parent (`faultDelegate` has 64,313). `get_schema` returns the first
+25 and adds a marker:
+
+```json
+"dnFormats": ["uni/fabric/moncommon/ratelimitp/fd-[{affected}]-fault-{code}", "…"],
+"dnFormatsTruncated": {"returned": 25, "total": 64313, "note": "sample of …"}
+```
+
+Nothing actionable is lost: those patterns differ only in the parent prefix and
+all end in the same relative name, which `rnFormat` gives you in full
+(`fd-[{affected}]-fault-{code}`). Build the DN as parent DN + `rnFormat` rather
+than hunting the matching entry. Pass `list_limit` (max 500) only if you truly
+need a wider sample — and never present the sample as the complete list.
+
 ### `containedBy` — the parent class(es) in `pkg:Class` notation
 
 ```json
@@ -200,6 +217,11 @@ Convert `pkg:Class` → `pkgClass` (remove the colon) to get the queryable
 class name: `fv:Tenant` → `fvTenant`.
 To query objects of this class under a specific parent, first query the parent
 to get its `dn`, then pass it as `scope_dn`.
+
+Sampled the same way as `dnFormats`, with a `containedByTruncated` marker, on
+the universal classes listed above — `faultDelegate` reports 2,801 parents.
+A truncated `containedBy` means "attaches to nearly anything", so scope the
+query by the parent you actually care about instead of reading the list.
 
 ### `contains` — the child classes this object may hold
 
