@@ -311,3 +311,6 @@ Free for personal, research, and noncommercial use. A [commercial license](LICEN
 is required for any commercial deployment or integration.
 
 Contact: [monark.aiops@pm.me](mailto:monark.aiops@pm.me)
+
+Cisco, Cisco ACI and APIC are trademarks of Cisco Systems, Inc.  aci-mcp is an
+independent project, not affiliated with or endorsed by Cisco Systems, Inc.
