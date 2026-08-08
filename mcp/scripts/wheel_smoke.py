@@ -65,6 +65,18 @@ def main() -> None:
     check("catalogue reachable", catalog.catalog_path().is_file(), str(catalog.catalog_path()))
     check("catalogue declares an APIC version", bool(version) and version != "unknown", version)
 
+    # The startup guard, against the niwaki the resolver actually chose. This is
+    # the check that fails if a release moved the catalogue's private schema —
+    # exactly the scenario the `niwaki>=1.8,<1.9` pin exists to prevent, and the
+    # only place in this script where the *resolved* dependency is under test
+    # rather than the one in the lockfile.
+    try:
+        catalog.verify_catalogue()
+    except Exception as exc:  # any failure is a failed smoke — report, don't raise
+        check("catalogue schema verifies", False, str(exc))
+    else:
+        check("catalogue schema verifies", True)
+
     schema = catalog.load_schema("fvBD")
     check("get_schema('fvBD') returns a schema", bool(schema))
     check(
