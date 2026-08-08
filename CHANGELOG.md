@@ -110,6 +110,20 @@ iteration. Nothing here is released yet; users remain on 1.2.2 throughout.
 
 ### Fixed
 
+- **Eleven tests were silently skipping — the search guarantees were not being
+  checked at all.** Deleting `data/class-descriptions.json` in the same release
+  that removed the data plane left every test that compared against it in a
+  `pytest.skip` branch: index equality, the recall and MRR assertions, the
+  per-query top-5, and the quality floors. They reported green by not running.
+  All of them now compare against the pre-2.0 recording in
+  `tests/baseline/baseline.json` instead of a deleted file. Verified: 0 skipped,
+  and a deliberate index regression fails 9 of them.
+- **The source distribution was malformed and could not build a wheel.**
+  `readme = "../README.md"` produced an archive entry named
+  `niwashi_mcp-2.0.0/../README.md`, a path escaping the archive root: `tar`
+  refuses to extract it and several tools reject such archives outright. The
+  package now carries its own `mcp/README.md`, and `uv build` rebuilds the
+  wheel *from the sdist*, which is what proves the sdist is complete.
 - **Path resolution no longer breaks when the package is installed.** The data
   and `.env` locations were derived from `__file__`, which only worked from a
   git checkout; installed, that arithmetic walked out of `site-packages` onto a

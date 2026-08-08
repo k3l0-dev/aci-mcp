@@ -12,12 +12,8 @@ WORKDIR /app
 # Install uv for fast, reproducible dependency installation
 RUN pip install --no-cache-dir uv
 
-# pyproject declares `readme = "../README.md"`, so the README must be in place
-# before any build step reads the metadata — including `uv sync`.
-COPY README.md /README.md
-
 # Install dependencies before copying source to leverage Docker layer cache
-COPY mcp/pyproject.toml mcp/uv.lock ./
+COPY mcp/pyproject.toml mcp/uv.lock mcp/README.md ./
 RUN uv sync --frozen --no-dev
 
 # Copy application source and shared data

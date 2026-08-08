@@ -98,32 +98,31 @@ class TestSearchQualityUnchanged:
         mrr = sum(1 / r for r in ranks if r is not None) / len(ranks)
         assert mrr == pytest.approx(EXPECTED_MRR, abs=1e-9)
 
-    def test_every_query_returns_the_same_top_5_as_the_file_index(self, index, golden):
-        """Per-query equality against the file this index replaces.
+    def test_every_query_returns_the_same_top_5_as_recorded(self, index, golden):
+        """Per-query equality against the pre-2.0 recording.
 
-        The strongest available check: it compares the two sources directly
-        rather than against a recorded number, so it stays meaningful even if
-        the golden set grows.
+        Aggregates can stay flat while individual answers permute, and it is
+        the individual answer an agent acts on. Compared against
+        `baseline/baseline.json`, captured from the file-backed index before
+        the migration — the file itself is deleted, and pointing at it made
+        this test skip silently.
         """
-        reference_path = Path(__file__).resolve().parents[3] / "data" / "class-descriptions.json"
-        if not reference_path.exists():
-            pytest.skip("class-descriptions.json not present")
-        reference = descriptions.load_descriptions(reference_path)
+        recorded_path = Path(__file__).resolve().parents[1] / "baseline" / "baseline.json"
+        if not recorded_path.exists():
+            pytest.skip("baseline.json not recorded")
+        recorded = json.loads(recorded_path.read_text())["search"]["per_query"]
 
         # Grouped per index, never interleaved: `search` caches on dict
         # identity, so alternating between the two sources would re-tokenise
         # 15,239 entries on all 148 calls and make this test take a minute.
-        queries = [item["query"] for item in golden]
-        old_ranks = {q: [h["class_name"] for h in descriptions.search(q, reference, limit=5)]
-                     for q in queries}
-        new_ranks = {q: [h["class_name"] for h in descriptions.search(q, index, limit=5)]
-                     for q in queries}
-
-        moved = [
-            f"'{q}': {old_ranks[q]} → {new_ranks[q]}"
-            for q in queries
-            if old_ranks[q] != new_ranks[q]
-        ]
+        moved = []
+        for item in golden:
+            q = item["query"]
+            if q not in recorded:
+                continue
+            now = [h["class_name"] for h in descriptions.search(q, index, limit=5)]
+            if now != recorded[q]["top5"]:
+                moved.append(f"'{q}': {recorded[q]['top5']} → {now}")
         assert not moved, f"{len(moved)} ranking(s) moved:\n  " + "\n  ".join(moved[:10])
 
 

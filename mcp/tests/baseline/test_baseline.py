@@ -72,23 +72,19 @@ def repo_root() -> Path:
 
 
 @pytest.fixture(scope="module")
-def descriptions(repo_root: Path) -> dict:
-    from niwashi_mcp.registry.descriptions import load_descriptions
+def descriptions() -> dict:
+    """The index the server actually uses — rebuilt from the catalogue.
 
-    path = repo_root / "data" / "class-descriptions.json"
-    if not path.exists():
-        pytest.skip("class-descriptions.json not present (CI without the data bundle)")
-    return load_descriptions(path)
+    Until 2.0 this read `data/class-descriptions.json`. That file is deleted,
+    and pointing at it made five tests skip silently — including the index
+    equality proof and every search metric. Comparing the *rebuilt* index
+    against the recorded baseline is the stronger check anyway: the baseline
+    was captured from the JSON file, so this now asserts the migration
+    reproduced it.
+    """
+    from niwashi_mcp.registry import catalog
 
-
-@pytest.fixture(scope="module")
-def schemas_dir(repo_root: Path) -> Path:
-    from niwashi_mcp.registry.schema import resolve_schemas_dir
-
-    resolved = resolve_schemas_dir(repo_root / "data" / "schemas")
-    if not resolved.is_dir() or not any(resolved.iterdir()):
-        pytest.skip("data/schemas is empty (CI without the schema bundle)")
-    return resolved
+    return catalog.descriptions_index()
 
 
 # --------------------------------------------------------------- index

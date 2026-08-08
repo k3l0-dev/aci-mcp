@@ -1,8 +1,10 @@
 # Internals: Auth Middleware
 
-`mcp/middleware/auth.py` — API key authentication for every incoming HTTP request.
+`mcp/src/niwashi_mcp/middleware/auth.py` — API key authentication for every incoming HTTP request.
 
 For a broader view of the full middleware stack (HealthMiddleware, OAuthDiscoveryMiddleware, and how they compose), see [middleware.md](middleware.md).
+
+This layer is unchanged in 2.0: it authenticates HTTP requests and knows nothing about the ACI object model or where it comes from.
 
 ---
 
@@ -32,7 +34,7 @@ Two accepted header forms, checked in priority order:
 | `Authorization` | `Bearer <token>` | First |
 | `X-API-Key` | `<token>` | Fallback, whenever `Authorization` doesn't start with `Bearer` (with the trailing space that separates it from the token) — that includes it being absent, empty, or using a different scheme (e.g. `Basic ...`) |
 
-When `Authorization: Bearer` is present but the token is invalid, `X-API-Key` is **not** consulted — `Authorization` starting with `Bearer ` is what decides which header is read, independent of whether the extracted token then turns out to be valid.
+When `Authorization: Bearer` is present but the token is invalid, `X-API-Key` is **not** consulted — the `Bearer` prefix and its separating space are what decide which header is read, independent of whether the extracted token then turns out to be valid.
 
 ---
 
@@ -116,7 +118,7 @@ class KeyStore:
 
 When `KeyStore` is empty, the middleware is a no-op — all requests pass through. This is dev mode. Auth is enabled as soon as the store contains at least one key.
 
-`reload()` replaces the key set atomically under a `threading.Lock`. In-flight requests that already called `get()` continue with their snapshot uninterrupted.
+`reload()` replaces the key set atomically under a `threading.Lock`. In-flight requests that already called `get()` continue with their snapshot uninterrupted. The only caller is the `SIGHUP` handler registered in `_serve()` — see [middleware.md](middleware.md#sighup-hot-reload) for the rotation procedure.
 
 ---
 
@@ -137,6 +139,17 @@ def load_api_keys() -> frozenset[str]:
 | `"token1,,token2,"` | Empty segments ignored |
 
 Comparison is always case-sensitive.
+
+`load_api_keys()` reads the process environment, nothing else. The `.env` file is loaded into that environment by `_serve()` before the `KeyStore` is built, and again on every `SIGHUP` — so the file's location is what decides which keys the server ends up with. `main.py` resolves it once, at import:
+
+| Order | Candidate |
+|---|---|
+| 1 | `$ACI_MCP_ENV_FILE`, used verbatim when set |
+| 2 | `./.env` in the current working directory |
+| 3 | `<repo>/.env`, only when the process is running from a verified git checkout |
+| 4 | `~/.config/niwashi-mcp/.env` |
+
+`ACI_MCP_ENV_FILE` wins outright when set, whether or not the file it names exists; otherwise the first of the remaining candidates that exists is used, and `./.env` is the fallback when none does. Since 2.0 the server is normally installed rather than run from a checkout, so candidates 1 and 4 are the ones that matter in production — a missing `.env` is not an error, and an unset `MCP_API_KEYS` disables authentication silently apart from the startup warning below. See [configuration/settings.md](../configuration/settings.md) for the full variable list.
 
 ---
 

@@ -60,7 +60,7 @@ Because the tally is the very same `total_available` that `query` reports, the t
 
 | Exception | Condition |
 |---|---|
-| `UnknownClassError` | `class_name` is not in the registry. Includes `.suggestions` (list) and `.registry_size` (int). |
+| `UnknownClassError` | `class_name` is not in the catalogue (15,452 classes). Includes `.suggestions` (list, drawn from the search index) and `.registry_size` (int — the 15,239-entry search index). The guard is identical to `query`'s, so the two tools can never disagree about whether a class is known. |
 | `FilterError` | `class_name` or a `filters` key contains characters outside the expected ACI identifier format. Filter values are always escaped, never rejected. |
 | `ApicRequestError` | APIC returned a non-2xx, non-auth response — e.g. 400 for a malformed `filter_expr`, or a transient 5xx that never recovered. Carries the HTTP status and, when present, the APIC error text. |
 

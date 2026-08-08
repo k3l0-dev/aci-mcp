@@ -203,21 +203,37 @@ class TestDescriptionsIndex:
 
     @pytest.fixture(scope="class")
     @classmethod
-    def reference(cls) -> dict:
-        path = Path(__file__).resolve().parents[3] / "data" / "class-descriptions.json"
+    def recorded(cls) -> dict:
+        """The index as recorded from `class-descriptions.json` before 2.0.
+
+        The file itself is deleted; its digest and class count survive in
+        `tests/baseline/baseline.json`. Comparing against the recording keeps
+        the guarantee testable — pointing at the deleted file made these tests
+        skip silently, which is worse than not having them.
+        """
+        path = Path(__file__).resolve().parents[1] / "baseline" / "baseline.json"
         if not path.exists():
-            pytest.skip("class-descriptions.json not present")
-        return descriptions.load_descriptions(path)
+            pytest.skip("baseline.json not recorded")
+        return json.loads(path.read_text())["index"]
 
-    def test_same_class_set(self, rebuilt, reference):
-        """Including the 213-class gap, which is a property of the filter, not an accident."""
-        assert set(rebuilt) == set(reference)
+    def test_same_class_count(self, rebuilt, recorded):
+        """The 213-class gap is a property of the index filter, not an accident."""
+        assert len(rebuilt) == recorded["class_count"]
 
-    def test_every_entry_is_identical(self, rebuilt, reference):
-        differing = [k for k in reference if rebuilt.get(k) != reference[k]]
-        assert not differing, (
-            f"{len(differing)} entries differ, e.g. {differing[0]}: "
-            f"ref={reference[differing[0]]} got={rebuilt.get(differing[0])}"
+    def test_index_is_byte_identical_to_the_recording(self, rebuilt, recorded):
+        """Digest equality against the pre-2.0 recording.
+
+        This is the claim the whole migration rests on: the rebuilt index is
+        not merely equivalent, it is byte-identical to the JSON file it
+        replaced.
+        """
+        import hashlib
+
+        digest = hashlib.sha256(
+            json.dumps(rebuilt, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode()
+        ).hexdigest()
+        assert digest == recorded["digest"], (
+            "the rebuilt index no longer matches the pre-2.0 recording"
         )
 
     def test_prop_labels_is_a_list(self, rebuilt):
