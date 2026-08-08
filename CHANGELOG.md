@@ -149,6 +149,15 @@ niwaki. The 1.x name carried a protected mark it had no licence to use.
 
 ### Fixed
 
+- **A `mailto:` in `[project.urls]` made the package unpublishable.**
+  `"Commercial License" = "mailto:monark.aiops@pm.me"` is rejected by the index
+  with `400 ... is not a valid url` — `Project-URL` values must be real URLs.
+  Neither `twine check` nor `uv build` validates this, so it passed every local
+  gate and only surfaced on a real upload. It now points at
+  `LICENSE-COMMERCIAL.md` in the repository, which carries the same contact.
+  Caught by the TestPyPI rehearsal, which is the whole reason for having one:
+  on PyPI it would have burned the 2.0.0 version number permanently.
+
 - **The latency tests had never run on CI hardware, and one measured the wrong
   thing.** `ci.yml` excludes `tests/perf` and only the release pipeline runs the
   full suite, so thresholds calibrated "on a modern laptop" met a shared 2-core
