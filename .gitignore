@@ -24,6 +24,11 @@ schema-collector/
 # Internal agent evaluation harness — never part of the public repository
 agent-eval/
 
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
 # Runtime artifacts
 .lab*
 tmp/

@@ -7,6 +7,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+Nothing yet.
+
+---
+
+## [2.1.0] - 2026-08-08
+
+**Two authentication defects fixed, and the Docker deployment path removed.**
+Both defects are reachable in 2.0.0 as published: a `SIGHUP` could strip
+authentication from a routable bind, and the rate limiter's table grew without
+bound under unauthenticated traffic. The Docker path is removed rather than
+repaired — it was shipped broken, no image was ever published, and running the
+server directly is unaffected.
+
+The five tools keep their signatures. The Python interface does not change.
+
 ### Removed
 
 - **The Docker deployment path is gone** — `mcp/deploy/` (Dockerfile,
@@ -56,6 +71,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   (with the startup guard and its exact message), the README configuration
   table, and the variable map. The absence of `MCP_HOST` from `.env.example` is
   what made the container defect above invisible.
+
+### Added
+
+- **The catalogue's latency decisions are measured again.** Until 2.0 the schema
+  path was `registry/schema.py` and `tests/perf/` measured it; the migration
+  deleted that reader, replaced it with SQLite — changing the cost profile
+  completely — and nothing replaced the measurement. `tests/perf/test_catalog_perf.py`
+  closes that gap, and pins three decisions that are each one deleted decorator
+  away from silently reverting: the single cached SQLite connection (a second
+  one loads a second copy of 26,654 labels and 25,411 comments), the pooled
+  string caches, and the fact that `property_details` and `properties_filter`
+  are genuinely the cheaper paths — which is what makes `get_schema`'s advice
+  true rather than merely well-intentioned. Asserted structurally or by ratio,
+  never by a wall-clock constant calibrated on one machine. Mutation-tested:
+  five sabotages, each failing the test that targets it.
 
 ### Fixed
 
