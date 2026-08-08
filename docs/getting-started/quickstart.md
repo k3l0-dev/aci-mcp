@@ -175,7 +175,7 @@ returns `[]`, which reads exactly like "there are none". That is why the
 
 If you are running from `uvx` and have no checkout, take the file from the
 repository:
-[`mcp/client/SKILL.md`](https://github.com/k3l0-dev/aci-mcp/blob/main/mcp/client/SKILL.md).
+[`mcp/client/SKILL.md`](https://github.com/k3l0-dev/niwashi-mcp/blob/main/mcp/client/SKILL.md).
 
 ### Claude Code
 
@@ -204,8 +204,8 @@ cp mcp/client/SKILL.md .opencode/skills/niwashi-mcp/SKILL.md
 Working on the server itself is the one case that still needs the repository.
 
 ```bash
-git clone https://github.com/k3l0-dev/aci-mcp.git
-cd aci-mcp
+git clone https://github.com/k3l0-dev/niwashi-mcp.git
+cd niwashi-mcp
 cp .env.example .env      # then fill in APIC_HOST / APIC_USER / APIC_PASSWORD
 
 cd mcp

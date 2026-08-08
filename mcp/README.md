@@ -44,7 +44,7 @@ an empty list for an unknown class or attribute — it does not error.
 ## Documentation
 
 Full documentation, architecture notes and deployment guides:
-**<https://github.com/k3l0-dev/aci-mcp>**
+**<https://github.com/k3l0-dev/niwashi-mcp>**
 
 The repository also carries `mcp/client/SKILL.md` — the operating guide to give
 an LLM client alongside the server. It teaches the ACI object model, the

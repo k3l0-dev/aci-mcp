@@ -842,12 +842,13 @@ First public open-source release.
 
 ---
 
-[Unreleased]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.2...HEAD
-[1.2.2]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.1...v1.2.2
-[1.2.1]: https://github.com/k3l0-dev/aci-mcp/compare/v1.2.0...v1.2.1
-[1.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/k3l0-dev/aci-mcp/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.3.0...v1.0.0
-[0.3.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/k3l0-dev/aci-mcp/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/k3l0-dev/aci-mcp/releases/tag/v0.1.0
+[Unreleased]: https://github.com/k3l0-dev/niwashi-mcp/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.2.2...v2.0.0
+[1.2.2]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.2.1...v1.2.2
+[1.2.1]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v0.3.0...v1.0.0
+[0.3.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/k3l0-dev/niwashi-mcp/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/k3l0-dev/niwashi-mcp/releases/tag/v0.1.0

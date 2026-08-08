@@ -46,11 +46,11 @@ packages = ["src/niwashi_mcp"]
 niwashi-mcp = "niwashi_mcp.main:main"
 
 [project.urls]
-Homepage = "https://github.com/k3l0-dev/aci-mcp"
-Repository = "https://github.com/k3l0-dev/aci-mcp"
-Documentation = "https://github.com/k3l0-dev/aci-mcp/tree/main/docs"
-Changelog = "https://github.com/k3l0-dev/aci-mcp/blob/main/CHANGELOG.md"
-"Bug Tracker" = "https://github.com/k3l0-dev/aci-mcp/issues"
+Homepage = "https://github.com/k3l0-dev/niwashi-mcp"
+Repository = "https://github.com/k3l0-dev/niwashi-mcp"
+Documentation = "https://github.com/k3l0-dev/niwashi-mcp/tree/main/docs"
+Changelog = "https://github.com/k3l0-dev/niwashi-mcp/blob/main/CHANGELOG.md"
+"Bug Tracker" = "https://github.com/k3l0-dev/niwashi-mcp/issues"
 "Commercial License" = "mailto:monark.aiops@pm.me"
 
 [tool.pytest.ini_options]

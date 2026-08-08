@@ -347,8 +347,8 @@ Full detail, including what was measured to prove the swap changed nothing:
 Only needed to develop the server or run its test suite:
 
 ```bash
-git clone https://github.com/k3l0-dev/aci-mcp.git
-cd aci-mcp/mcp
+git clone https://github.com/k3l0-dev/niwashi-mcp.git
+cd niwashi-mcp/mcp
 
 uv sync
 uv run niwashi-mcp     # reads ../.env
