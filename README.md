@@ -20,11 +20,9 @@ so any LLM can reach all 15,452 classes with no hardcoded class knowledge.</p>
 [![Python](https://img.shields.io/badge/python-3.12+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastMCP](https://img.shields.io/badge/FastMCP-3.4+-00C896)](https://github.com/jlowin/fastmcp)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white)](mcp/deploy/Dockerfile)
-[![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/k3l0-dev/aci-mcp)
 <br/>
 
 ![Cisco ACI](https://img.shields.io/badge/Cisco-ACI-1BA0D7?style=flat-square&logo=cisco&logoColor=white)
-![DevNet](https://img.shields.io/badge/Cisco-DevNet-6CC04A?style=flat-square&logo=cisco&logoColor=white)
 ![MCP](https://img.shields.io/badge/Model%20Context%20Protocol-MCP-FF6B35?style=flat-square)
 ![Network AIOps](https://img.shields.io/badge/Network-AIOps-7B2FBE?style=flat-square)
 ![Network Automation](https://img.shields.io/badge/Network-Automation-0066CC?style=flat-square)

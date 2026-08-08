@@ -1,0 +1,189 @@
+# niwashi-mcp — release pipeline (PyPI trusted publishing)
+#
+# Triggered by version tags. Release-candidate tags (v*rc*) rehearse on
+# TestPyPI; final tags publish to PyPI through the protected `pypi`
+# environment (manual approval), then materialise as a GitHub Release
+# carrying the CHANGELOG section and the built distributions.
+#
+# No tokens anywhere: both indexes trust this exact repository/workflow/
+# environment via OIDC, the pypa action generates PEP 740 attestations, and
+# GitHub build-provenance attestations cover the attached artifacts.
+#
+# The project lives in mcp/, not at the repository root, so every build step
+# runs with `working-directory: mcp` while the CHANGELOG stays at the root.
+
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+          enable-cache: false # no cache on the publishing path
+
+      # A tag that does not match the packaged version would publish an
+      # immutable artifact under the wrong number. Fail here, not on PyPI.
+      - name: Check the tag matches the packaged version
+        working-directory: mcp
+        run: |
+          VERSION=$(grep -m1 '^version' pyproject.toml | cut -d'"' -f2)
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "tag $GITHUB_REF_NAME does not match pyproject version $VERSION"
+            exit 1
+          fi
+
+      # Fail before anything reaches an index if the release notes are missing —
+      # the github-release job extracts this same section.
+      - name: Check the changelog has a section for this version
+        if: ${{ !contains(github.ref_name, 'rc') }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" {flag=1; next}
+            /^## \[/ {flag=0}
+            flag' CHANGELOG.md > /tmp/notes.md
+          test -s /tmp/notes.md
+
+      # The full suite must pass on the exact commit being published. CI runs
+      # on branches; nothing otherwise guarantees it ran on this tag.
+      - name: Run the test suite
+        working-directory: mcp
+        run: uv run --frozen pytest -q
+
+      - name: Lint
+        working-directory: mcp
+        run: uv run --frozen ruff check .
+
+      # `uv build` builds the sdist and then the wheel *from that sdist*, which
+      # is what proves the sdist is complete. A malformed sdist shipped once
+      # before and only this path caught it.
+      - name: Build
+        working-directory: mcp
+        run: uv build
+
+      - name: Validate metadata and README rendering
+        working-directory: mcp
+        run: uvx twine check dist/*
+
+      # Smoke the built artifact, not the source tree, on every supported
+      # Python. This is what catches a wrong dependency pin or a wheel that
+      # shipped without its data layer.
+      - name: Smoke the wheel on every supported Python
+        working-directory: mcp
+        run: |
+          for py in 3.12 3.13; do
+            uv venv --python "$py" "/tmp/smoke$py"
+            uv pip install --python "/tmp/smoke$py/bin/python" dist/niwashi_mcp-*.whl
+            (cd /tmp && "/tmp/smoke$py/bin/python" "$GITHUB_WORKSPACE/mcp/scripts/wheel_smoke.py")
+          done
+
+      - name: Write the checksums
+        working-directory: mcp
+        run: |
+          mkdir -p assets
+          sha256sum dist/* | sed 's|  .*/|  |' > assets/SHA256SUMS.txt
+
+      - uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: |
+            mcp/dist/*
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: mcp/dist/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-assets
+          path: mcp/assets/
+
+  publish-testpypi:
+    if: contains(github.ref_name, 'rc')
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/niwashi-mcp
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+
+  publish-pypi:
+    if: ${{ !contains(github.ref_name, 'rc') }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/niwashi-mcp
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  github-release:
+    if: ${{ !contains(github.ref_name, 'rc') }}
+    needs: [build, publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-assets
+          path: assets/
+      - name: Extract the changelog section
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\[" ver "\\]" {flag=1; next}
+            /^## \[/ {flag=0}
+            flag' CHANGELOG.md > /tmp/notes.md
+          test -s /tmp/notes.md
+      - name: Create the GitHub Release
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* assets/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --title "niwashi-mcp $GITHUB_REF_NAME" \
+            --notes-file /tmp/notes.md
+        env:
+          GH_TOKEN: ${{ github.token }}
