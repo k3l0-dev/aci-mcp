@@ -5,10 +5,19 @@ Why this exists
 ---------------
 The 2.0 migration replaces the data layer (raw jsonmeta files) with niwaki's
 SQLite catalogue. The tools' signatures do not change, so a regression would be
-*silent*: ``get_schema()`` could start returning a subtly different shape, the
+*silent*: the projection could start returning a subtly different shape, the
 search index could drift, and every existing test would still pass. The floors
-in ``tests/eval/test_search_quality.py`` are deliberately loose (60 % / 85 %)
-and would not catch a drop from the actual 78.4 % to, say, 62 %.
+that used to sit in ``tests/eval/`` were deliberately loose (60 % / 85 %) and
+would not have caught a drop from the actual 78.4 % to, say, 62 %; that module
+has since been deleted precisely because these pins subsume it.
+
+⚠️ **Scope, stated exactly.** What is recorded is ``catalog.load_schema()`` —
+the data-layer projection — not the ``get_schema`` *tool*. The bounding layer
+between them (``_bound_schema_lists``, the ``list_limit`` default of 25, the
+``*Truncated`` markers) is what an agent actually receives, and it is **not** in
+this net. It is covered by ``tests/unit/test_schema_bounds.py``, which asserts
+it at the tool level. An earlier version of this docstring said this file
+protected ``get_schema()``; it protects the layer underneath it.
 
 This module records what the implementation *actually does today*, so that
 ``test_baseline.py`` can assert the new data layer reproduces it exactly.

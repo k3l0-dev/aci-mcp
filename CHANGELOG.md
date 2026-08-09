@@ -9,6 +9,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Added
 
+- **What a tool does when the backend fails.** `StubBackend` never raised — not
+  a 400, not a 500, not a timeout, not malformed JSON — so no integration test
+  saw a tool meet a failing backend. Fourteen tests now do, through a backend
+  that raises. The one that matters most is `count`: returning `{"count": 0}`
+  because the APIC refused the request is a wrong answer delivered with total
+  confidence, and the tool's own docstring tells an agent that a tool error "is
+  a failure to answer, not an answer of zero". Nothing enforced it. Same for
+  `get_by_dn`, which has a legitimate `{"found": false}` shape a failure must
+  not borrow — "no object exists there" and "I could not ask" lead an agent to
+  opposite conclusions. Mutation-tested: making either swallow its exception
+  fails five and four tests respectively.
+
+- **Startup and footprint budgets.** Both sit on the critical path of
+  `uvx niwashi-mcp` and neither was measured. Cold process, three runs:
+  **419 / 420 / 436 ms** for import plus a full index rebuild — against the
+  `descriptions_load_cold = 33.96` ms the recorded baseline still carries from
+  the pre-2.0 JSON path, an 11.5x regression written into a committed file
+  nobody read, because that file records timings without asserting them.
+  Resident footprint ~159 MB once the tokenised index is warm. Ceilings are
+  sanity bounds with 3-9x headroom for a slower runner, and the build-once
+  property is asserted as a ratio rather than a constant, since a constant only
+  passes on the machine it was calibrated on.
+
 - **The MCP contract is under test.** An entire class of defect had no coverage:
   what the server *advertises*. Every other test drives a tool function directly
   in Python, so none saw the tool list a client actually receives — names,
