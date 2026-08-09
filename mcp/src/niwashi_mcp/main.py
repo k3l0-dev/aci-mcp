@@ -90,6 +90,7 @@ from typing import Annotated, Any
 from dotenv import load_dotenv
 from fastmcp import Context, FastMCP
 from fastmcp.server.lifespan import lifespan
+from mcp.types import ToolAnnotations
 from pydantic import BeforeValidator
 
 from niwashi_mcp.apic.client import ApicClient
@@ -463,8 +464,21 @@ local lookups — always worth it when you are not already certain.
 
 # ── Tools ─────────────────────────────────────────────────────────────────────
 
+# Every tool here is READ-ONLY. `search_classes` and `get_schema` never leave the
+# process; `query`, `get_by_dn` and `count` issue GETs against the APIC and
+# nothing else — ApicClient has no POST path but the login. Saying so in the
+# tool annotations is not decoration: a client that does not know a tool is safe
+# has to assume it is not, and prompts the user on every single call. An agent
+# answering one question makes a dozen of these calls.
+#
+# Only `readOnlyHint` and `openWorldHint` are set. Per the MCP specification,
+# `destructiveHint` and `idempotentHint` are meaningful only when `readOnlyHint`
+# is false, so declaring them here would be noise that reads as rigour.
+_LOCAL_READ = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+_FABRIC_READ = ToolAnnotations(readOnlyHint=True, openWorldHint=True)
 
-@mcp.tool
+
+@mcp.tool(title="Search ACI classes", annotations=_LOCAL_READ)
 async def search_classes(
     keyword: str,
     ctx: Context,
@@ -504,7 +518,7 @@ async def search_classes(
     return results
 
 
-@mcp.tool
+@mcp.tool(title="Inspect an ACI class schema", annotations=_LOCAL_READ)
 async def get_schema(
     class_name: str,
     ctx: Context,
@@ -602,7 +616,7 @@ async def get_schema(
     return schema
 
 
-@mcp.tool
+@mcp.tool(title="Query ACI objects", annotations=_FABRIC_READ)
 async def query(
     class_name: str,
     ctx: Context,
@@ -810,7 +824,7 @@ async def query(
     }
 
 
-@mcp.tool
+@mcp.tool(title="Fetch one ACI object by DN", annotations=_FABRIC_READ)
 async def get_by_dn(
     dn: str,
     ctx: Context,
@@ -875,7 +889,7 @@ async def get_by_dn(
     return obj
 
 
-@mcp.tool
+@mcp.tool(title="Count ACI objects", annotations=_FABRIC_READ)
 async def count(
     class_name: str,
     ctx: Context,

@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a capability or an improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This server deliberately exposes **five generic tools** rather than one
+        per ACI object. That is the design, not an unfinished state: a small,
+        stable surface is what lets an agent reach all 15,452 classes without
+        hardcoded knowledge. Proposals that add a sixth tool need to say why the
+        five cannot express the need.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you were trying to do, and where it stopped. Not the solution yet.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you tried with the existing tools
+      description: >
+        Which of `search_classes`, `get_schema`, `query`, `get_by_dn`, `count`
+        you attempted, and why the result fell short.
+    validations:
+      required: true

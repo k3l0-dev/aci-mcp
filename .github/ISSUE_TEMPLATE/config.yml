@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Request an APIC release
+    url: https://github.com/k3l0-dev/niwashi-mcp/blob/main/SUPPORTED-APIC.md
+    about: Running an APIC other than the shipped 6.0(9c)? Add a row there in a pull request — one line, no data from your fabric.
+  - name: Question or idea
+    url: https://github.com/k3l0-dev/niwashi-mcp/discussions
+    about: Anything that is not a defect. Usage, design, or "is this supposed to work like this?"
+  - name: Report a vulnerability
+    url: https://github.com/k3l0-dev/niwashi-mcp/blob/main/SECURITY.md
+    about: Please do not open a public issue for security problems.

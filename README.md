@@ -1,6 +1,6 @@
 <div align="center">
 
-<h1>niwashi-mcp</h1>
+<h1>NIWASHI-MCP</h1>
 
 <img src="docs/assets/banner.jpg" alt="niwashi-mcp banner" width="800"/>
 
@@ -98,11 +98,11 @@ Edit `claude_desktop_config.json`:
 {
   "mcpServers": {
     "niwashi-mcp": {
-      "type": "http",
-      "url": "http://localhost:8000/mcp",
-      "headers": {
-        "Authorization": "Bearer <your-token>"
-      }
+      "command": "npx",
+      "args": [
+        "-y", "mcp-remote", "http://localhost:8000/mcp",
+        "--header", "Authorization: Bearer <your-token>"
+      ]
     }
   }
 }
@@ -110,7 +110,18 @@ Edit `claude_desktop_config.json`:
 
 Restart Claude Desktop. The server appears under **MCP** in the tool menu.
 
-> Omit `headers` when `MCP_API_KEYS` is unset (development only).
+> **Why the `mcp-remote` bridge and not `"type": "http"`.** This server speaks
+> MCP over HTTP, but `claude_desktop_config.json` takes a *local command* to
+> launch. Given a `"type": "http"` entry it reports *"not valid MCP server
+> configurations and were skipped"* — and it says so once, at startup, then
+> carries on with the server silently absent. `mcp-remote` is the standard
+> bridge: a local process that speaks stdio to the client and HTTP to us.
+> Measured against Claude Desktop on macOS, 2026-08-09.
+>
+> Drop the `--header` pair when `MCP_API_KEYS` is unset (development only).
+> Note the header is one argument, `Authorization: Bearer <token>` — splitting
+> it, or passing only the `Bearer …` half, produces a 401 the bridge reports as
+> a connection failure.
 
 #### Claude Code (CLI)
 
@@ -127,23 +138,28 @@ claude mcp add niwashi-mcp --transport http http://localhost:8000/mcp \
 
 #### OpenCode
 
-Add to your project's `.opencode/config.json`:
+Add to `~/.config/opencode/opencode.json` to reach the server from any project,
+or to `.opencode/opencode.json` inside one project to scope it there:
 
 ```json
 {
   "mcp": {
-    "servers": {
-      "niwashi-mcp": {
-        "type": "http",
-        "url": "http://localhost:8000/mcp",
-        "headers": {
-          "Authorization": "Bearer <your-token>"
-        }
+    "niwashi-mcp": {
+      "type": "remote",
+      "url": "http://localhost:8000/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer <your-token>"
       }
     }
   }
 }
 ```
+
+Verify with `opencode mcp list`; the entry should read `connected`. OpenCode
+merges the global and project files, so declaring the same server in both under
+*different* names registers it twice and the agent sees ten tools instead of
+five — which is exactly the ambiguity the five-tool surface exists to avoid.
 
 #### Cursor, Windsurf, any other client
 
@@ -167,7 +183,7 @@ how to read a schema, how DNs are built, and when to reach for each tool.
 |---|---|
 | Claude Desktop / Projects | Paste `SKILL.md` into the project instructions |
 | Claude Code | `cp mcp/client/SKILL.md .claude/niwashi-mcp.md` |
-| OpenCode | `cp mcp/client/SKILL.md .opencode/skills/niwashi-mcp/SKILL.md` |
+| OpenCode | `cp mcp/client/SKILL.md ~/.config/opencode/skills/niwashi-mcp-query/SKILL.md` (or `.opencode/skills/…` per project). The directory name must match the skill's `name:` field, and it must sit beside the server declaration — tools without the skill is the failure this file exists to prevent |
 | Anything else | Paste it into the system prompt or context file |
 
 Then ask:
@@ -199,6 +215,12 @@ unchanged; only the source of the data moved.
 
 The APIC release is now pinned by the `niwaki` dependency rather than chosen by
 whoever ran the collector, which is why the server logs it at startup.
+
+**If your fabric runs a different release**, most of it still works — the object
+model is stable across trains. What does not is narrow but quiet: classes added,
+removed or renamed in your release come back empty rather than erroring, which
+looks exactly like "there are none". [`SUPPORTED-APIC.md`](SUPPORTED-APIC.md)
+explains the symptom, and is where you request a release in one line.
 
 ### Why two class counts
 
