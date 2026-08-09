@@ -9,6 +9,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Added
 
+- **Seven guards that a green suite could not tell were broken.** A targeted
+  mutation pass over the client and the `query` tool found seven places where a
+  plausible edit passed all 539 tests. None was a defect — the code is correct
+  at every one of them — but nothing would have noticed them becoming one, and
+  five sit on the path where the caller receives fewer objects than match and
+  the envelope does not say so.
+
+  The blocker was `StubBackend`: it hardcoded `complete=True` on both return
+  paths, so the branch of `query` that tells an agent *"I fetched 200 of 99,999
+  objects before hitting the safety cap"* was unreachable from any integration
+  test. Deleting that note and its warning outright left the suite green. The
+  stub now takes `cap_at` and can express the state.
+
+  Also pinned: `truncated` computed on the clamped limit rather than the
+  requested one (raw `limit=500, page=2` over 1,000 matches reports
+  `truncated=false` and `next_page=null`, stopping a documented paging loop 400
+  objects short); a 403 on the *data* path re-authenticating and retrying, which
+  only `/aaaLogin` had ever exercised; `_MAX_PAGES` and `_MAX_OBJECTS` holding
+  their values, since every other cap test imports the constants and so measures
+  only that the loop obeys them — 25 → 250 and 5000 → 50000 both passed; and a
+  non-numeric `totalCount` falling back rather than reporting zero, which is
+  half of what that function's docstring already promised.
+
+  Each of the seven was broken deliberately and fails the test written for it.
+  No production code changed.
+
 - **The five tools declare themselves read-only.** `search_classes` and
   `get_schema` never leave the process; `query`, `get_by_dn` and `count` issue
   GETs against the APIC and nothing else. None of that was stated anywhere a

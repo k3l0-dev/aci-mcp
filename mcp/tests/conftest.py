@@ -219,8 +219,23 @@ class StubBackend:
         {"modTs", "lcOwn", "monPolDn", "childAction", "extMngdBy", "uid", "rn"}
     )
 
-    def __init__(self, imdata: list[dict]):
+    def __init__(self, imdata: list[dict], *, cap_at: int | None = None):
+        """
+        Args:
+            imdata: raw APIC objects the stub serves.
+            cap_at: when set, `query_class` reports the safety cap — it returns
+                at most this many objects with ``complete=False`` while
+                ``total_available`` keeps the true match count.
+
+                Without it the stub could only ever answer ``complete=True``,
+                on both return paths, so the branch in the `query` tool that
+                tells an agent "I fetched N of M before hitting the cap" was
+                unreachable from any integration test. That note is the one
+                thing an agent has to read to know its answer is incomplete,
+                and deleting it left the whole suite green.
+        """
         self._data = imdata
+        self._cap_at = cap_at
         self.calls: list[dict] = []
 
     def _emit(
@@ -334,6 +349,12 @@ class StubBackend:
         total_available = len(results)
 
         if fetch_all:
+            if self._cap_at is not None:
+                return QueryResult(
+                    objects=results[: self._cap_at],
+                    total_available=total_available,
+                    complete=False,
+                )
             return QueryResult(
                 objects=results, total_available=total_available, complete=True
             )
