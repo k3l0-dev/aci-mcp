@@ -1,0 +1,86 @@
+name: Bug report
+description: Something behaves differently from what the documentation says
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: an **empty result** is usually not a bug. The APIC returns
+        nothing — not an error — for a class it does not know, so an empty result
+        most often means the class name is wrong, the filter attribute does not
+        exist on that class, or the shipped catalogue describes a different APIC
+        release than your fabric. See [SUPPORTED-APIC.md](../blob/main/SUPPORTED-APIC.md).
+
+        If that is what you are hitting, the APIC release fields below are the
+        ones that matter most.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: >
+        The tool call if you have it — name and arguments — or the question you
+        asked your agent. Redact tenant names, DNs and addresses freely; the
+        shape matters more than the values.
+      placeholder: |
+        query(class_name="fvBD", filters={"name": "servers"}, scope_dn="uni/tn-XXX")
+        → {"results": [], "returned": 0, "total_available": 0, ...}
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: niwashi-mcp version
+      placeholder: "2.1.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: startup-log
+    attributes:
+      label: Startup log line
+      description: >
+        The `Registry loaded` line the server prints at startup. It names the
+        catalogue's APIC release, which is the first thing to check against your
+        own.
+      placeholder: "Registry loaded — 15239 class descriptions (niwaki catalogue, APIC 6.0(9c))"
+      render: text
+    validations:
+      required: true
+
+  - type: input
+    id: apic-release
+    attributes:
+      label: Your APIC release
+      description: "`acidiag version`, or the APIC UI. Say `unknown` if you cannot check."
+      placeholder: "6.0(9c)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: MCP client
+      options:
+        - Claude Desktop
+        - Claude Code
+        - OpenCode
+        - Cursor
+        - Other / direct HTTP
+    validations:
+      required: true
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else
+      description: Server logs, the full tool response, or what you already ruled out.
