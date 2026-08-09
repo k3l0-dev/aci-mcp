@@ -66,8 +66,6 @@ from niwashi_mcp.registry.descriptions import search as desc_search
 
 BASELINE_PATH = _HERE / "baseline.json"
 _REPO_ROOT = _MCP_ROOT.parent
-_SCHEMAS_DIR = _REPO_ROOT / "data" / "schemas"
-_DESCRIPTIONS = _REPO_ROOT / "data" / "class-descriptions.json"
 _GOLDEN = _MCP_ROOT / "tests" / "fixtures" / "search_golden.json"
 
 # A stratified sample, not a random one. Each class is here because it exercises

@@ -4,7 +4,6 @@
 """Unit tests for registry.descriptions.search (v2 scoring)."""
 
 
-import pytest
 
 from niwashi_mcp.registry.descriptions import search
 
@@ -208,14 +207,29 @@ def test_class_without_label_returns_empty_string_for_label():
 
 
 def test_metadata_with_none_values_does_not_crash():
-    # A schema entry with an explicit null label/comment (as opposed to the
-    # key being absent) still crashes — documents the gap for a future fix,
-    # same as under the v1 implementation.
-    descriptions_with_none = {
-        "fvBD": {"label": None, "comment": None},
-    }
-    with pytest.raises((AttributeError, TypeError)):
-        search("fvBD", descriptions_with_none)
+    """An explicit null label or comment must not crash the search.
+
+    The test previously asserted the opposite of its own name — it required an
+    AttributeError, "documenting the gap for a future fix". A test named after a
+    fix that fails when the fix lands is worse than no test: whoever makes the
+    code robust sees a red suite and assumes they broke something.
+
+    The gap is closed instead. The catalogue never emits a null here, but
+    `search()` takes a caller's dict and should not answer a malformed entry
+    with a traceback three frames down.
+    """
+    # A class with no searchable text at all: null label, null comment, and no
+    # entry in the curated jargon table. It must not crash, and must not match.
+    assert search("bridge domain", {"zzzNoText": {"label": None, "comment": None}}) == []
+
+    # Partly null still matches on the half that is there.
+    results = search("bridge domain", {"zzzNoText": {"label": "Bridge Domain", "comment": None}})
+    assert [r["class_name"] for r in results] == ["zzzNoText"]
+
+    # And a null label on a class the jargon table knows still resolves through
+    # it — `_JARGON["fvBD"] = "bridge domain"` is text, so this is a match, not
+    # a crash. Asserting it here so the jargon path is not mistaken for the bug.
+    assert [r["class_name"] for r in search("bridge domain", {"fvBD": {"label": None}})] == ["fvBD"]
 
 
 def test_limit_zero_clamped_to_one():

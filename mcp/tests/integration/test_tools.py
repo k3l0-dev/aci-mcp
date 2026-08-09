@@ -2,7 +2,8 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
 """
-Integration tests for the three MCP tools: search_classes, get_schema, query.
+Integration tests for the five MCP tools: search_classes, get_schema, query,
+get_by_dn, count.
 
 Uses StubBackend and MINIMAL_DESCRIPTIONS from conftest so tests always run
 without a live APIC or the full data/ schema collection.
@@ -49,6 +50,9 @@ async def test_search_classes_result_shape(tool_ctx):
     from niwashi_mcp.main import search_classes
 
     results = await search_classes("tenant", tool_ctx)
+    # Non-empty first: a `for` over an empty list asserts nothing, and an empty
+    # result is exactly what a broken search returns.
+    assert results, "search_classes returned nothing for a term in the fixture"
     for r in results:
         assert "class_name" in r
         assert "label" in r
@@ -152,6 +156,11 @@ async def test_get_schema_unknown_class_logs_warning(tool_ctx):
 
     await get_schema("nonExistentClassXYZ", tool_ctx)
     tool_ctx.warning.assert_called_once()
+    # ctx.warning reaches the MCP client as a log notification, so it is agent-
+    # visible text, not a debug aid. Assert what it says: "a mock was called" is
+    # true of any message, including an empty one.
+    msg = tool_ctx.warning.call_args.args[0]
+    assert "nonExistentClassXYZ" in msg and "not found" in msg
 
 
 @pytest.mark.asyncio
@@ -192,6 +201,7 @@ async def test_query_result_has_class_key(tool_ctx):
     envelope = await query("fvBD", tool_ctx)
     results = envelope["results"]
     assert all("_class" in r for r in results)
+    assert results, "query returned nothing — `all(...)` below is vacuous on []"
     assert all(r["_class"] == "fvBD" for r in results)
 
 
@@ -499,6 +509,8 @@ async def test_query_unknown_class_logs_warning(tool_ctx):
     with pytest.raises(UnknownClassError):
         await query("xyzFakeClass", tool_ctx)
     tool_ctx.warning.assert_called_once()
+    msg = tool_ctx.warning.call_args.args[0]
+    assert "unknown class" in msg.lower() and "xyzFakeClass" in msg
 
 
 @pytest.mark.asyncio
@@ -615,6 +627,8 @@ async def test_get_by_dn_not_found_logs_warning(tool_ctx):
 
     await get_by_dn("uni/tn-OT/BD-doesNotExist", tool_ctx)
     tool_ctx.warning.assert_called_once()
+    msg = tool_ctx.warning.call_args.args[0]
+    assert "uni/tn-OT/BD-doesNotExist" in msg and "not found" in msg
 
 
 @pytest.mark.asyncio
@@ -690,6 +704,8 @@ async def test_count_unknown_class_logs_warning(tool_ctx):
     with pytest.raises(UnknownClassError):
         await count("xyzFakeClass", tool_ctx)
     tool_ctx.warning.assert_called_once()
+    msg = tool_ctx.warning.call_args.args[0]
+    assert "unknown class" in msg.lower() and "xyzFakeClass" in msg
 
 
 

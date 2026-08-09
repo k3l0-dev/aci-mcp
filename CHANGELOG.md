@@ -9,6 +9,42 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Changed
 
+- **The rest of the audit's bogus-test list — deleted or rebuilt, none left as
+  they were.** Two had no reason to exist; the other five were necessary and
+  badly built.
+
+  Deleted: `tests/eval/` in full. It asserted Recall@1 >= 0.60 and
+  Recall@5 >= 0.85 against an implementation delivering 0.784 / 0.946 — floors
+  so far below reality that its own docstring's claim, that it would catch
+  removing the `isConfigurable` prior, is measurably false: removing it drops
+  R@1 to 71.6 % and the module still passed. Of twelve scoring mutants it killed
+  two; `tests/baseline/` kills twelve, because it asserts the metrics and every
+  query's exact top-5 as equalities. Its one non-redundant check, that the
+  golden set has not shrunk, is folded into `test_search_source.py`. Also
+  deleted: two constants in `baseline/capture.py` pointing at `data/` paths
+  removed in 2.0, and five contentless `ctx.warning.assert_called_once()`
+  assertions replaced rather than dropped — those warnings reach the MCP client
+  as log notifications, so they are agent-visible text and their content is the
+  contract.
+
+  Rebuilt: `test_query_and_count_both_validate` counted a substring in
+  `main.py`'s source, which passes on a comment, passes on a call in dead code,
+  and fails on a benign refactor — factoring the shared guard into one helper
+  would have broken it while improving the code. It now patches
+  `catalog.class_exists` and asserts neither tool reaches the backend for a
+  rejected class. `test_metadata_with_none_values_does_not_crash` required an
+  `AttributeError`, asserting the opposite of its own name and guaranteeing that
+  whoever fixed the gap would see a red suite; the gap is closed in
+  `_build_entry` instead and the test asserts what it is called.
+  `test_empty_filter_is_fastest` measured two paths and then asserted two
+  unrelated constants — the comparison in its name was never made; renamed to
+  what it checks. Two `all(...)` assertions were vacuous on an empty list, which
+  is exactly what a broken call returns; they now assert non-empty first. And
+  `test_awkward_shapes_match_exactly` skipped whichever of its twelve difficult
+  classes were missing from the frozen fixtures; it now asserts that set is
+  exactly the four known to be absent, so a fixture dropping out fails loudly
+  rather than shrinking the test in silence.
+
 - **Six tests that passed for the wrong reason now assert what they claim.**
   Found by the audit, each verified by breaking the thing it guards:
 

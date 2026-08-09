@@ -88,10 +88,21 @@ class TestSchemaParity:
         ``actionAeSubj`` is excluded here and asserted separately: it carries a
         ``mo:*`` register whose options the catalogue drops on purpose.
         """
+        # Assert the skipped set is EXACTLY the four known to be absent from the
+        # frozen fixtures, rather than skipping "whatever is missing". A fixture
+        # quietly dropping out of the bundle would otherwise shrink this test in
+        # silence — the docstring says "every deliberately-chosen difficult
+        # class", and it should stop being true loudly.
+        skipped = {c for c in AWKWARD_CLASSES if c not in frozen_classes}
+        assert skipped == {"faultInst", "faultDelegate", "actionAeSubj", "tagTag"}, (
+            f"the set of classes this test cannot check has changed: {sorted(skipped)}. "
+            f"They are covered by baseline digests instead; update both together."
+        )
+
         failures = []
         for cls in AWKWARD_CLASSES:
-            if cls not in frozen_classes:
-                continue  # monsters and mo:* registers are covered by baseline digests
+            if cls in skipped:
+                continue  # covered by tests/baseline/ digests, asserted above
             old = jsonmeta_oracle.project(cls, include_property_details=True)
             new = catalog.load_schema(cls, include_property_details=True)
             if old != new:

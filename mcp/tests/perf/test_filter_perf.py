@@ -43,7 +43,16 @@ def test_10k_calls_with_5_filters():
     )
 
 
-def test_empty_filter_is_fastest():
+def test_filter_construction_stays_trivial():
+    """Renamed: it never compared anything.
+
+    It was `test_empty_filter_is_fastest`, measured both paths, and then
+    asserted two unrelated absolute ceilings — the comparison its name promised
+    was never made. Asserting `t_empty < t_one` would honour the name but at
+    this scale both are noise-dominated string work, so the ordering is a flaky
+    assertion about nothing. The ceilings are the real content; the name now
+    says so.
+    """
     t_empty = time.perf_counter()
     for _ in range(10_000):
         build_filter("fvBD", {})

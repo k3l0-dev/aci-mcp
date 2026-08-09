@@ -21,7 +21,15 @@ from __future__ import annotations
 
 import pytest
 
+from niwashi_mcp.exceptions import UnknownClassError
 from niwashi_mcp.registry import catalog
+from tests.conftest import MINIMAL_DESCRIPTIONS, StubBackend, make_ctx
+
+
+def _ctx(imdata):
+    return make_ctx(
+        {"descriptions": dict(MINIMAL_DESCRIPTIONS), "backend": StubBackend(imdata)}
+    )
 
 pytestmark = pytest.mark.catalog
 
@@ -98,12 +106,32 @@ class TestValidationIsWiredIntoTheTools:
 
         return Path(main.__file__).read_text()
 
-    def test_query_and_count_both_validate(self):
-        source = self._main_source()
-        assert source.count("catalog.class_exists(class_name)") == 2, (
-            "query() and count() must each validate — they cannot be allowed to "
-            "disagree on whether a class is known"
-        )
+    @pytest.mark.asyncio
+    async def test_query_and_count_both_validate(self, sample_imdata):
+        """Both tools must consult the catalogue, and neither may reach the
+        backend for a class it does not know.
+
+        This used to `assert source.count("catalog.class_exists(class_name)") == 2`.
+        Counting a substring in the source passes on a comment, passes on a call
+        in dead code, and fails on a benign refactor — factoring the shared guard
+        into one `_validate()` helper would have broken it while improving the
+        code. Assert the behaviour instead.
+        """
+        from unittest.mock import patch
+
+        from niwashi_mcp.main import count, query
+
+        for tool in (query, count):
+            ctx = _ctx(sample_imdata)
+            with patch(
+                "niwashi_mcp.main.catalog.class_exists", return_value=False
+            ) as guard, pytest.raises(UnknownClassError):
+                await tool("fvBD", ctx)
+            guard.assert_called_once_with("fvBD")
+            assert not ctx.lifespan_context["backend"].calls, (
+                f"{tool.__name__} reached the backend for a class the catalogue "
+                f"rejected — the APIC answers that with an empty result, not an error"
+            )
 
     def test_the_two_tier_fallback_is_gone(self):
         """No warning path left that admits a class the index does not know."""

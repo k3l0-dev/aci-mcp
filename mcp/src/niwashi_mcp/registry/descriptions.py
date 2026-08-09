@@ -186,8 +186,13 @@ def _build_entry(cls: str, meta: dict[str, str]) -> dict:
     Isolated so `_get_index()` can build all 15k+ entries once and cache the
     result — see the module docstring for why this matters for latency.
     """
-    label = meta.get("label", "")
-    comment = meta.get("comment", "")
+    # `or ""` rather than a default: an entry can carry an explicit null label
+    # or comment, and `.get(k, "")` returns the None, not the default. The
+    # catalogue never emits one — `descriptions_index()` omits empty keys — but
+    # `search()` is a public function taking a caller's dict, and crashing with
+    # an AttributeError three frames down is a poor answer to a malformed entry.
+    label = meta.get("label") or ""
+    comment = meta.get("comment") or ""
     prop_labels = meta.get("prop_labels") or []
     jargon = _JARGON.get(cls, "")
 

@@ -4,7 +4,7 @@
 """
 tests/
 
-The niwashi-mcp test suite is organized into five categories, each with a
+The niwashi-mcp test suite is organized into six categories, each with a
 distinct purpose and a distinct relationship to CI:
 
   unit/         Pure-logic tests with no I/O — registry/filter.py,
@@ -50,13 +50,20 @@ distinct purpose and a distinct relationship to CI:
 
   perf/         Latency/throughput budget tests against synthetic
                 production-scale data (15k+ classes, 1000-object responses,
-                200+ schema files) — catches performance regressions in the
+                and the real niwaki catalogue) — catches performance regressions in the
                 hot paths (schema loading, filter building, search scoring),
                 not correctness regressions.
 
-  eval/         Search-quality gate — runs the golden-set evaluation
-                (tests/eval_search.py) as a pytest test with a floor on
-                Recall@1/Recall@5, so a scoring regression in
-                registry.descriptions.search() fails CI instead of only
-                showing up in an offline report.
+  baseline/     Recorded behaviour, asserted as EQUALITY rather than as a
+                floor: the descriptions index by digest, get_schema() for 38
+                stratified classes, and the exact top-5 of all 74 golden
+                queries. Built as the anti-drift net for the 2.0 data-layer
+                migration and kept because equality catches what a floor
+                cannot. It replaced eval/, whose Recall@1 >= 0.60 floor sat so
+                far under the delivered 0.784 that it killed two of twelve
+                scoring mutants where these pins kill all twelve.
+
+  live/         Requires a reachable APIC. Gated behind the `live` marker and
+                excluded from the default run by addopts, so a plain
+                `uv run pytest` never touches the network.
 """

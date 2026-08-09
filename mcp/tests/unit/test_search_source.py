@@ -201,3 +201,30 @@ class TestLifespanUsesTheCatalogue:
         changes the object model an agent reasons about with no trace.
         """
         assert "catalog.apic_version()" in self._main_source()
+
+
+# ── the golden set itself ─────────────────────────────────────────────────────
+
+
+def test_golden_set_has_meaningful_size():
+    """Guards against the golden set silently shrinking.
+
+    Folded in from `tests/eval/test_search_quality.py`, which was deleted. That
+    module asserted Recall@1 >= 0.60 and Recall@5 >= 0.85 against an
+    implementation delivering 0.784 / 0.946 — floors so far below the real
+    figures that its own docstring's claim (that it would catch removing the
+    `isConfigurable` prior) was measurably false: removing it drops R@1 to 71.6 %
+    and the test still passed. Of twelve scoring mutants it killed two;
+    `tests/baseline/` kills all twelve, because it asserts the metrics and the
+    exact top-5 of every query as *equalities* rather than floors.
+
+    This check was the one thing in that module the baseline does not restate:
+    a golden set trimmed to a handful of queries could be satisfied by a change
+    that does not generalise.
+    """
+    import json
+    from pathlib import Path
+
+    golden = Path(__file__).resolve().parents[1] / "fixtures" / "search_golden.json"
+    queries = json.loads(golden.read_text())["queries"]
+    assert len(queries) >= 50, f"golden set shrank to {len(queries)} queries"
