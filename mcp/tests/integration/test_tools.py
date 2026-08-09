@@ -8,7 +8,6 @@ Uses StubBackend and MINIMAL_DESCRIPTIONS from conftest so tests always run
 without a live APIC or the full data/ schema collection.
 """
 
-from pathlib import Path
 
 import pytest
 
@@ -62,7 +61,7 @@ async def test_search_classes_limit_capped_at_50(tool_ctx):
 
     # Requesting 999 — must be capped at 50
     results = await search_classes("a", tool_ctx, limit=999)
-    assert len(results) <= 50
+    assert len(results) == 50  # equality: `<= 50` passed for any ceiling below it
 
 
 @pytest.mark.asyncio
@@ -70,7 +69,7 @@ async def test_search_classes_limit_respected(tool_ctx):
     from niwashi_mcp.main import search_classes
 
     results = await search_classes("a", tool_ctx, limit=2)
-    assert len(results) <= 2
+    assert len(results) == 2
 
 
 # ── search_classes — limit boundary values (0, -1, 1, cap, cap+1) ────────────
@@ -107,7 +106,7 @@ async def test_search_classes_limit_at_cap_50_respected(tool_ctx):
     from niwashi_mcp.main import search_classes
 
     results = await search_classes("a", tool_ctx, limit=50)
-    assert len(results) <= 50
+    assert len(results) == 50  # equality: `<= 50` passed for any ceiling below it
 
 
 @pytest.mark.asyncio
@@ -115,7 +114,7 @@ async def test_search_classes_limit_cap_plus_one_still_capped_at_50(tool_ctx):
     from niwashi_mcp.main import search_classes
 
     results = await search_classes("a", tool_ctx, limit=51)
-    assert len(results) <= 50
+    assert len(results) == 50  # equality: `<= 50` passed for any ceiling below it
 
 
 @pytest.mark.asyncio
@@ -156,11 +155,11 @@ async def test_get_schema_unknown_class_logs_warning(tool_ctx):
 
 
 @pytest.mark.asyncio
-@pytest.mark.skipif(
-    not Path(__file__).parent.parent.parent.parent.joinpath("data", "schemas").exists(),
-    reason="schemas/ collection not available",
-)
 async def test_get_schema_known_class_returns_required_fields(tool_ctx):
+    # The skipif here guarded a `data/schemas` directory that 2.0 deleted and
+    # .gitignore excludes, so it skipped in CI and in any clean checkout —
+    # measured on `git archive HEAD`: 1 skipped, this one. The body needs no
+    # such directory; the catalogue ships inside the niwaki dependency.
     from niwashi_mcp.main import get_schema
 
     schema = await get_schema("fvBD", tool_ctx)
@@ -221,7 +220,12 @@ async def test_query_limit_capped_at_200(tool_ctx):
     from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=9999)
-    assert len(envelope["results"]) <= 200
+    # The clamp, asserted where it acts. `len(results) <= 200` held on a
+    # three-object fixture whatever the ceiling was — including none at all.
+    assert tool_ctx.lifespan_context["backend"].calls[-1]["limit"] == 200
+    # …and the envelope still describes the fixture it actually got.
+    assert envelope["returned"] == len(envelope["results"])
+    assert envelope["returned"] <= envelope["total_available"]
 
 
 @pytest.mark.asyncio
@@ -280,7 +284,12 @@ async def test_query_limit_at_cap_200_respected(tool_ctx):
     from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=200)
-    assert len(envelope["results"]) <= 200
+    # The clamp, asserted where it acts. `len(results) <= 200` held on a
+    # three-object fixture whatever the ceiling was — including none at all.
+    assert tool_ctx.lifespan_context["backend"].calls[-1]["limit"] == 200
+    # …and the envelope still describes the fixture it actually got.
+    assert envelope["returned"] == len(envelope["results"])
+    assert envelope["returned"] <= envelope["total_available"]
 
 
 @pytest.mark.asyncio
@@ -288,7 +297,12 @@ async def test_query_limit_cap_plus_one_still_capped_at_200(tool_ctx):
     from niwashi_mcp.main import query
 
     envelope = await query("fvBD", tool_ctx, limit=201)
-    assert len(envelope["results"]) <= 200
+    # The clamp, asserted where it acts. `len(results) <= 200` held on a
+    # three-object fixture whatever the ceiling was — including none at all.
+    assert tool_ctx.lifespan_context["backend"].calls[-1]["limit"] == 200
+    # …and the envelope still describes the fixture it actually got.
+    assert envelope["returned"] == len(envelope["results"])
+    assert envelope["returned"] <= envelope["total_available"]
 
 
 @pytest.mark.asyncio
@@ -356,7 +370,13 @@ async def test_query_truncated_true_reports_total_and_note(tool_ctx):
     assert envelope["returned"] == 2
     assert envelope["total_available"] == 3
     assert envelope["truncated"] is True
-    assert envelope["note"] is not None
+    # Assert what the note SAYS, not that a string exists. Replacing the whole
+    # note with "ok" passed. It is the only text telling an agent not to read a
+    # partial page as a maximum, a total, or a complete list.
+    note = envelope["note"]
+    assert "Do not conclude" in note
+    assert "fetch_all=True" in note
+    assert f"{envelope['returned']} of {envelope['total_available']}" in note
     assert envelope["next_page"] == 1
     assert envelope["complete"] is True
 

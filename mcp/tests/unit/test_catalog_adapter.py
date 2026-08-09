@@ -282,15 +282,23 @@ class TestWireOnlyBoundary:
 
         Sampled across configurable classes, which is where filters are used.
         """
-        con = catalog._connect()
-        rows = con.execute(
+        # Actually swept. The previous version said "swept" and did
+        # `LIMIT 4000` then `[:150]` — 150 of 3,010 configurable classes, 5 %,
+        # chosen by an unordered SELECT. The whole sweep costs ~0.12 s, so the
+        # sampling bought nothing and cost the guarantee the docstring claimed.
+        rows = catalog._query(
             "SELECT m.class_name, p.wire_name FROM prop p JOIN mo m ON m.id = p.class_id "
-            "WHERE m.is_configurable = 1 LIMIT 4000"
-        ).fetchall()
+            "WHERE m.is_configurable = 1"
+        )
         by_class: dict[str, set[str]] = {}
         for cls, wire in rows:
             by_class.setdefault(cls, set()).add(wire)
-        for cls, wires in list(by_class.items())[:150]:
+
+        assert len(by_class) > 2_500, (
+            f"only {len(by_class)} configurable classes reached the sweep — "
+            f"the query stopped covering the corpus"
+        )
+        for cls, wires in by_class.items():
             exposed = set(catalog.load_schema(cls)["properties"])
             assert exposed <= wires, f"{cls} exposed non-wire names: {sorted(exposed - wires)}"
 

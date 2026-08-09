@@ -7,7 +7,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
-Nothing yet.
+### Changed
+
+- **Six tests that passed for the wrong reason now assert what they claim.**
+  Found by the audit, each verified by breaking the thing it guards:
+
+  - Three clamp tests asserted `len(results) <= 200` against a three-object
+    fixture — true whether the ceiling was 200, 9,999, or absent. They now
+    assert the clamped value that reaches the backend, and still check the
+    envelope describes what came back. Removing `query`'s clamp fails seven.
+  - Four search-limit tests used `<= 50` where any lower ceiling also passed; a
+    regression to 10 was invisible. Now equalities.
+  - The truncation-note test asserted `note is not None`. Replacing the entire
+    note with `"ok"` passed — and that note is the only text telling an agent
+    not to read a partial page as a total. It now asserts what the note says.
+  - `test_no_readable_name_leaks_across_configurable_classes` said "swept, not
+    spot-checked" and covered 150 of 3,010 configurable classes (5 %), picked by
+    an unordered `SELECT ... LIMIT 4000`. The full sweep costs ~0.12 s, so the
+    sampling bought nothing and cost the guarantee. It sweeps, and asserts its
+    own coverage.
+  - `test_get_schema_known_class_returns_required_fields` carried a `skipif` on
+    a `data/schemas` directory that 2.0 deleted and `.gitignore` excludes, so it
+    skipped in CI and in every clean checkout. Measured on `git archive HEAD`:
+    one skip, this test. The body never needed the directory.
 
 ---
 
