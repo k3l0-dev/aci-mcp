@@ -144,7 +144,7 @@ Rules:
 
 ## 4. Schema anatomy
 
-`get_schema(class_name)` returns the APIC jsonmeta schema, simplified.
+`get_schema(class_name)` returns the ACI object model for that class, simplified.
 Here is what each field means and how to use it:
 
 ### `identifiedBy` — primary key within the parent scope
@@ -276,7 +276,6 @@ Per-property fields (only `type` and `access` are always present):
 | `type` | ACI model type, e.g. `scalar:Bool`, `fv:RouteScp` |
 | `access` | `read-write` · `create-only` (immutable after create) · `read-only` (never settable) |
 | `naming` | present when the property is part of the DN (an identifier) |
-| `mandatory` | present when the property is required on create |
 | `default` | the default value, when declared |
 | `options` | allowed values — the **exact strings** the APIC accepts in `filters` and config |
 | `comment` | one-line description |
@@ -877,7 +876,7 @@ a sample object without filters to observe the actual values in context.
 | `query` returns `results: []`, class is valid | Object absent from backend OR wrong filter value — this applies even to an abstract class (`isAbstract: true`): querying one returns the union of its concrete subclasses' instances, not an automatic `[]` | Remove filters first to confirm objects exist, then re-add filters |
 | `query` returns `truncated: true` | This call only returned part of the matching set (`returned < total_available`) | Partial data — do not conclude a maximum, minimum, total, or complete list from it. Re-run with `fetch_all=True`, or page with `page`/`limit` until `truncated` is `false` |
 | `search_classes` returns no results | Keyword too specific | Try acronym, English label, or first 3 chars of the expected class name |
-| `get_schema` returns `{}` | Class not in local schema collection | Query without filters, inspect `properties` of a sample result |
+| `get_schema` returns `{}` | No such class in the catalogue — lookup is exact and case-sensitive (`fvBd` is not `fvBD`) | Query without filters, inspect `properties` of a sample result |
 | `_children` is empty despite `include_children` | Children don't exist under that parent, or wrong child class name | Query child class directly with scope_dn to verify |
 | `get_by_dn` returns `{"found": false, ...}` | DN is stale, mistyped, or the object was deleted | Re-derive the DN from a fresh `query` result — never reconstruct it from memory |
 | `count` disagrees with a follow-up `query` | Read taken mid-materialisation after a config push | Wait for stabilisation and re-read (eventual consistency, section 7) |

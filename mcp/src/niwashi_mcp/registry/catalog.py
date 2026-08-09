@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 import zlib
 from functools import lru_cache
 from pathlib import Path
@@ -81,6 +82,49 @@ def catalog_path() -> Path:
     return Path(niwaki.__file__).parent / "query" / "_catalog" / "catalog.db"
 
 
+# One lock around every statement executed on the shared connection.
+#
+# `check_same_thread=False` below says the connection may cross threads; the
+# earlier claim that this was "safe under SQLite's default serialised threading
+# mode" was wrong, and wrong in the worst direction. SQLite serialises its own
+# internals, but `sqlite3.Connection` keeps a per-connection prepared-statement
+# cache that does not. Measured on this catalogue, `load_schema` under a thread
+# pool, 3 repetitions per cell:
+#
+#     1 thread  ·   600 calls  ·  0 exceptions ·   0 wrong schemas
+#     4 threads ·  2400 calls  ·  21 (0.9 %)   ·  29 silently wrong
+#    16 threads ·  9600 calls  · 192 (2.0 %)   · 333 (3.5 %) silently wrong
+#
+# "Silently wrong" means a schema whose digest differs from the single-threaded
+# reference **with no exception raised**: the caller receives another class's
+# schema and cannot tell. For a server whose whole purpose is to stop an agent
+# from answering confidently about a fabric it misread, that is the failure mode
+# to eliminate rather than document.
+#
+# Isolated to the statement cache, not to SQLite: with the cache disabled 0/0,
+# with a thread-local connection 0/0, with this lock 0/0. The lock is also the
+# fastest of the three (0.040 s vs 0.089 s thread-local vs 0.150 s uncached at
+# 2,400 calls) and the only one that keeps a single copy of the string pools,
+# which is the property `_connect`'s cache exists to preserve.
+#
+# Nothing in `src/` spawns threads today — no `to_thread`, no
+# `ThreadPoolExecutor` — so this is latent. It stops being latent the moment a
+# tool moves a catalogue read off the event loop, or the server is deployed with
+# more than one worker.
+_DB_LOCK = threading.Lock()
+
+
+def _query(sql: str, params: tuple = ()) -> list:
+    """Run one statement on the shared connection, serialised.
+
+    Every read goes through here. Reaching for `_connect().execute(...)`
+    directly reintroduces the race — `test_catalog_concurrency.py` asserts this
+    module has no such call site.
+    """
+    with _DB_LOCK:
+        return _connect().execute(sql, params).fetchall()
+
+
 @lru_cache(maxsize=1)
 def _connect() -> sqlite3.Connection:
     """One read-only connection for the process.
@@ -106,7 +150,8 @@ def _connect() -> sqlite3.Connection:
 @lru_cache(maxsize=1)
 def _flag_bits() -> dict[str, int]:
     """Map flag name to bit value, from the manifest rather than by assumption."""
-    row = _connect().execute("SELECT value FROM manifest WHERE key='prop_flags'").fetchone()
+    rows = _query("SELECT value FROM manifest WHERE key='prop_flags'")
+    row = rows[0] if rows else None
     if not row:
         raise DescriptionsLoadError("catalogue manifest has no prop_flags entry")
     bits = {name: 1 << i for i, name in enumerate(row[0].split(","))}
@@ -125,7 +170,8 @@ def apic_version() -> str:
     Worth logging at startup: from 2.0 this is pinned by the niwaki dependency
     rather than chosen by the operator, and it changes on niwaki's schedule.
     """
-    row = _connect().execute("SELECT value FROM manifest WHERE key='apic_version'").fetchone()
+    rows = _query("SELECT value FROM manifest WHERE key='apic_version'")
+    row = rows[0] if rows else None
     return row[0] if row else "unknown"
 
 
@@ -184,9 +230,9 @@ def verify_catalogue() -> None:
     import niwaki
 
     version = getattr(niwaki, "__version__", "unknown")
-    conn = _connect()
+    _connect()  # opens (and validates the path) before any statement runs
 
-    present = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+    present = {r[0] for r in _query("SELECT name FROM sqlite_master WHERE type='table'")}
     for table, columns in _REQUIRED_TABLES.items():
         if table not in present:
             raise DescriptionsLoadError(
@@ -194,7 +240,7 @@ def verify_catalogue() -> None:
                 f"This server reads the catalogue's private schema; that release "
                 f"restructured it. Pin niwaki>=1.8,<1.9."
             )
-        have = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        have = {r[1] for r in _query(f"PRAGMA table_info({table})")}
         if missing := sorted(columns - have):
             raise DescriptionsLoadError(
                 f"niwaki {version}'s catalogue table '{table}' is missing {missing}. "
@@ -202,7 +248,7 @@ def verify_catalogue() -> None:
                 f"changed it. Pin niwaki>=1.8,<1.9."
             )
 
-    keys = {row[0] for row in conn.execute("SELECT key FROM manifest")}
+    keys = {r[0] for r in _query("SELECT key FROM manifest")}
     if missing := sorted(_REQUIRED_MANIFEST_KEYS - keys):
         raise DescriptionsLoadError(
             f"niwaki {version}'s catalogue manifest is missing {missing}."
@@ -255,8 +301,8 @@ def _unzip(blob: bytes | None, field: str = "blob") -> Any:
 def _pool(table: str, column: str, ident: int | None) -> str | None:
     if ident is None:
         return None
-    row = _connect().execute(f"SELECT {column} FROM {table} WHERE id=?", (ident,)).fetchone()
-    return row[0] if row else None
+    rows = _query(f"SELECT {column} FROM {table} WHERE id=?", (ident,))
+    return rows[0][0] if rows else None
 
 
 def _comment_text(comment_id: int | None) -> str | None:
@@ -304,10 +350,11 @@ def _index_comment(comment_id: int | None) -> str:
 
 def _class_row(class_name: str) -> sqlite3.Row | None:
     cols = ", ".join(c for c, _ in _SCALAR_COLUMNS)
-    return _connect().execute(
+    rows = _query(
         f"SELECT id, {cols}, label_id, residual, dn_formats FROM mo WHERE class_name = ?",
         (class_name,),
-    ).fetchone()
+    )
+    return rows[0] if rows else None
 
 
 def class_exists(class_name: str) -> bool:
@@ -319,9 +366,7 @@ def class_exists(class_name: str) -> bool:
     hazard structurally impossible, so the guard is now the storage engine
     rather than a hand-written comparison.
     """
-    return _connect().execute(
-        "SELECT 1 FROM mo WHERE class_name = ?", (class_name,)
-    ).fetchone() is not None
+    return bool(_query("SELECT 1 FROM mo WHERE class_name = ?", (class_name,)))
 
 
 def _project_property(row: sqlite3.Row, bits: dict[str, int]) -> dict[str, Any]:
@@ -396,8 +441,8 @@ def _project_property(row: sqlite3.Row, bits: dict[str, int]) -> dict[str, Any]:
 def _pool_blob(table: str, ident: int | None) -> bytes | None:
     if ident is None:
         return None
-    row = _connect().execute(f"SELECT content FROM {table} WHERE id=?", (ident,)).fetchone()
-    return row[0] if row else None
+    rows = _query(f"SELECT content FROM {table} WHERE id=?", (ident,))
+    return rows[0][0] if rows else None
 
 
 def load_schema(
@@ -479,11 +524,11 @@ def load_schema(
     # classes in the source. Always emitted, as [] when absent from storage.
     result["dnFormats"] = _unzip(dn_formats, "mo.dn_formats") or []
 
-    prop_rows = _connect().execute(
+    prop_rows = _query(
         "SELECT wire_name, comment_id, enum_id, base_type_id, model_type_id, "
         "default_val, flags FROM prop WHERE class_id = ?",
         (class_id,),
-    ).fetchall()
+    )
 
     if prop_rows:
         by_wire = {r[0]: r for r in prop_rows}
@@ -534,10 +579,10 @@ def _extract_prop_labels(class_id: int, bits: dict[str, int]) -> list[str]:
     list, in schema order — the reference file stores a list, and the search
     tokeniser depends on that shape.
     """
-    rows = _connect().execute(
+    rows = _query(
         "SELECT wire_name, label_id, flags FROM prop WHERE class_id = ?",
         (class_id,),
-    ).fetchall()
+    )
     hidden = bits.get("isHidden", 0)
     labels: list[str] = []
     seen: set[str] = set()
@@ -567,9 +612,9 @@ def descriptions_index() -> dict[str, dict[str, Any]]:
     """
     bits = _flag_bits()
     out: dict[str, dict[str, Any]] = {}
-    rows = _connect().execute(
+    rows = _query(
         "SELECT id, class_name, label_id, comment_id, is_configurable, is_abstract FROM mo"
-    ).fetchall()
+    )
 
     for class_id, name, label_id, comment_id, configurable, abstract in rows:
         entry: dict[str, Any] = {}

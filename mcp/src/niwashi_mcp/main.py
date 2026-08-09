@@ -528,8 +528,9 @@ async def get_schema(
 ) -> dict[str, Any]:
     """Return the structural schema for an ACI class.
 
-    Extracts the query-planning fields from the APIC jsonmeta schema file
-    for the given class.  The returned dict contains:
+    Reads the query-planning fields for the class from the ACI object-model
+    catalogue that ships inside the `niwaki` dependency — one SQLite file, no
+    directory to point at and nothing to download.  The returned dict contains:
 
       identifiedBy   — attribute(s) that uniquely identify an instance;
                         use these as filter keys in query()
@@ -574,7 +575,6 @@ async def get_schema(
       {"type": <ACI model type>,          # e.g. "scalar:Bool", "fv:RouteScp"
        "access": "read-write"|"create-only"|"read-only",
        "naming": true,                    # only when the property is part of the DN
-       "mandatory": true,                 # only when required on create
        "default": <value>,                # only when the schema declares one
        "options": [<allowed value>, ...], # only for enumerated properties
        "comment": <one-line description>}
@@ -593,8 +593,9 @@ async def get_schema(
                     `*Truncated` marker tells you the sample was too small.
 
     Returns:
-        Schema dict as described above, or an empty dict when the class file
-        is not found in the local schema collection.
+        Schema dict as described above, or an empty dict when the catalogue
+        holds no such class.  Lookup is exact and case-sensitive: `fvBd` does
+        not resolve to `fvBD`.
 
     Raises:
         DescriptionsLoadError: The niwaki catalogue is missing or unreadable.
@@ -716,12 +717,13 @@ async def query(
         of child attribute dicts, each with their own "_class" key.
 
     Raises:
-        UnknownClassError: class_name is neither in the descriptions registry
-                           nor resolvable to a schema file — includes closest
-                           matches so the LLM can self-correct. A class that
-                           has a schema file but no descriptions entry (a
-                           small gap between the two collections) is allowed
-                           through with a logged warning instead of raising.
+        UnknownClassError: class_name is not in the catalogue — includes the
+                           closest matches so the caller can self-correct
+                           without another search_classes() round-trip. The
+                           check is exact and case-sensitive. It exists because
+                           the APIC answers an unknown class with an empty
+                           result rather than an error, which is
+                           indistinguishable from "there are none".
         FilterError:       `class_name` or a `filters` key contains characters
                            outside the expected ACI identifier format (see
                            registry.filter.build_filter). Filter *values* are
@@ -928,12 +930,10 @@ async def count(
            "filters": <filters or {}>}
 
     Raises:
-        UnknownClassError: class_name is neither in the descriptions registry
-                           nor resolvable to a schema file — includes closest
-                           matches so the LLM can self-correct. A class that
-                           has a schema file but no descriptions entry (the
-                           same small gap query() tolerates) is allowed
-                           through with a logged warning instead of raising.
+        UnknownClassError: class_name is not in the catalogue — the same
+                           guard query() applies, from the same single source
+                           of truth, so the two tools can never disagree about
+                           whether a class exists.
         FilterError:       `class_name` or a `filters` key contains characters
                            outside the expected ACI identifier format (see
                            registry.filter.build_filter). Filter values are

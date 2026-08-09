@@ -9,6 +9,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Added
 
+- **The prompt surface is under test.** About 7,800 words reach an agent on a
+  normal session — `mcp.instructions`, the five tool docstrings FastMCP forwards
+  as tool descriptions, and `client/SKILL.md` — and nothing imported any of it.
+  Line coverage could not help: `instructions` is one string literal, so
+  `main.py` reported 98 % while its largest agent-facing artifact went
+  unexamined. Eight tests now pin what can be mechanically compared — that no
+  prompt text describes files on disk, that every documented output key is one
+  the tool sets, that the clamps and list bounds quoted to the agent match the
+  code, and that `SKILL.md` passes no parameter the tools do not accept. All
+  three defects above were found by writing them.
+
+- **Concurrency tests for the catalogue**, asserting content equality against a
+  single-threaded reference rather than merely "did not raise" — the measured
+  failure raised nothing 3.5 % of the time. Plus a structural test, over the AST,
+  that fails if any statement is executed outside `_query()`: `_connect().execute(…)`
+  is the natural thing to write and a timing test might not catch it.
+
+  Both nets were mutation-tested. Removing the lock fails three tests; one
+  bypassing statement fails two; five separate sabotages of the prompt surface
+  each fail the test that targets them. One of those five initially survived —
+  the envelope-key check scanned the raw source, docstring included, so the
+  documentation satisfied an assertion about the implementation. It now strips
+  the docstring via the AST.
+
 - **Seven guards that a green suite could not tell were broken.** A targeted
   mutation pass over the client and the `query` tool found seven places where a
   plausible edit passed all 539 tests. None was a defect — the code is correct
@@ -58,6 +82,45 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   how the APIC answers an unknown class.
 
 ### Fixed
+
+- **Concurrent catalogue reads could return another class's schema, silently.**
+  `_connect()` hands out one `sqlite3.Connection` with `check_same_thread=False`,
+  and its docstring claimed that was "safe under SQLite's default serialised
+  threading mode". SQLite serialises its own internals; `sqlite3.Connection`
+  keeps a per-connection prepared-statement cache that does not. Measured on this
+  catalogue, `load_schema` under a thread pool, three repetitions per cell:
+
+  | threads | calls | exceptions | silently wrong |
+  |---:|---:|---:|---:|
+  | 1 | 600 | 0 | 0 |
+  | 4 | 2,400 | 21 (0.9 %) | 29 |
+  | 16 | 9,600 | 192 (2.0 %) | 333 (3.5 %) |
+
+  "Silently wrong" means a schema whose content differs from the single-threaded
+  reference **with no exception raised** — the caller receives another class's
+  schema and cannot tell. Every read now goes through one `_query()` behind a
+  lock. Isolated to the statement cache, not to SQLite: cache disabled 0/0,
+  thread-local connection 0/0, lock 0/0. The lock is also the fastest of the
+  three (0.040 s against 0.089 s and 0.150 s at 2,400 calls) and the only one
+  that keeps a single copy of the string pools, which is what the cached
+  connection exists for. Latent today — nothing in `src/` spawns threads — and
+  one `asyncio.to_thread` or one multi-worker deployment away from not being.
+
+- **The server described a data layer it stopped having in 2.0.** `get_schema`
+  told every agent it reads "the APIC jsonmeta schema file" and returns `{}` when
+  "the class file is not found in the local schema collection"; `query` and
+  `count` documented a two-tier validation with a fallback to schema files that
+  2.0 replaced with a single source of truth; `SKILL.md` said `get_schema`
+  "returns the APIC jsonmeta schema". None of it has been true since the object
+  model became a SQLite catalogue inside the `niwaki` dependency. Documentation
+  that lies to a human wastes an afternoon; documentation that lies to an agent
+  becomes its model of the system.
+
+- **`property_details` documented a `mandatory` key that cannot appear.**
+  Measured: **0 of 332,297 properties** in the shipped catalogue set the flag bit.
+  Removed from the `get_schema` docstring and from `SKILL.md`. The projection
+  stays in `catalog.py` — a future catalogue that does set the bit will fail the
+  new test rather than emitting an undocumented field.
 
 - **The documented client setup did not work, for either client.** Claude
   Desktop rejects a `"type": "http"` entry — it reports *"not valid MCP server
