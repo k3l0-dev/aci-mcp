@@ -726,7 +726,7 @@ wheels = [
 
 [[package]]
 name = "niwashi-mcp"
-version = "2.1.1rc1"
+version = "2.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "fastmcp" },

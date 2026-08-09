@@ -7,6 +7,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+Nothing yet.
+
+---
+
+## [2.1.1] - 2026-08-09
+
+**A silent wrong answer removed, and the documentation the agent reads made
+true again.** Concurrent catalogue reads could return another class's schema
+with no exception raised; that is now serialised. Separately, three pieces of
+agent-facing text still described the pre-2.0 data layer — a directory of
+jsonmeta files that has not existed since the object model moved into the
+`niwaki` catalogue.
+
+The five tools keep their signatures. Nothing in the request or response shape
+changes.
+
 ### Added
 
 - **The prompt surface is under test.** About 7,800 words reach an agent on a
