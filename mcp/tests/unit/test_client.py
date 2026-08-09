@@ -880,3 +880,97 @@ async def test_count_class_retries_on_500_then_succeeds():
     client = _make_client(_MockResponse(500, {}), _MockResponse(200, body))
     assert await client.count_class("fvBD", {}) == 7
     assert len(client._client.requests) == 2
+
+
+# ── 403 on the data path, and the caps' actual values ─────────────────────────
+#
+# Two gaps a targeted mutation pass found. Neither is a defect in the client
+# today; both are places where a plausible edit would go unnoticed.
+#
+# The re-auth branch triggers on `resp.status_code in (401, 403)`, but until now
+# only the *login* endpoint was ever tested with a 403 — so narrowing that tuple
+# to `(401,)` left the whole suite green. An APIC answers 403 on the data path
+# when a token is valid but no longer carries the role for that class, which is
+# recoverable by re-authenticating and is exactly what the branch is for.
+#
+# The cap tests import `_MAX_PAGES` and `_MAX_OBJECTS` and assert against them,
+# which proves the loop *honours* whatever the constants say and can never
+# notice their values changing. Measured: 25 → 250 and 5000 → 50000 both pass.
+# These bounds are what stops a fabric-wide scan from being unbounded, and the
+# tool docstrings promise an agent that a capped answer stops "in the thousands".
+
+
+@pytest.mark.asyncio
+async def test_query_class_403_on_the_data_path_reauthenticates_and_retries():
+    """A 403 on a data request is recoverable, exactly as a 401 is.
+
+    Without this, narrowing the re-auth branch to 401 alone is invisible: the
+    only 403 the suite exercised was on /aaaLogin, which never reaches it.
+    """
+    client = _make_client(
+        _MockResponse(403, {}),
+        _MockResponse(200, apic_login_response()),
+        _MockResponse(200, apic_response([{"fvBD": {"attributes": {"dn": "uni/tn-T/BD-b"}}}])),
+    )
+    result = await client.query_class("fvBD", {})
+
+    assert len(result.objects) == 1
+    methods = [r["method"] for r in client._client.requests]
+    assert methods == ["GET", "POST", "GET"], "no re-authentication happened between the two GETs"
+
+
+@pytest.mark.asyncio
+async def test_get_by_dn_403_on_the_data_path_reauthenticates_and_retries():
+    """The same branch is shared by get_by_dn; assert it there too."""
+    client = _make_client(
+        _MockResponse(403, {}),
+        _MockResponse(200, apic_login_response()),
+        _MockResponse(200, apic_response([{"fvBD": {"attributes": {"dn": "uni/tn-T/BD-b"}}}])),
+    )
+    obj = await client.get_by_dn("uni/tn-T/BD-b")
+
+    assert obj is not None
+    assert [r["method"] for r in client._client.requests] == ["GET", "POST", "GET"]
+
+
+@pytest.mark.asyncio
+async def test_persistent_403_after_reauth_is_an_auth_error_not_a_request_error():
+    """Still 403 after re-authenticating is an authorisation problem, and must
+    say so — an ApicRequestError would send the caller looking at their filter."""
+    client = _make_client(
+        _MockResponse(403, {}),
+        _MockResponse(200, apic_login_response()),
+        _MockResponse(403, {}),
+    )
+    with pytest.raises(ApicAuthError) as exc_info:
+        await client.query_class("fvBD", {})
+    assert exc_info.value.status == 403
+
+
+def test_the_fetch_all_caps_hold_the_values_the_tools_promise():
+    """Pin the values, not just the loop's obedience to them.
+
+    Every other cap test imports these constants and asserts against them, so
+    they measure that the loop honours the cap — never what the cap is. Raising
+    `_MAX_PAGES` tenfold passes all of them. These two numbers are the only
+    thing bounding a fabric-wide scan with no `scope_dn`, and `query`'s docstring
+    tells an agent a capped fetch stops at "thousands of objects": a change here
+    is a change to what the server promises, so it should be deliberate and
+    arrive with its own diff.
+    """
+    assert _MAX_PAGES == 25
+    assert _MAX_OBJECTS == 5000
+    assert 1_000 <= _MAX_OBJECTS < 100_000, "no longer 'thousands', as the tool docstring says"
+
+
+def test_non_numeric_total_count_falls_back_rather_than_reporting_zero():
+    """The half of the docstring's promise that was never tested.
+
+    `test_query_class_missing_total_count_falls_back` covers a *missing*
+    totalCount; the docstring also promises a non-numeric one falls back. It
+    does — but nothing asserted it, so making the except clause return 0 instead
+    passed. That would tell an agent a populated result set is empty.
+    """
+    assert ApicClient._parse_total_available({"totalCount": "n/a"}, 2) == 2
+    assert ApicClient._parse_total_available({"totalCount": None}, 7) == 7
+    assert ApicClient._parse_total_available({"totalCount": "12"}, 0) == 12

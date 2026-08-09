@@ -18,7 +18,7 @@ from tests.conftest import MINIMAL_DESCRIPTIONS, StubBackend, make_ctx
 # ── Tool context helpers ──────────────────────────────────────────────────────
 
 
-def _stub_ctx(sample_imdata, descriptions=None):
+def _stub_ctx(sample_imdata, descriptions=None, *, cap_at=None):
     """Build a tool context with optional custom descriptions.
 
     No `schemas_dir`: 2.0 reads the object model from the catalogue inside the
@@ -28,7 +28,7 @@ def _stub_ctx(sample_imdata, descriptions=None):
     return make_ctx(
         {
             "descriptions": desc,
-            "backend": StubBackend(sample_imdata),
+            "backend": StubBackend(sample_imdata, cap_at=cap_at),
         }
     )
 
@@ -785,3 +785,71 @@ async def test_query_pagination_walk_terminates():
 
     assert seen == 45, f"the walk collected {seen} of 45 objects"
     assert iterations == 3, f"45 objects at 20 per page should take 3 pages, took {iterations}"
+
+
+# ── query — the two ways a partial answer can pass for a complete one ─────────
+#
+# These are the worst failure mode this server has: the caller receives fewer
+# objects than match, and nothing in the envelope says so. Both paths below were
+# unreachable from the test suite. The first because `StubBackend` hardcoded
+# `complete=True` on both of its return paths, so the safety-cap branch of the
+# `query` tool could never run; deleting that branch outright left the whole
+# suite green. The second because no test ever combined `page > 0` with a
+# `limit` outside [1, 200], which is where the clamp and the paging arithmetic
+# have to agree.
+
+
+@pytest.mark.asyncio
+async def test_query_reports_the_safety_cap_to_the_agent(sample_imdata):
+    """fetch_all stopping early must say so, in `complete` and in `note`.
+
+    An agent that asked for everything and silently got part of it will state a
+    maximum, a total, or a complete list from it. `complete=False` alone is not
+    enough — the note is what tells it what to do next.
+    """
+    from niwashi_mcp.main import query
+
+    ctx = _stub_ctx(sample_imdata, cap_at=1)
+    envelope = await query("fvBD", ctx, fetch_all=True)
+
+    assert envelope["complete"] is False
+    assert envelope["returned"] < envelope["total_available"]
+    assert envelope["note"], "a capped fetch_all returned no note at all"
+    assert "safety cap" in envelope["note"]
+    assert str(envelope["total_available"]) in envelope["note"]
+
+
+@pytest.mark.asyncio
+async def test_query_complete_fetch_all_carries_no_cap_note(sample_imdata):
+    """The counterpart, so the assertion above cannot pass by always being true."""
+    from niwashi_mcp.main import query
+
+    envelope = await query("fvBD", _stub_ctx(sample_imdata), fetch_all=True)
+
+    assert envelope["complete"] is True
+    assert envelope["note"] is None
+
+
+@pytest.mark.asyncio
+async def test_query_truncation_survives_a_limit_that_gets_clamped():
+    """`truncated` must be computed on the limit actually used, not the one asked for.
+
+    With limit=500 clamped to 200 and page=2, consuming the raw 500 would make
+    the server believe 1000 objects had been seen. It would report
+    `truncated=false` and `next_page=null` on a result set of 1000 — an agent
+    following the documented paging loop stops there, 400 objects short, with
+    nothing saying so.
+    """
+    from niwashi_mcp.main import query
+
+    imdata = [{"fvBD": {"attributes": {"name": f"bd{i}", "dn": f"uni/tn-T/BD-bd{i}"}}}
+              for i in range(1000)]
+    ctx = _stub_ctx(imdata)
+
+    envelope = await query("fvBD", ctx, limit=500, page=2)
+
+    assert ctx.lifespan_context["backend"].calls[-1]["limit"] == 200
+    assert envelope["total_available"] == 1000
+    assert envelope["truncated"] is True, "consumed was computed on the unclamped limit"
+    assert envelope["next_page"] == 3
+    assert envelope["note"] is not None
