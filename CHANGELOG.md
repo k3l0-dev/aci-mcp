@@ -7,6 +7,52 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
+### Added
+
+- **The MCP contract is under test.** An entire class of defect had no coverage:
+  what the server *advertises*. Every other test drives a tool function directly
+  in Python, so none saw the tool list a client actually receives — names,
+  titles, annotations, parameter schemas, required fields. That surface is the
+  whole integration contract, and a defect in it does not raise: the tool simply
+  stops being offered, or is offered with a shape the caller cannot satisfy.
+  Twelve tests now assert it through FastMCP's own registry, no network
+  involved. Mutation-tested: a sixth tool appearing, a tool losing
+  `readOnlyHint`, the server changing its announced name, a title emptied, and
+  the `GROUNDING` section vanishing from the instructions each fail their test.
+
+- **The projection filters and search priors are pinned.** Six decisions that
+  were correct and invisible: an audit removed each in turn and all 539 tests
+  stayed green. Empty `default` values (86 properties, 57 classes), the
+  `defaultValue` enum marker, the `"null"` comment sentinel, and the three
+  structural priors — stats/telemetry, abstract, Rs/Rt. The stats prior carries
+  **4,769 of 15,239 index entries (31.3 %)** and the entire evaluation stack was
+  blind to it: not one of the 74 golden queries surfaces a telemetry class, so
+  removing the penalty changed no metric.
+
+  The abstract prior took measuring to test honestly. Built on "bridge domain"
+  the test asserted nothing — `fvBD` leads on an exact jargon match whether the
+  penalty exists or not. Removing it flips exactly two queries: "interface"
+  poeIf → ipIf and "domain" bgpDom → l2Dom, both abstract. The test uses those.
+
+- **The July fault inventory is frozen as a fixture, and scored.** It existed
+  only as a line in a private note: 22 faults, `F0104x1, F0103x1, F609026x7,
+  F2247x11, F3951x2`, verified twice live on 2026-07-20. A model summarising
+  that list into a table named two codes present in none of it — with confident
+  descriptions attached — while under-counting three of the five real ones.
+  Every tool call in that transcript was correct; the fabrication happened after
+  the last one returned.
+
+  `agent-eval/lib/fabrication.py` scores an answer as precision at full recall
+  over the set of codes: one fabricated code scores **0, not 0.8**. Grading it
+  as "four of five, 80 %" gets the incentive backwards — a table that is 80 %
+  right and 20 % missing is usable, because the reader knows it is partial; one
+  that is 80 % right and 20 % invented is worse than useless, because nothing
+  marks which fifth is fiction and it reads more authoritative, not less.
+
+- **`SKILL.md` gains the fourth grounding counter-example**, on summarising a
+  list into clusters or a table — the case above. It ships with its automated
+  form rather than as advice alone, which was the condition for adding it.
+
 ### Changed
 
 - **The rest of the audit's bogus-test list — deleted or rebuilt, none left as

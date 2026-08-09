@@ -866,6 +866,29 @@ a sample object without filters to observe the actual values in context.
         what a class prefix (fv, vz, mo...) "stands for" historically, or
         why a property is named the way it is — that etymology was never
         returned by any tool, no matter how plausible it sounds.
+
+        SUMMARISING A LIST is where this rule is broken most often, and
+        least visibly. When you group a result into clusters, a table, or
+        a per-tenant breakdown, every code, count, name and object you
+        write must be traceable to an item actually present in the tool
+        result. Do not add a plausible row to complete a table that would
+        otherwise look sparse, and do not invent a grouping column for
+        objects whose DN does not carry that field — a fabric-scoped
+        object (uni/vmmp-VMware/..., configpush/...) has no tenant, so it
+        does not get one.
+
+        Observed: a correct query returned 22 faults across five codes.
+        The summary of it named two codes that were in no result — with
+        confident descriptions attached — and under-counted three of the
+        five real ones. Every tool call in that transcript was right. The
+        fabrication happened after the last one returned. A table that is
+        80 % right and 20 % invented is worse than one that is 80 % right
+        and 20 % absent: nothing marks which fifth is fiction, and it
+        reads more authoritative, not less.
+
+        If a count is tedious to verify, compute it rather than estimate
+        it — section 9 has the recipes. An arithmetic slip you can find
+        is better than a number you produced by feel.
 ```
 
 ### Error handling
