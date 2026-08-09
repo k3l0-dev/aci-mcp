@@ -7,7 +7,81 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **Seven guards that a green suite could not tell were broken.** A targeted
+  mutation pass over the client and the `query` tool found seven places where a
+  plausible edit passed all 539 tests. None was a defect — the code is correct
+  at every one of them — but nothing would have noticed them becoming one, and
+  five sit on the path where the caller receives fewer objects than match and
+  the envelope does not say so.
+
+  The blocker was `StubBackend`: it hardcoded `complete=True` on both return
+  paths, so the branch of `query` that tells an agent *"I fetched 200 of 99,999
+  objects before hitting the safety cap"* was unreachable from any integration
+  test. Deleting that note and its warning outright left the suite green. The
+  stub now takes `cap_at` and can express the state.
+
+  Also pinned: `truncated` computed on the clamped limit rather than the
+  requested one (raw `limit=500, page=2` over 1,000 matches reports
+  `truncated=false` and `next_page=null`, stopping a documented paging loop 400
+  objects short); a 403 on the *data* path re-authenticating and retrying, which
+  only `/aaaLogin` had ever exercised; `_MAX_PAGES` and `_MAX_OBJECTS` holding
+  their values, since every other cap test imports the constants and so measures
+  only that the loop obeys them — 25 → 250 and 5000 → 50000 both passed; and a
+  non-numeric `totalCount` falling back rather than reporting zero, which is
+  half of what that function's docstring already promised.
+
+  Each of the seven was broken deliberately and fails the test written for it.
+  No production code changed.
+
+- **The five tools declare themselves read-only.** `search_classes` and
+  `get_schema` never leave the process; `query`, `get_by_dn` and `count` issue
+  GETs against the APIC and nothing else. None of that was stated anywhere a
+  client could read it, so every client had to assume the worst and prompt the
+  user on each call — and an agent answering one question makes a dozen. Each
+  tool now carries `readOnlyHint`, an `openWorldHint` that separates the two
+  local tools from the three that reach the fabric, and a human-readable title.
+  `destructiveHint` and `idempotentHint` are deliberately absent: the MCP
+  specification defines them as meaningful only when `readOnlyHint` is false.
+
+- **A contribution path for APIC releases.** `SUPPORTED-APIC.md` states which
+  release ships, what happens when yours differs, and takes a one-line request.
+  A pull request here cannot add support on its own — the catalogue lives in the
+  `niwaki` dependency — so what it does is register demand, and the file says so
+  rather than implying otherwise.
+
+- **Issue and pull request templates.** The bug report asks for the
+  `Registry loaded` startup line and the reporter's APIC release, because a
+  version gap and a genuine defect present identically: an empty result. It also
+  opens by saying an empty result is usually not a bug, which is the truth about
+  how the APIC answers an unknown class.
+
+### Fixed
+
+- **The documented client setup did not work, for either client.** Claude
+  Desktop rejects a `"type": "http"` entry — it reports *"not valid MCP server
+  configurations and were skipped"* once at startup and then runs with the
+  server silently absent. It needs the `mcp-remote` stdio bridge, which is now
+  what the README shows, with the reason and the trap that the header is one
+  argument. The OpenCode block was wrong in four ways at once: the file name,
+  an extra `servers` nesting level, `"type": "http"` instead of `"remote"`, and
+  a missing `enabled`. Both are now the configurations that were verified
+  connected.
+
+- **`README.md` never disclosed the version limitation.** It named APIC 6.0(9c)
+  and stopped there. It now says what happens on a different release, and that
+  the failure is quiet.
+
+- **`CONTRIBUTING.md` gave two instructions that were wrong, one of them
+  harmful.** It told every contributor to run `ruff format`, which would
+  reformat 30 of the 59 files in `mcp/` and bury their change in unrelated diff —
+  this codebase is not formatter-managed and CI only ever runs `ruff check`. And
+  it pointed at `pytest tests/unit/`, which is 434 of the 539 tests, so nobody
+  following the guide ran the integration tests, the search-quality gate or the
+  recorded baseline before opening a pull request. Both corrected, and the local
+  convention that a new guard is broken on purpose before it is trusted is now
+  written down rather than folklore.
 
 ---
 

@@ -28,6 +28,8 @@ agent-eval/
 dist/
 build/
 *.egg-info/
+coverage.json
+coverage.xml
 
 # Runtime artifacts
 .lab*
