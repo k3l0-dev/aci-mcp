@@ -197,3 +197,77 @@ def test_skill_invents_no_tool_parameter():
                 if kwarg not in real[tool]:
                     bad.append(f"{tool}({kwarg}=…)")
     assert not bad, f"SKILL.md passes parameters that do not exist: {sorted(set(bad))}"
+
+
+# ── the vocabulary lint ───────────────────────────────────────────────────────
+#
+# SKILL.md teaches by example, and its examples are full of class and property
+# names. A typo'd class name in a teaching example is worse than one in code:
+# code fails, but an agent imitates the example verbatim, queries the mistyped
+# name, and the APIC answers an empty result indistinguishable from "none".
+# The docs went stale exactly this way once already ("the APIC jsonmeta schema
+# file"); names rot the same way words do.
+
+
+def test_every_aci_name_skill_teaches_actually_exists():
+    """Every backticked camelCase token is a class, a property, or allowlisted.
+
+    Checked against the shipped catalogue itself, so the lint follows the
+    corpus: a class SKILL.md cites that disappears from a future catalogue
+    fails here the day the dependency is bumped, not the day a user's query
+    comes back empty.
+    """
+    import re
+
+    text = _SKILL.read_text()
+    candidates = set(re.findall(r"`([a-z][a-z0-9]*[A-Z][A-Za-z0-9]*)`", text))
+    assert len(candidates) > 30, (
+        f"only {len(candidates)} camelCase tokens found — the extraction regex "
+        f"no longer matches how SKILL.md marks names, so the lint is blind"
+    )
+
+    classes = {r[0] for r in catalog._query("SELECT class_name FROM mo")}
+    properties = {r[0] for r in catalog._query("SELECT DISTINCT wire_name FROM prop")}
+
+    # Every entry must carry its reason, and — asserted below — must still be
+    # in use. An allowlist that only grows is how a lint stops linting.
+    allowlist = {
+        # get_schema's own output keys, quoted when teaching the schema shape:
+        "identifiedBy", "rnFormat", "dnFormats", "containedBy", "relationTo",
+        "relationFrom", "isAbstract", "sourceClass",
+        # the *Truncated marker get_schema adds beside a sampled list:
+        "containedByTruncated",
+        # deliberate wrong-case example teaching that lookup is case-sensitive:
+        "fvBd",
+        # notation for colon-flattening ("`pkg:Class` → `pkgClass`"), not a name:
+        "pkgClass",
+    }
+
+    unknown = sorted(
+        c for c in candidates
+        if c not in classes and c not in properties and c not in allowlist
+    )
+    assert not unknown, (
+        f"SKILL.md teaches names that are neither a class nor a property in the "
+        f"shipped catalogue: {unknown}. An agent will imitate them verbatim and "
+        f"read the empty result as 'there are none'."
+    )
+
+    stale = sorted(a for a in allowlist if a not in candidates)
+    assert not stale, (
+        f"allowlist entries no longer used by SKILL.md: {stale} — prune them, "
+        f"or the allowlist rots into a bypass"
+    )
+
+
+def test_the_wrong_case_example_is_still_wrong():
+    """`fvBd` is allowlisted as a deliberate error. Verify it stays one.
+
+    If a future catalogue ever contained a real `fvBd`, the teaching example
+    would silently become a valid class and the case-sensitivity lesson would
+    teach the opposite of what it says.
+    """
+    from niwashi_mcp.registry.catalog import class_exists
+
+    assert not class_exists("fvBd")
+    assert class_exists("fvBD")

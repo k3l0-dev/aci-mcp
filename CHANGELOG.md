@@ -9,6 +9,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
 
 ### Added
 
+- **SKILL.md's teaching vocabulary is linted against the catalogue.** Every
+  backticked camelCase name in the skill file must be a real class, a real
+  property, or a documented exception with a reason. A typo in a teaching
+  example is worse than one in code: code fails, but an agent imitates the
+  example verbatim, queries the mistyped name, and reads the empty result as
+  "there are none". Mutation-tested — a typo'd class or property name each fail
+  it — and it also asserts the deliberate wrong-case example (`fvBd`) stays
+  wrong, so the case-sensitivity lesson cannot silently invert.
+
+### Added
+
 - **What a tool does when the backend fails.** `StubBackend` never raised — not
   a 400, not a 500, not a timeout, not malformed JSON — so no integration test
   saw a tool meet a failing backend. Fourteen tests now do, through a backend
