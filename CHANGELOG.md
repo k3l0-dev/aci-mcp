@@ -18,8 +18,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) — versioning 
   it — and it also asserts the deliberate wrong-case example (`fvBd`) stays
   wrong, so the case-sensitivity lesson cannot silently invert.
 
-### Added
-
 - **What a tool does when the backend fails.** `StubBackend` never raised — not
   a 400, not a 500, not a timeout, not malformed JSON — so no integration test
   saw a tool meet a failing backend. Fourteen tests now do, through a backend
@@ -362,8 +360,6 @@ The five tools keep their signatures. The Python interface does not change.
   (with the startup guard and its exact message), the README configuration
   table, and the variable map. The absence of `MCP_HOST` from `.env.example` is
   what made the container defect above invisible.
-
-### Added
 
 - **The catalogue's latency decisions are measured again.** Until 2.0 the schema
   path was `registry/schema.py` and `tests/perf/` measured it; the migration
