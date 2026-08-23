@@ -31,7 +31,7 @@ dependencies = [
     # covered by niwaki's SemVer contract, so a 1.9 could restructure it
     # legitimately. `catalog.verify_catalogue()` refuses startup if it ever
     # does; this pin keeps the resolver from getting there in the first place.
-    "niwaki>=1.8,<1.9",
+    "niwaki>=1.8,<2.1",
     "python-dotenv>=1.0,<2.0",
 ]
 
